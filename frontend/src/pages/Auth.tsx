@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -11,43 +11,130 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 
+// Featured destinations for background slideshow
+const destinations = [
+  {
+    name: 'Bali',
+    image: 'https://images.unsplash.com/photo-1573790387438-4da905039392',
+  },
+  {
+    name: 'Lombok',
+    image: 'https://images.unsplash.com/photo-1606152536277-5aa1fd33e150',
+  },
+  {
+    name: 'Raja Ampat',
+    image: 'https://images.unsplash.com/photo-1516690561799-46d8f74f9abf',
+  },
+  {
+    name: 'Borobudur Temple',
+    image: 'https://images.unsplash.com/photo-1580655653885-65763b2597d0',
+  },
+];
+
 const Auth = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [currentDestination, setCurrentDestination] = useState(0);
   const navigate = useNavigate();
 
-  // Define passwordType without using showPassword state
-  const passwordType = "password";
+  // Background image slideshow effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentDestination((prev) => (prev + 1) % destinations.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would verify credentials here
+    
+    setLoading(true);
+    
+    // Validate email and password (simple validation)
+    if (!email || !password) {
+      alert('Please enter both email and password');
+      setLoading(false);
+      return;
+    }
+
+    // In a real app, you would authenticate with your backend
     console.log('Logging in with:', { email, password });
     
+    // Show success message (without toast)
+    alert('Login successful! Redirecting to dashboard...');
+
     // Navigate to dashboard after successful login
-    navigate('/dashboard');
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 500);
   };
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
+    // Validation
+    if (!username || !email || !password || !confirmPassword) {
+      alert('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
     // In a real app, you would create a new account here
     console.log('Signing up with:', { username, email, password });
     
+    // Show success message (without toast)
+    alert('Account created! Welcome to Travelink!');
+
     // Navigate to dashboard after successful signup
-    navigate('/dashboard');
+    setTimeout(() => {
+      navigate('/dashboard');
+    }, 500);
   };
 
   const handleReset = (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+
+    // Validation
+    if (!email) {
+      alert('Please enter your email');
+      setLoading(false);
+      return;
+    }
+
     // In a real app, you would send a password reset email
     console.log('Resetting password for:', email);
     
-    // Show message and switch to login
-    alert(`Password reset instructions sent to ${email}`);
-    setActiveTab('login');
+    // Show success message (without toast)
+    alert(`Reset email sent to ${email}. Check your inbox for instructions.`);
+
+    // Switch to login tab
+    setTimeout(() => {
+      setActiveTab('login');
+      setLoading(false);
+    }, 1000);
+  };
+
+  const handleSocialLogin = (provider: string) => {
+    setLoading(true);
+    
+    // Show message for demo purposes
+    alert(`${provider} login initiated. In a real app, this would connect to your backend.`);
+
+    // Navigate to dashboard
+    navigate('/dashboard');
   };
 
   return (
@@ -57,7 +144,7 @@ const Auth = () => {
         display={{ base: 'none', md: 'block' }} 
         bg="blue.600" 
         w={{ md: '50%', lg: '60%' }}
-        backgroundImage="url('https://images.unsplash.com/photo-1573790387438-4da905039392?ixlib=rb-4.0.3')"
+        backgroundImage={`url('${destinations[currentDestination].image}')`}
         backgroundSize="cover"
         backgroundPosition="center"
         position="relative"
@@ -82,7 +169,9 @@ const Auth = () => {
           color="white"
         >
           <Box mb={10}>
-            <Heading size="lg" mb={2}>Travelink</Heading>
+            <Heading size="lg" mb={2}>
+              ✈️ Travelink
+            </Heading>
             <Text fontSize="sm">Discover Indonesia with local guides</Text>
           </Box>
           
@@ -94,6 +183,37 @@ const Auth = () => {
             From stunning beaches to vibrant cities and ancient temples, 
             experience personalized travel adventures with knowledgeable local guides.
           </Text>
+
+          {/* Destination indicator */}
+          <Flex mt={10} justify="center">
+            {destinations.map((_, index) => (
+              <Box
+                key={index}
+                w="10px"
+                h="10px"
+                borderRadius="full"
+                bg={index === currentDestination ? "white" : "whiteAlpha.500"}
+                mx={1}
+                cursor="pointer"
+                onClick={() => setCurrentDestination(index)}
+              />
+            ))}
+          </Flex>
+
+          {/* Current location label */}
+          <Box 
+            position="absolute" 
+            bottom="20px" 
+            right="20px"
+            bg="blackAlpha.600"
+            px={4}
+            py={2}
+            borderRadius="md"
+          >
+            <Text fontSize="sm">
+              📍 {destinations[currentDestination].name}, Indonesia
+            </Text>
+          </Box>
         </Flex>
       </Box>
       
@@ -114,6 +234,34 @@ const Auth = () => {
             </Text>
           </Box>
           
+          {/* Tab Navigation */}
+          <Flex mb={6} borderBottom="1px" borderColor="gray.200">
+            <Box 
+              px={4} 
+              py={2} 
+              cursor="pointer"
+              borderBottom={activeTab === 'login' ? "2px solid" : "none"}
+              borderColor="blue.500"
+              color={activeTab === 'login' ? "blue.500" : "gray.500"}
+              fontWeight={activeTab === 'login' ? "semibold" : "normal"}
+              onClick={() => setActiveTab('login')}
+            >
+              Sign In
+            </Box>
+            <Box 
+              px={4} 
+              py={2} 
+              cursor="pointer"
+              borderBottom={activeTab === 'signup' ? "2px solid" : "none"}
+              borderColor="blue.500"
+              color={activeTab === 'signup' ? "blue.500" : "gray.500"}
+              fontWeight={activeTab === 'signup' ? "semibold" : "normal"}
+              onClick={() => setActiveTab('signup')}
+            >
+              Sign Up
+            </Box>
+          </Flex>
+          
           {/* Login Form */}
           {activeTab === 'login' && (
             <form onSubmit={handleLogin}>
@@ -125,16 +273,18 @@ const Auth = () => {
                     placeholder="your@email.com" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    bg="gray.50"
                   />
                 </Box>
                 
                 <Box>
                   <Text as="label" fontWeight="medium" mb={2} display="block">Password</Text>
                   <Input 
-                    type={passwordType}
+                    type="password"
                     placeholder="Enter your password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    bg="gray.50"
                   />
                 </Box>
                 
@@ -156,7 +306,7 @@ const Auth = () => {
                   w="full"
                   mt={2}
                 >
-                  Sign In
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </Flex>
             </form>
@@ -173,6 +323,7 @@ const Auth = () => {
                     placeholder="Choose a username" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
+                    bg="gray.50"
                   />
                 </Box>
                 
@@ -183,26 +334,29 @@ const Auth = () => {
                     placeholder="your@email.com" 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    bg="gray.50"
                   />
                 </Box>
                 
                 <Box>
                   <Text as="label" fontWeight="medium" mb={2} display="block">Password</Text>
                   <Input 
-                    type={passwordType}
+                    type="password"
                     placeholder="Create a password" 
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    bg="gray.50"
                   />
                 </Box>
                 
                 <Box>
                   <Text as="label" fontWeight="medium" mb={2} display="block">Confirm Password</Text>
                   <Input 
-                    type={passwordType}
+                    type="password"
                     placeholder="Confirm your password" 
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    bg="gray.50"
                   />
                 </Box>
                 
@@ -213,7 +367,7 @@ const Auth = () => {
                   w="full"
                   mt={2}
                 >
-                  Create Account
+                  {loading ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </Flex>
             </form>
@@ -224,12 +378,13 @@ const Auth = () => {
             <form onSubmit={handleReset}>
               <Flex direction="column" gap={4}>
                 <Heading size="md" mb={4}>Forgot Password?</Heading>
-                <Text mb={4}>Please enter your email</Text>
+                <Text mb={4}>Please enter your email to receive reset instructions</Text>
                 <Input 
                   type="email" 
                   placeholder="your@email.com" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  bg="gray.50"
                 />
                 
                 <Button 
@@ -239,12 +394,11 @@ const Auth = () => {
                   w="full"
                   mt={2}
                 >
-                  Reset Password
+                  {loading ? 'Sending Reset Email...' : 'Reset Password'}
                 </Button>
                 
                 <Button 
-                  variant="outline" 
-                  colorScheme="blue" 
+                  colorScheme="blue"
                   onClick={() => setActiveTab('login')}
                   alignSelf="center"
                 >
@@ -274,51 +428,44 @@ const Auth = () => {
               </Box>
               
               <Flex gap={4}>
-                <Button flex="1" variant="outline" onClick={() => navigate('/dashboard')}>
+                <Button 
+                  flex="1" 
+                  colorScheme="red" 
+                  onClick={() => handleSocialLogin('Google')}
+                >
                   Google
                 </Button>
-                <Button flex="1" variant="outline" onClick={() => navigate('/dashboard')}>
+                <Button 
+                  flex="1" 
+                  colorScheme="blue" 
+                  onClick={() => handleSocialLogin('Facebook')}
+                >
                   Facebook
                 </Button>
-                <Button flex="1" variant="outline" onClick={() => navigate('/dashboard')}>
+                <Button 
+                  flex="1" 
+                  colorScheme="gray" 
+                  onClick={() => handleSocialLogin('Apple')}
+                >
                   Apple
                 </Button>
               </Flex>
             </>
           )}
           
-          {/* Toggle between login and signup */}
-          {activeTab !== 'reset' && (
-            <Text mt={8} textAlign="center">
-              {activeTab === 'login' ? (
-                <>
-                  Don't have an account?{' '}
-                  <Box 
-                    as="span" 
-                    color="blue.500" 
-                    fontWeight="semibold"
-                    cursor="pointer"
-                    onClick={() => setActiveTab('signup')}
-                  >
-                    Sign up
-                  </Box>
-                </>
-              ) : (
-                <>
-                  Already have an account?{' '}
-                  <Box 
-                    as="span" 
-                    color="blue.500" 
-                    fontWeight="semibold"
-                    cursor="pointer"
-                    onClick={() => setActiveTab('login')}
-                  >
-                    Sign in
-                  </Box>
-                </>
-              )}
+          {/* Footer section */}
+          <Box mt={8} textAlign="center">
+            <Text fontSize="sm" color="gray.500">
+              By signing in or creating an account, you agree to our{' '}
+              <Box as="span" color="blue.500" cursor="pointer">
+                Terms & Conditions
+              </Box>{' '}
+              and{' '}
+              <Box as="span" color="blue.500" cursor="pointer">
+                Privacy Policy
+              </Box>
             </Text>
-          )}
+          </Box>
         </Container>
       </Box>
     </Flex>

@@ -103,6 +103,10 @@ const Dashboard = () => {
     }).format(price);
   };
 
+  const navigateTo = (path: string) => {
+    navigate(path);
+  };
+
   const toggleDrawer = () => {
     setIsDrawerOpen(!isDrawerOpen);
   };
@@ -119,7 +123,7 @@ const Dashboard = () => {
                 fontSize="2xl"
                 color="blue.600"
                 cursor="pointer"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigateTo('/dashboard')}
               >
                 Travelink
               </Box>
@@ -141,18 +145,16 @@ const Dashboard = () => {
               </Box>
 
               <Button 
-                variant="ghost" 
                 colorScheme="blue" 
                 mr={2}
-                onClick={() => navigate('/tours')}
+                onClick={() => navigateTo('/tours')}
               >
                 Explore
               </Button>
               <Button 
-                variant="ghost" 
                 colorScheme="blue" 
                 mr={2}
-                onClick={() => navigate('/bookings')}
+                onClick={() => navigateTo('/bookings')}
               >
                 My Bookings
               </Button>
@@ -168,7 +170,7 @@ const Dashboard = () => {
                   justifyContent="center"
                   fontWeight="bold"
                   cursor="pointer"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigateTo('/profile')}
                 >
                   U
                 </Box>
@@ -200,7 +202,7 @@ const Dashboard = () => {
         >
           <Flex justify="space-between" mb={6}>
             <Heading size="md">Menu</Heading>
-            <Button variant="ghost" onClick={toggleDrawer}>✕</Button>
+            <Button colorScheme="blue" onClick={toggleDrawer}>✕</Button>
           </Flex>
           <Flex direction="column" gap={4}>
             <Input
@@ -211,7 +213,7 @@ const Dashboard = () => {
             <Button 
               w="full" 
               onClick={() => {
-                navigate('/tours');
+                navigateTo('/tours');
                 toggleDrawer();
               }}
             >
@@ -220,7 +222,7 @@ const Dashboard = () => {
             <Button 
               w="full" 
               onClick={() => {
-                navigate('/bookings');
+                navigateTo('/bookings');
                 toggleDrawer();
               }}
             >
@@ -229,7 +231,7 @@ const Dashboard = () => {
             <Button 
               w="full" 
               onClick={() => {
-                navigate('/profile');
+                navigateTo('/profile');
                 toggleDrawer();
               }}
             >
@@ -238,7 +240,7 @@ const Dashboard = () => {
             <Button 
               w="full" 
               onClick={() => {
-                navigate('/settings');
+                navigateTo('/settings');
                 toggleDrawer();
               }}
             >
@@ -247,9 +249,8 @@ const Dashboard = () => {
             <Button 
               w="full" 
               colorScheme="red" 
-              variant="outline"
               onClick={() => {
-                navigate('/');
+                navigateTo('/');
                 toggleDrawer();
               }}
             >
@@ -297,15 +298,16 @@ const Dashboard = () => {
             <Text fontSize="lg" mb={6}>
               Discover personalized travel experiences in Indonesia with our trusted local guides.
             </Text>
-            <Button
-              bg="white"
-              color="blue.600"
-              size="lg"
-              _hover={{ bg: 'gray.100' }}
-              onClick={() => navigate('/tours')}
-            >
-              Explore Tours
-            </Button>
+            <Box>
+              <Button
+                bg="white"
+                color="blue.600"
+                size="lg"
+                onClick={() => navigateTo('/tours')}
+              >
+                Explore Tours
+              </Button>
+            </Box>
           </Box>
         </Box>
         
@@ -313,13 +315,14 @@ const Dashboard = () => {
         <Box mb={10}>
           <Flex justify="space-between" align="center" mb={4}>
             <Heading size="lg">Featured Destinations</Heading>
-            <Button 
-              variant="link" 
-              color="blue.500"
-              onClick={() => navigate('/tours')}
-            >
-              View All →
-            </Button>
+            <Box>
+              <Button 
+                colorScheme="blue"
+                onClick={() => navigateTo('/tours')}
+              >
+                View All →
+              </Button>
+            </Box>
           </Flex>
           
           <Grid
@@ -333,10 +336,8 @@ const Dashboard = () => {
                 borderRadius="lg"
                 overflow="hidden"
                 boxShadow="md"
-                transition="all 0.3s"
-                _hover={{ transform: 'translateY(-5px)', boxShadow: 'lg' }}
                 cursor="pointer"
-                onClick={() => navigate(`/tours/${destination.id}`)}
+                onClick={() => navigateTo(`/tours/${destination.id}`)}
               >
                 <Box position="relative" h="200px">
                   <Image 
@@ -368,7 +369,7 @@ const Dashboard = () => {
                 
                 <Box p={4}>
                   <Heading size="md" mb={2}>{destination.name}</Heading>
-                  <Text color="gray.600" noOfLines={2} mb={4}>
+                  <Text color="gray.600" mb={4}>
                     {destination.description}
                   </Text>
                   
@@ -379,12 +380,18 @@ const Dashboard = () => {
                         /person
                       </Box>
                     </Text>
-                    <Button 
-                      colorScheme="blue" 
-                      size="sm"
-                    >
-                      Explore
-                    </Button>
+                    <Box>
+                      <Button 
+                        colorScheme="blue" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigateTo(`/tours/${destination.id}`);
+                        }}
+                      >
+                        Explore
+                      </Button>
+                    </Box>
                   </Flex>
                 </Box>
               </Box>
@@ -439,14 +446,15 @@ const Dashboard = () => {
                         <Badge colorScheme="green" py={1} px={2} borderRadius="md">
                           Confirmed
                         </Badge>
-                        <Button
-                          variant="outline"
-                          colorScheme="blue"
-                          size="sm"
-                          onClick={() => navigate(`/bookings/${tour.id}`)}
-                        >
-                          View Details
-                        </Button>
+                        <Box>
+                          <Button
+                            colorScheme="blue"
+                            size="sm"
+                            onClick={() => navigateTo(`/bookings/${tour.id}`)}
+                          >
+                            View Details
+                          </Button>
+                        </Box>
                       </Flex>
                     </Flex>
                   </Flex>
@@ -461,12 +469,14 @@ const Dashboard = () => {
                 textAlign="center"
               >
                 <Text fontSize="lg" mb={4}>You have no upcoming tours</Text>
-                <Button 
-                  colorScheme="blue"
-                  onClick={() => navigate('/tours')}
-                >
-                  Explore Tours
-                </Button>
+                <Box>
+                  <Button 
+                    colorScheme="blue"
+                    onClick={() => navigateTo('/tours')}
+                  >
+                    Explore Tours
+                  </Button>
+                </Box>
               </Box>
             )}
           </Box>
@@ -484,8 +494,7 @@ const Dashboard = () => {
                   boxShadow="md"
                   align="center"
                   cursor="pointer"
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
-                  onClick={() => navigate(`/guides/${guide.id}`)}
+                  onClick={() => navigateTo(`/guides/${guide.id}`)}
                 >
                   <Box 
                     width="64px" 
@@ -501,21 +510,6 @@ const Dashboard = () => {
                       width="100%"
                       height="100%"
                       objectFit="cover"
-                      fallback={
-                        <Box 
-                          width="100%" 
-                          height="100%" 
-                          bg="blue.500" 
-                          color="white"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                          fontSize="xl"
-                          fontWeight="bold"
-                        >
-                          {guide.name.charAt(0)}
-                        </Box>
-                      }
                     />
                   </Box>
                   <Box flex="1">
@@ -528,13 +522,18 @@ const Dashboard = () => {
                       <Text fontWeight="bold">{guide.rating}</Text>
                     </Flex>
                   </Box>
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    variant="outline"
-                  >
-                    View Profile
-                  </Button>
+                  <Box>
+                    <Button
+                      colorScheme="blue"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateTo(`/guides/${guide.id}/profile`);
+                      }}
+                    >
+                      View Profile
+                    </Button>
+                  </Box>
                 </Flex>
               ))}
             </Flex>
