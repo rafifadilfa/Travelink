@@ -95,6 +95,19 @@ const Dashboard = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Enhanced color values for better visibility
+  const headerBg = 'white';
+  const sectionBg = 'gray.50';
+  const cardBg = 'white';
+  const primaryText = 'gray.800';
+  const secondaryText = 'gray.600';
+  const highlightColor = 'blue.600';
+  const buttonColor = 'blue.600';
+  const buttonText = 'white';
+  const sectionHeadingColor = 'gray.800';
+  const badgeBg = 'green.500';
+  const badgeText = 'white';
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -112,16 +125,16 @@ const Dashboard = () => {
   };
 
   return (
-    <Box minH="100vh" bg="gray.50">
-      {/* Header */}
-      <Box bg="white" boxShadow="sm" position="sticky" top={0} zIndex={10}>
+    <Box minH="100vh" bg={sectionBg}>
+      {/* Header with improved contrast */}
+      <Box bg={headerBg} boxShadow="md" position="sticky" top={0} zIndex={10}>
         <Container maxW="container.xl">
           <Flex py={4} justify="space-between" align="center">
             <Flex align="center">
               <Box
                 fontWeight="bold"
                 fontSize="2xl"
-                color="blue.600"
+                color={highlightColor}
                 cursor="pointer"
                 onClick={() => navigateTo('/dashboard')}
               >
@@ -141,29 +154,39 @@ const Dashboard = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   pl={10}
                   borderRadius="full"
+                  bg="white"
+                  borderColor="gray.300"
+                  _hover={{ borderColor: 'gray.400' }}
+                  _focus={{ borderColor: highlightColor, boxShadow: `0 0 0 1px ${highlightColor}` }}
                 />
               </Box>
 
               <Button 
-                colorScheme="blue" 
+                bg={buttonColor} 
+                color={buttonText}
+                _hover={{ bg: 'blue.700' }}
                 mr={2}
                 onClick={() => navigateTo('/tours')}
+                fontWeight="semibold"
               >
                 Explore
               </Button>
               <Button 
-                colorScheme="blue" 
+                bg={buttonColor}
+                color={buttonText}
+                _hover={{ bg: 'blue.700' }}
                 mr={2}
                 onClick={() => navigateTo('/bookings')}
+                fontWeight="semibold"
               >
                 My Bookings
               </Button>
               <Box position="relative">
                 <Box 
-                  width="32px" 
-                  height="32px" 
+                  width="36px" 
+                  height="36px" 
                   borderRadius="full" 
-                  bg="blue.500" 
+                  bg={highlightColor}
                   color="white" 
                   display="flex" 
                   alignItems="center" 
@@ -171,6 +194,7 @@ const Dashboard = () => {
                   fontWeight="bold"
                   cursor="pointer"
                   onClick={() => navigateTo('/profile')}
+                  fontSize="sm"
                 >
                   U
                 </Box>
@@ -179,7 +203,7 @@ const Dashboard = () => {
 
             {/* Mobile Navigation Button */}
             <Box display={{ base: 'block', md: 'none' }}>
-              <Button onClick={toggleDrawer}>
+              <Button onClick={toggleDrawer} bg={buttonColor} color={buttonText}>
                 ☰
               </Button>
             </Box>
@@ -195,23 +219,28 @@ const Dashboard = () => {
           right="0" 
           bottom="0" 
           width="250px" 
-          bg="white" 
+          bg={cardBg}
           boxShadow="lg" 
           zIndex={20}
           p={4}
         >
           <Flex justify="space-between" mb={6}>
-            <Heading size="md">Menu</Heading>
-            <Button colorScheme="blue" onClick={toggleDrawer}>✕</Button>
+            <Heading size="md" color={primaryText}>Menu</Heading>
+            <Button bg={buttonColor} color={buttonText} onClick={toggleDrawer}>✕</Button>
           </Flex>
           <Flex direction="column" gap={4}>
             <Input
               placeholder="Search destinations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              bg="white"
+              borderColor="gray.300"
             />
             <Button 
               w="full" 
+              bg={buttonColor}
+              color={buttonText}
+              _hover={{ bg: 'blue.700' }}
               onClick={() => {
                 navigateTo('/tours');
                 toggleDrawer();
@@ -221,6 +250,9 @@ const Dashboard = () => {
             </Button>
             <Button 
               w="full" 
+              bg={buttonColor}
+              color={buttonText}
+              _hover={{ bg: 'blue.700' }}
               onClick={() => {
                 navigateTo('/bookings');
                 toggleDrawer();
@@ -230,6 +262,10 @@ const Dashboard = () => {
             </Button>
             <Button 
               w="full" 
+              bg={buttonColor}
+              color={buttonText}
+              variant="outline"
+              _hover={{ bg: 'blue.50' }}
               onClick={() => {
                 navigateTo('/profile');
                 toggleDrawer();
@@ -239,6 +275,10 @@ const Dashboard = () => {
             </Button>
             <Button 
               w="full" 
+              variant="outline"
+              borderColor={buttonColor}
+              color={buttonColor}
+              _hover={{ bg: 'blue.50' }}
               onClick={() => {
                 navigateTo('/settings');
                 toggleDrawer();
@@ -262,15 +302,16 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <Container maxW="container.xl" py={8}>
-        {/* Welcome Section */}
+        {/* Welcome Section with improved contrast */}
         <Box 
-          bg="blue.600" 
+          bg={buttonColor}
           color="white" 
           borderRadius="xl" 
           p={8} 
           mb={8}
           position="relative"
           overflow="hidden"
+          boxShadow="lg"
         >
           <Box
             position="absolute"
@@ -290,20 +331,23 @@ const Dashboard = () => {
               right={0}
               bottom={0}
               bg="blue.600"
-              opacity={0.5}
+              opacity={0.6}
             />
           </Box>
           <Box position="relative" maxW={{ lg: '60%' }}>
-            <Heading size="xl" mb={4}>Welcome back!</Heading>
-            <Text fontSize="lg" mb={6}>
+            <Heading size="xl" mb={4} color="white" textShadow="0px 1px 2px rgba(0,0,0,0.2)">Welcome back!</Heading>
+            <Text fontSize="lg" mb={6} color="white" textShadow="0px 1px 2px rgba(0,0,0,0.2)">
               Discover personalized travel experiences in Indonesia with our trusted local guides.
             </Text>
             <Box>
               <Button
                 bg="white"
-                color="blue.600"
+                color={buttonColor}
                 size="lg"
+                _hover={{ bg: 'gray.100' }}
                 onClick={() => navigateTo('/tours')}
+                fontWeight="bold"
+                boxShadow="md"
               >
                 Explore Tours
               </Button>
@@ -313,11 +357,13 @@ const Dashboard = () => {
         
         {/* Featured Destinations */}
         <Box mb={10}>
-          <Flex justify="space-between" align="center" mb={4}>
-            <Heading size="lg">Featured Destinations</Heading>
+          <Flex justify="space-between" align="center" mb={6}>
+            <Heading size="lg" color={sectionHeadingColor} fontWeight="bold">Featured Destinations</Heading>
             <Box>
               <Button 
-                colorScheme="blue"
+                bg={buttonColor}
+                color={buttonText}
+                _hover={{ bg: 'blue.700' }}
                 onClick={() => navigateTo('/tours')}
               >
                 View All →
@@ -332,10 +378,12 @@ const Dashboard = () => {
             {featuredDestinations.map((destination) => (
               <Box
                 key={destination.id}
-                bg="white"
+                bg={cardBg}
                 borderRadius="lg"
                 overflow="hidden"
                 boxShadow="md"
+                _hover={{ boxShadow: 'lg', transform: 'translateY(-4px)' }}
+                transition="all 0.3s ease"
                 cursor="pointer"
                 onClick={() => navigateTo(`/tours/${destination.id}`)}
               >
@@ -349,16 +397,17 @@ const Dashboard = () => {
                   />
                   <Flex 
                     position="absolute"
-                    bottom={2}
-                    left={2}
-                    bg="blackAlpha.700"
+                    bottom={3}
+                    left={3}
+                    bg="rgba(0,0,0,0.8)"
                     color="white"
-                    px={2}
-                    py={1}
+                    px={3}
+                    py={1.5}
                     borderRadius="md"
                     align="center"
+                    boxShadow="md"
                   >
-                    <Text fontWeight="bold" mr={1}>
+                    <Text fontWeight="bold" mr={1} fontSize="md">
                       {destination.rating}
                     </Text>
                     <Text fontSize="sm">
@@ -367,22 +416,24 @@ const Dashboard = () => {
                   </Flex>
                 </Box>
                 
-                <Box p={4}>
-                  <Heading size="md" mb={2}>{destination.name}</Heading>
-                  <Text color="gray.600" mb={4}>
+                <Box p={5}>
+                  <Heading size="md" mb={2} color={primaryText}>{destination.name}</Heading>
+                  <Text color={secondaryText} mb={4} fontWeight="normal">
                     {destination.description}
                   </Text>
                   
                   <Flex justify="space-between" align="center">
-                    <Text fontWeight="bold" color="blue.600">
+                    <Text fontWeight="bold" color={highlightColor} fontSize="lg">
                       {formatPrice(destination.price)}
-                      <Box as="span" fontWeight="normal" fontSize="sm" color="gray.500">
+                      <Box as="span" fontWeight="normal" fontSize="sm" color={secondaryText} ml={1}>
                         /person
                       </Box>
                     </Text>
                     <Box>
                       <Button 
-                        colorScheme="blue" 
+                        bg={buttonColor}
+                        color={buttonText}
+                        _hover={{ bg: 'blue.700' }}
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -401,19 +452,23 @@ const Dashboard = () => {
 
         {/* Upcoming Tours and Top Guides Section */}
         <Grid templateColumns={{ base: "1fr", lg: "7fr 5fr" }} gap={8}>
-          {/* Upcoming Tours */}
+          {/* Upcoming Tours with improved visibility */}
           <Box>
-            <Heading size="lg" mb={4}>Your Upcoming Tours</Heading>
+            <Heading size="lg" mb={5} color={sectionHeadingColor} pb={2} borderBottom="2px solid" borderColor="gray.200">
+              Your Upcoming Tours
+            </Heading>
             
             {upcomingTours.length > 0 ? (
-              <Flex direction="column" gap={4}>
+              <Flex direction="column" gap={5}>
                 {upcomingTours.map((tour) => (
                   <Flex
                     key={tour.id}
-                    bg="white"
+                    bg={cardBg}
                     borderRadius="lg"
                     overflow="hidden"
                     boxShadow="md"
+                    _hover={{ boxShadow: 'lg' }}
+                    transition="all 0.3s ease"
                     direction={{ base: 'column', sm: 'row' }}
                   >
                     <Image 
@@ -423,33 +478,34 @@ const Dashboard = () => {
                       h={{ base: '150px', sm: '100%' }}
                       objectFit="cover"
                     />
-                    <Flex p={4} flex="1" direction="column" justify="space-between">
+                    <Flex p={5} flex="1" direction="column" justify="space-between">
                       <Box>
-                        <Heading size="md" mb={1}>{tour.name}</Heading>
-                        <Text color="gray.600" mb={3}>
+                        <Heading size="md" mb={2} color={primaryText}>{tour.name}</Heading>
+                        <Text color={primaryText} fontWeight="medium" mb={3}>
                           {tour.location}
                         </Text>
-                        <Flex align="center" mb={2}>
-                          <Box color="gray.500" mr={2}>
+                        <Flex align="center" mb={3}>
+                          <Box color={buttonColor} mr={2} fontSize="lg">
                             📅
                           </Box>
-                          <Text>{tour.date}</Text>
+                          <Text color={primaryText} fontWeight="medium">{tour.date}</Text>
                         </Flex>
                         <Flex align="center">
-                          <Box color="gray.500" mr={2}>
+                          <Box color={buttonColor} mr={2} fontSize="lg">
                             ⏰
                           </Box>
-                          <Text>{tour.time}</Text>
+                          <Text color={primaryText} fontWeight="medium">{tour.time}</Text>
                         </Flex>
                       </Box>
                       <Flex mt={4} justify="space-between" align="center">
-                        <Badge colorScheme="green" py={1} px={2} borderRadius="md">
+                        <Badge bg={badgeBg} color={badgeText} py={1.5} px={3} borderRadius="md" fontWeight="bold">
                           Confirmed
                         </Badge>
                         <Box>
                           <Button
-                            colorScheme="blue"
-                            size="sm"
+                            bg={buttonColor}
+                            color={buttonText}
+                            _hover={{ bg: 'blue.700' }}
                             onClick={() => navigateTo(`/bookings/${tour.id}`)}
                           >
                             View Details
@@ -462,16 +518,18 @@ const Dashboard = () => {
               </Flex>
             ) : (
               <Box 
-                bg="white" 
+                bg={cardBg}
                 p={8} 
                 borderRadius="lg" 
                 boxShadow="md"
                 textAlign="center"
               >
-                <Text fontSize="lg" mb={4}>You have no upcoming tours</Text>
+                <Text fontSize="lg" mb={4} color={primaryText}>You have no upcoming tours</Text>
                 <Box>
                   <Button 
-                    colorScheme="blue"
+                    bg={buttonColor}
+                    color={buttonText}
+                    _hover={{ bg: 'blue.700' }}
                     onClick={() => navigateTo('/tours')}
                   >
                     Explore Tours
@@ -481,17 +539,21 @@ const Dashboard = () => {
             )}
           </Box>
 
-          {/* Top Guides */}
+          {/* Top Guides with improved visibility */}
           <Box>
-            <Heading size="lg" mb={4}>Top Guides</Heading>
+            <Heading size="lg" mb={5} color={sectionHeadingColor} pb={2} borderBottom="2px solid" borderColor="gray.200">
+              Top Guides
+            </Heading>
             <Flex direction="column" gap={4}>
               {topGuides.map((guide) => (
                 <Flex
                   key={guide.id}
-                  bg="white"
+                  bg={cardBg}
                   p={4}
                   borderRadius="lg"
                   boxShadow="md"
+                  _hover={{ boxShadow: 'lg', transform: 'translateY(-2px)' }}
+                  transition="all 0.3s ease"
                   align="center"
                   cursor="pointer"
                   onClick={() => navigateTo(`/guides/${guide.id}`)}
@@ -503,6 +565,7 @@ const Dashboard = () => {
                     overflow="hidden"
                     mr={4}
                     position="relative"
+                    boxShadow="md"
                   >
                     <Image 
                       src={guide.avatar} 
@@ -511,21 +574,32 @@ const Dashboard = () => {
                       height="100%"
                       objectFit="cover"
                     />
+                    <Box 
+                      position="absolute" 
+                      bottom="2px" 
+                      right="2px" 
+                      width="12px" 
+                      height="12px" 
+                      bg="green.500" 
+                      borderRadius="full" 
+                      border="2px solid white"
+                    />
                   </Box>
                   <Box flex="1">
-                    <Heading size="sm" mb={1}>{guide.name}</Heading>
-                    <Text fontSize="sm" color="gray.600" mb={1}>
+                    <Heading size="md" mb={1} color={primaryText}>{guide.name}</Heading>
+                    <Text fontSize="sm" color={secondaryText} mb={1} fontWeight="medium">
                       {guide.location} • {guide.tours} tours
                     </Text>
                     <Flex align="center">
-                      <Text color="yellow.500" mr={1}>★</Text>
-                      <Text fontWeight="bold">{guide.rating}</Text>
+                      <Box color="yellow.500" fontWeight="bold" mr={1}>★★★★★</Box>
+                      <Text fontWeight="bold" color={primaryText}>{guide.rating}</Text>
                     </Flex>
                   </Box>
                   <Box>
                     <Button
-                      colorScheme="blue"
-                      size="sm"
+                      bg={buttonColor}
+                      color={buttonText}
+                      _hover={{ bg: 'blue.700' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         navigateTo(`/guides/${guide.id}/profile`);
@@ -539,7 +613,6 @@ const Dashboard = () => {
             </Flex>
           </Box>
         </Grid>
-
       </Container>
     </Box>
   );
