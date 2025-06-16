@@ -1,69 +1,92 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Box, Flex, Text, Button, Heading, Container, Grid,
+  useColorModeValue, Icon, VStack, HStack, Divider, useToast
+} from '@chakra-ui/react';
+import {
+  ArrowBackIcon, CheckCircleIcon, CalendarIcon, TimeIcon, InfoOutlineIcon
+} from '@chakra-ui/icons';
 
-function Payment() {
+const tourData = {
+  name: 'Bali Beach Hopping Adventure',
+  date: 'August 15, 2025',
+  time: '08:30 AM',
+  pricePerPerson: 1200000,
+  persons: 2,
+};
+
+const Payment: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [selectedMethod, setSelectedMethod] = useState('mastercard');
 
-  // Enhanced color scheme for better visibility
-  const styles = {
-    // Colors
-    primaryColor: '#3182CE', // Blue 600
-    primaryDark: '#2C5282', // Blue 800
-    primaryLight: '#EBF8FF', // Blue 50
-    primaryLighter: '#F0F9FF', // Even lighter blue
-    successColor: '#38A169', // Green 600
-    textPrimary: '#1A202C', // Gray 900
-    textSecondary: '#4A5568', // Gray 700
-    textTertiary: '#718096', // Gray 600
-    borderColor: '#E2E8F0', // Gray 200
-    bgLight: '#F7FAFC', // Gray 50
-    white: '#FFFFFF',
-    
-    // Typography
-    headingLarge: '1.75rem',
-    headingMedium: '1.5rem',
-    headingSmall: '1.25rem',
-    textRegular: '1rem',
-    textSmall: '0.875rem',
-    textXSmall: '0.75rem',
-    
-    // Spacing
-    spacingXs: '0.5rem',
-    spacingSm: '0.75rem',
-    spacingMd: '1rem',
-    spacingLg: '1.5rem',
-    spacingXl: '2rem',
-    
-    // Borders and effects
-    borderRadius: '0.5rem',
-    borderRadiusLg: '0.75rem',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    boxShadowHover: '0 10px 15px rgba(0,0,0,0.1)',
+  const overallBg = useColorModeValue('blue.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const glassBg = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.85)');
+  const primaryColor = useColorModeValue('blue.500', 'blue.400');
+  const primaryHoverColor = useColorModeValue('blue.600', 'blue.500');
+  const successColor = useColorModeValue('green.500', 'green.400');
+  const successHoverColor = useColorModeValue('green.600', 'green.500');
+  const primaryTextColor = useColorModeValue('gray.700', 'whiteAlpha.900');
+  const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
+  const subtleBorderColor = useColorModeValue('gray.200', 'gray.700');
+  const accentGradient = `linear(to-br, ${useColorModeValue('purple.400', 'purple.300')}, ${primaryColor})`;
+
+  const baseButtonStyle = {
+    borderRadius: "lg", fontWeight: "semibold", h: "44px",
+    px: 5, fontSize: "sm",
+    transition: "all 0.25s cubic-bezier(.08,.52,.52,1)",
+    _active: { transform: 'translateY(1px) scale(0.97)', boxShadow: 'sm' },
+    _focus: { boxShadow: `0 0 0 3px ${useColorModeValue('blue.200', 'blue.700')}` }
   };
 
-  // Simple formatting for price
-  function formatPrice(price) {
+  const primaryGradientButtonStyle = {
+    ...baseButtonStyle,
+    bgGradient: `linear(to-r, ${successColor}, ${useColorModeValue('green.400', 'green.300')})`,
+    color: 'white',
+    boxShadow: "md",
+    fontSize: { base: "md", md: "lg"},
+    h: {base: "48px", md: "52px"},
+    px: 6,
+    _hover: {
+      bgGradient: `linear(to-r, ${successHoverColor}, ${useColorModeValue('green.500', 'green.400')})`,
+      transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg'
+    },
+  };
+  
+  const secondaryButtonStyle = {
+    ...baseButtonStyle, bg: 'transparent', color: primaryColor,
+    border: "2px solid", borderColor: primaryColor,
+    _hover: {
+      bg: useColorModeValue('blue.50', 'rgba(49,130,206,0.1)'), borderColor: primaryHoverColor,
+      color: primaryHoverColor, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'md'
+    },
+  };
+
+  const formatPrice = (price: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(price);
-  }
+  };
 
-  // Hardcoded tour data
-  const tourPrice = 1200000;
-  const persons = 2;
-  const totalPrice = tourPrice * persons;
+  const totalPrice = tourData.pricePerPerson * tourData.persons;
 
-  // Handle form submission
-  function handlePaymentSubmit() {
-    alert('Payment successful! Your booking has been confirmed.');
-    // In a real app, we would navigate to the bookings page
+  const handlePaymentSubmit = () => {
+    toast({
+      title: 'Payment Successful!',
+      description: 'Your booking has been confirmed.',
+      status: 'success',
+      duration: 5000,
+      isClosable: true,
+      position: 'top',
+      icon: <Icon as={CheckCircleIcon} w={5} h={5} color="green.500" />
+    });
     navigate('/bookings');
-  }
+  };
 
-  // Payment methods
   const paymentMethods = [
     { id: 'mastercard', name: 'Mastercard', icon: '💳' },
     { id: 'qris', name: 'QRIS', icon: '🔲' },
@@ -74,396 +97,270 @@ function Payment() {
   ];
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      height: '100%',
-      width: '100%',
-      backgroundColor: styles.bgLight, 
-      padding: 0,
-      margin: 0,
-      fontFamily: 'Inter, system-ui, sans-serif',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      <div style={{ width: '100%', flex: 1 }}>
-        {/* Enhanced Header */}
-        <div style={{ 
-          backgroundColor: styles.white, 
-          padding: styles.spacingMd,
-          width: '100%',
-          borderBottom: `1px solid ${styles.borderColor}`,
-          boxShadow: styles.boxShadow,
-          position: 'sticky',
-          top: 0,
-          zIndex: 10
-        }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            maxWidth: '1400px',
-            margin: '0 auto',
-            padding: `0 ${styles.spacingLg}`
-          }}>
-            <div 
-              style={{ 
-                fontWeight: 'bold', 
-                fontSize: styles.headingMedium, 
-                color: styles.primaryColor, 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: styles.spacingSm
-              }}
-              onClick={() => navigate('/dashboard')}
-            >
-              <span role="img" aria-label="airplane" style={{ fontSize: '1.5rem' }}>✈️</span> Travelink
-            </div>
-            <button 
-              style={{ 
-                padding: `${styles.spacingSm} ${styles.spacingLg}`, 
-                backgroundColor: styles.primaryLight, 
-                color: styles.primaryColor, 
-                border: 'none', 
-                borderRadius: styles.borderRadius, 
-                cursor: 'pointer',
-                fontWeight: 'bold',
-                fontSize: styles.textRegular,
-                boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: styles.spacingSm
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = styles.primaryLighter;
-                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = styles.primaryLight;
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-              }}
-              onClick={() => navigate(-1)}
-            >
-              <span role="img" aria-label="back" style={{ fontSize: '1.2rem' }}>←</span>
-              Back
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content Container */}
-        <div style={{
-          maxWidth: '1000px',
-          width: '100%',
-          margin: '0 auto',
-          padding: `${styles.spacingXl} ${styles.spacingLg}`,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: styles.spacingXl
-        }}>
-          <h1 style={{ 
-            fontSize: styles.headingLarge, 
-            fontWeight: 'bold', 
-            color: styles.textPrimary,
-            borderBottom: `2px solid ${styles.borderColor}`,
-            paddingBottom: styles.spacingMd
-          }}>
-            Choose Payment
-          </h1>
-
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: styles.spacingXl,
-            width: '100%'
-          }}>
-            {/* Payment Methods Section */}
-            <div style={{ 
-              backgroundColor: styles.white, 
-              padding: styles.spacingXl, 
-              borderRadius: styles.borderRadiusLg, 
-              boxShadow: styles.boxShadow,
-              border: `1px solid ${styles.borderColor}`
-            }}>
-              <h2 style={{ 
-                fontSize: styles.headingSmall, 
-                fontWeight: 'bold', 
-                marginBottom: styles.spacingLg,
-                color: styles.primaryColor,
-                display: 'flex',
-                alignItems: 'center',
-                gap: styles.spacingSm
-              }}>
-                <span role="img" aria-label="credit card" style={{ fontSize: '1.5rem' }}>💳</span> 
-                Payment Methods
-              </h2>
-              
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                gap: styles.spacingMd
-              }}>
-                {paymentMethods.map((method) => (
-                  <div 
-                    key={method.id}
-                    style={{ 
-                      border: `2px solid ${method.id === selectedMethod ? styles.primaryColor : styles.borderColor}`,
-                      borderRadius: styles.borderRadius,
-                      padding: styles.spacingLg,
-                      cursor: 'pointer',
-                      backgroundColor: method.id === selectedMethod ? styles.primaryLight : styles.white,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: styles.spacingMd,
-                      transition: 'all 0.2s ease',
-                      boxShadow: method.id === selectedMethod ? styles.boxShadow : 'none'
-                    }}
-                    onClick={() => setSelectedMethod(method.id)}
-                    onMouseOver={(e) => {
-                      if (method.id !== selectedMethod) {
-                        e.currentTarget.style.boxShadow = styles.boxShadow;
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (method.id !== selectedMethod) {
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                      }
-                    }}
-                  >
-                    <div style={{ 
-                      width: '24px', 
-                      height: '24px', 
-                      borderRadius: '50%', 
-                      border: `2px solid ${method.id === selectedMethod ? styles.primaryColor : styles.borderColor}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      {method.id === selectedMethod && (
-                        <div style={{ 
-                          width: '12px', 
-                          height: '12px', 
-                          borderRadius: '50%',
-                          backgroundColor: styles.primaryColor
-                        }}></div>
-                      )}
-                    </div>
-                    <div style={{ 
-                      fontSize: '1.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: method.id === selectedMethod ? styles.white : styles.bgLight,
-                      borderRadius: '8px'
-                    }}>
-                      {method.icon}
-                    </div>
-                    <div style={{ 
-                      fontWeight: method.id === selectedMethod ? 'bold' : 'medium',
-                      color: method.id === selectedMethod ? styles.primaryColor : styles.textPrimary,
-                      fontSize: styles.textRegular
-                    }}>
-                      {method.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Invoice Section */}
-            <div style={{ 
-              backgroundColor: styles.white, 
-              padding: styles.spacingXl, 
-              borderRadius: styles.borderRadiusLg, 
-              boxShadow: styles.boxShadow,
-              border: `1px solid ${styles.borderColor}`
-            }}>
-              <h2 style={{ 
-                fontSize: styles.headingSmall, 
-                fontWeight: 'bold', 
-                marginBottom: styles.spacingLg,
-                color: styles.primaryColor,
-                display: 'flex',
-                alignItems: 'center',
-                gap: styles.spacingSm
-              }}>
-                <span role="img" aria-label="receipt" style={{ fontSize: '1.5rem' }}>🧾</span> 
-                Invoice
-              </h2>
-              
-              {/* Invoice Header */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 100px 120px', 
-                borderBottom: `2px solid ${styles.borderColor}`, 
-                paddingBottom: styles.spacingSm, 
-                marginBottom: styles.spacingMd,
-                fontWeight: 'bold',
-                color: styles.textPrimary
-              }}>
-                <div>Item Description</div>
-                <div>Time</div>
-                <div style={{ textAlign: 'right' }}>Price</div>
-              </div>
-              
-              {/* Invoice Details */}
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 100px 120px', 
-                marginBottom: styles.spacingLg,
-                padding: styles.spacingLg,
-                backgroundColor: styles.bgLight,
-                borderRadius: styles.borderRadius,
-                border: `1px solid ${styles.borderColor}`
-              }}>
-                <div>
-                  <div style={{ 
-                    fontWeight: 'bold',
-                    color: styles.textPrimary,
-                    fontSize: styles.textRegular,
-                    marginBottom: styles.spacingXs
-                  }}>
-                    Bali Beach Hopping Adventure
-                  </div>
-                  <div style={{ 
-                    fontSize: styles.textSmall, 
-                    color: styles.textSecondary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    marginBottom: '2px'
-                  }}>
-                    <span role="img" aria-label="calendar" style={{ fontSize: '1rem' }}>📅</span>
-                    Monday, May 25, 2025
-                  </div>
-                  <div style={{ 
-                    fontSize: styles.textSmall, 
-                    color: styles.textSecondary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <span role="img" aria-label="people" style={{ fontSize: '1rem' }}>👥</span>
-                    {persons} people
-                  </div>
-                </div>
-                <div style={{ 
-                  color: styles.textPrimary,
-                  fontWeight: 'medium',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
-                  08:30 AM
-                </div>
-                <div style={{ 
-                  textAlign: 'right',
-                  color: styles.primaryColor,
-                  fontWeight: 'bold'
-                }}>
-                  {formatPrice(tourPrice)}
-                </div>
-              </div>
-              
-              <div style={{ 
-                height: '1px', 
-                backgroundColor: styles.borderColor, 
-                margin: `${styles.spacingLg} 0` 
-              }}></div>
-              
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                fontWeight: 'bold', 
-                marginBottom: styles.spacingLg,
-                padding: styles.spacingMd,
-                backgroundColor: styles.primaryLight,
-                borderRadius: styles.borderRadius,
-                border: `1px solid ${styles.borderColor}`
-              }}>
-                <div style={{ 
-                  color: styles.textPrimary,
-                  fontSize: styles.textRegular
-                }}>
-                  Total (IDR):
-                </div>
-                <div style={{ 
-                  color: styles.primaryColor,
-                  fontSize: styles.headingSmall
-                }}>
-                  {formatPrice(totalPrice)}
-                </div>
-              </div>
-              
-              <button 
-                style={{ 
-                  width: '100%', 
-                  padding: styles.spacingLg, 
-                  backgroundColor: styles.successColor, 
-                  color: styles.white, 
-                  border: 'none', 
-                  borderRadius: styles.borderRadius, 
-                  fontSize: styles.headingSmall,
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  boxShadow: styles.boxShadow,
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: styles.spacingSm
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2F855A'; // Darker green
-                  e.currentTarget.style.boxShadow = styles.boxShadowHover;
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = styles.successColor;
-                  e.currentTarget.style.boxShadow = styles.boxShadow;
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-                onClick={handlePaymentSubmit}
+    <Box minH="100vh" bg={overallBg}>
+      <Box 
+        bg={glassBg} 
+        backdropFilter="blur(18px)" 
+        boxShadow="md" 
+        position="sticky" 
+        top={0} 
+        zIndex={1000} 
+        borderBottom="1px solid" 
+        borderColor={subtleBorderColor}
+      >
+        <Container maxW="container.xl">
+          <Flex h="68px" justify="space-between" align="center">
+            <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
+              <Flex 
+                alignItems="center" 
+                justifyContent="center" 
+                boxSize="40px" 
+                borderRadius="lg" 
+                bgGradient={accentGradient} 
+                boxShadow="lg" 
+                transition="all 0.3s ease" 
+                _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}
               >
-                <span role="img" aria-label="check" style={{ fontSize: '1.25rem' }}>✓</span>
-                Book Now
-              </button>
-              
-              <div style={{ 
-                fontSize: styles.textXSmall, 
-                color: styles.textSecondary, 
-                textAlign: 'center', 
-                marginTop: styles.spacingMd,
-                backgroundColor: styles.bgLight,
-                padding: styles.spacingSm,
-                borderRadius: styles.borderRadius
-              }}>
-                By clicking "Book Now", you agree to our Terms of Service and Privacy Policy.
-                Payment will be processed securely.
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Footer */}
-        <div style={{
-          backgroundColor: styles.white,
-          padding: `${styles.spacingLg} ${styles.spacingXl}`,
-          borderTop: `1px solid ${styles.borderColor}`,
-          marginTop: 'auto',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: styles.textSecondary, fontSize: styles.textSmall }}>
-            © 2025 Travelink. All rights reserved.
-          </p>
-        </div>
-      </div>
-    </div>
+                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
+              </Flex>
+              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">
+                Travelink
+              </Heading>
+            </Flex>
+            <Button 
+              {...secondaryButtonStyle} 
+              size="sm" 
+              onClick={() => navigate(-1)} 
+              leftIcon={<ArrowBackIcon />}
+            >
+              Back
+            </Button>
+          </Flex>
+        </Container>
+      </Box>
+
+      <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
+        <VStack spacing={{ base: 6, md: 8 }} align="stretch">
+          <Heading 
+            as="h1" 
+            size={{ base: "lg", md: "xl" }}
+            fontWeight="bold" 
+            color={primaryTextColor}
+            borderBottom="2px solid"
+            borderColor={subtleBorderColor}
+            pb={3}
+            textAlign="center"
+          >
+            Complete Your Payment
+          </Heading>
+
+          <Box 
+            bg={cardBg} 
+            p={{ base: 5, md: 8 }} 
+            borderRadius="xl" 
+            boxShadow="xl"
+            border="1px solid"
+            borderColor={subtleBorderColor}
+          >
+            <Heading 
+              as="h2" 
+              size={{ base: "md", md: "lg"}} 
+              fontWeight="bold" 
+              mb={6}
+              color={primaryColor}
+              display="flex"
+              alignItems="center"
+              gap={2}
+            >
+              <Text as="span" fontSize="2xl">💳</Text>
+              Select Payment Method
+            </Heading>
+            
+            <Grid 
+              templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} 
+              gap={5}
+            >
+              {paymentMethods.map((method) => (
+                <Flex
+                  key={method.id}
+                  border="2px solid"
+                  borderColor={method.id === selectedMethod ? primaryColor : subtleBorderColor}
+                  borderRadius="lg"
+                  p={5}
+                  cursor="pointer"
+                  bg={method.id === selectedMethod ? useColorModeValue('blue.50', 'blue.800') : cardBg}
+                  alignItems="center"
+                  gap={4}
+                  transition="all 0.2s ease"
+                  boxShadow={method.id === selectedMethod ? "lg" : "md"}
+                  _hover={{ 
+                    boxShadow: "xl", 
+                    transform: "translateY(-3px)",
+                    borderColor: primaryColor
+                  }}
+                  onClick={() => setSelectedMethod(method.id)}
+                >
+                  <Box 
+                    w="24px" h="24px" borderRadius="full" 
+                    border="2px solid" 
+                    borderColor={method.id === selectedMethod ? primaryColor : secondaryTextColor}
+                    display="flex" alignItems="center" justifyContent="center"
+                    flexShrink={0}
+                  >
+                    {method.id === selectedMethod && (
+                      <Box w="12px" h="12px" borderRadius="full" bg={primaryColor}></Box>
+                    )}
+                  </Box>
+                  <Text fontSize={{ base: "2xl", md: "3xl"}}>{method.icon}</Text>
+                  <Text 
+                    fontWeight={method.id === selectedMethod ? "bold" : "medium"}
+                    color={method.id === selectedMethod ? primaryColor : primaryTextColor}
+                    fontSize={{ base: "sm", md: "md"}}
+                  >
+                    {method.name}
+                  </Text>
+                </Flex>
+              ))}
+            </Grid>
+          </Box>
+
+          <Box 
+            bg={cardBg} 
+            p={{ base: 5, md: 8 }} 
+            borderRadius="xl" 
+            boxShadow="xl"
+            border="1px solid"
+            borderColor={subtleBorderColor}
+          >
+            <Heading 
+              as="h2" 
+              size={{ base: "md", md: "lg"}}
+              fontWeight="bold" 
+              mb={6}
+              color={primaryColor}
+              display="flex"
+              alignItems="center"
+              gap={2}
+            >
+              <Text as="span" fontSize="2xl">🧾</Text>
+              Order Summary
+            </Heading>
+            
+            <Box
+              bg={useColorModeValue('gray.50', 'gray.750')}
+              p={{ base: 4, md: 6 }}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor={subtleBorderColor}
+              mb={6}
+              boxShadow="sm"
+            >
+              <VStack spacing={4} align="stretch">
+                <Heading 
+                  size="md" 
+                  color={primaryTextColor} 
+                  pb={3}
+                  mb={2}
+                  borderBottom="1px dashed"
+                  borderColor={subtleBorderColor}
+                >
+                  {tourData.name}
+                </Heading>
+
+                <HStack justifyContent="space-between" alignItems="center">
+                  <HStack spacing={3} color={secondaryTextColor}>
+                    <Icon as={CalendarIcon} boxSize={5} />
+                    <Text fontSize="md" fontWeight="medium">Date:</Text>
+                  </HStack>
+                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{tourData.date}</Text>
+                </HStack>
+
+                <HStack justifyContent="space-between" alignItems="center">
+                  <HStack spacing={3} color={secondaryTextColor}>
+                    <Icon as={TimeIcon} boxSize={5} />
+                    <Text fontSize="md" fontWeight="medium">Time:</Text>
+                  </HStack>
+                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{tourData.time}</Text>
+                </HStack>
+
+                <HStack justifyContent="space-between" alignItems="center">
+                  <HStack spacing={3} color={secondaryTextColor}>
+                    <Icon as={InfoOutlineIcon} boxSize={5} /> 
+                    <Text fontSize="md" fontWeight="medium">Guests:</Text>
+                  </HStack>
+                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{tourData.persons} person(s)</Text>
+                </HStack>
+
+                <HStack justifyContent="space-between" alignItems="center">
+                  <HStack spacing={3} color={secondaryTextColor}>
+                    <Text fontSize="xl" lineHeight="1" color={primaryColor}>💲</Text>
+                    <Text fontSize="md" fontWeight="medium">Price per person:</Text>
+                  </HStack>
+                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{formatPrice(tourData.pricePerPerson)}</Text>
+                </HStack>
+              </VStack>
+            </Box>
+            
+            <Divider my={6} borderColor={subtleBorderColor}/>
+            
+            <Flex 
+              justifyContent="space-between" 
+              alignItems="center"
+              fontWeight="bold" 
+              mb={8}
+              p={{ base: 4, md: 5}}
+              bg={useColorModeValue('blue.100', 'blue.900')} 
+              borderRadius="lg"
+              border="1px solid"
+              borderColor={useColorModeValue('blue.200', 'blue.700')}
+            >
+              <Text color={primaryTextColor} fontSize={{ base: "md", md: "lg"}}>
+                Total Amount Due:
+              </Text>
+              <Text color={primaryColor} fontSize={{ base: "xl", md: "2xl"}} fontWeight="extrabold">
+                {formatPrice(totalPrice)}
+              </Text>
+            </Flex>
+            
+            <Button 
+              {...primaryGradientButtonStyle}
+              w="100%"
+              leftIcon={<CheckCircleIcon boxSize={5}/>}
+              onClick={handlePaymentSubmit}
+            >
+              Confirm & Book Now
+            </Button>
+            
+            <Text 
+              fontSize="xs" 
+              color={secondaryTextColor} 
+              textAlign="center" 
+              mt={6}
+              bg={useColorModeValue('gray.100', 'gray.750')}
+              p={3}
+              borderRadius="md"
+            >
+              By clicking "Confirm & Book Now", you agree to our Terms of Service and Privacy Policy.
+              Payment will be processed securely.
+            </Text>
+          </Box>
+        </VStack>
+      </Container>
+      
+      <Box 
+        bg={cardBg} 
+        py={6}
+        px={{ base: 4, md: 8}} 
+        borderTop="1px solid" 
+        borderColor={subtleBorderColor}
+        mt={10}
+      >
+        <Text textAlign="center" color={secondaryTextColor} fontSize="sm">
+          © {new Date().getFullYear()} Travelink. All rights reserved. Secure Payment Gateway.
+        </Text>
+      </Box>
+    </Box>
   );
-}
+};
 
 export default Payment;
