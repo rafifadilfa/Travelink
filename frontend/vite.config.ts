@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    allowedHosts: ['3554-36-50-113-249.ngrok-free.app']
+    allowedHosts: ['6b3d-125-208-135-1.ngrok-free.app']
   }
 })
