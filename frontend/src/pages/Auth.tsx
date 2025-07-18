@@ -37,6 +37,7 @@ const destinations: Destination[] = [
 const BASE_INPUT_BORDER_COLOR = '#dee2e6';
 const FOCUSED_INPUT_BORDER_COLOR = '#007bff';
 
+
 const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'login' | 'signup' | 'reset'>('login');
@@ -50,6 +51,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [isHoveringSubmit, setIsHoveringSubmit] = useState(false);
   const [isHoveringSocialGoogle, setIsHoveringSocialGoogle] = useState(false);
   const [isHoveringSocialFacebook, setIsHoveringSocialFacebook] = useState(false);
+  const [isHoveringGuideLogin, setIsHoveringGuideLogin] = useState(false);
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -146,6 +149,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     backgroundColor: '#0056b3',
     boxShadow: '0 6px 8px rgba(0, 0, 0, 0.15)',
     transform: 'translateY(-1px)',
+  };
+
+  const guideButtonStyle: React.CSSProperties = {
+      ...buttonBaseStyle,
+      backgroundColor: '#28a745', // Warna hijau untuk login pemandu
+      marginTop: '10px'
+  }
+
+  const guideButtonHoverStyle: React.CSSProperties = {
+      backgroundColor: '#218838',
+      boxShadow: '0 6px 8px rgba(0, 0, 0, 0.15)',
+      transform: 'translateY(-1px)',
   };
 
 
@@ -621,6 +636,15 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     Sign in with {provider}
                   </button>
                 ))}
+                 <button
+                    style={isHoveringGuideLogin ? {...guideButtonStyle, ...guideButtonHoverStyle} : guideButtonStyle}
+                    onMouseEnter={() => setIsHoveringGuideLogin(true)}
+                    onMouseLeave={() => setIsHoveringGuideLogin(false)}
+                    // PERUBAHAN DI SINI: Mengarahkan ke halaman autentikasi pemandu
+                    onClick={() => navigate('/guide/auth')}
+                 >
+                    Guide Login / Sign Up
+                </button>
                 </div>
             </>
           )}
