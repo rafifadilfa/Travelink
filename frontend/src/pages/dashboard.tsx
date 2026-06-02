@@ -16,7 +16,9 @@ import {
   VStack,
   HStack,
   Avatar,
+  Tooltip,
 } from '@chakra-ui/react';
+import { logoutUser } from '../utils/logout';
 import { ArrowForwardIcon, StarIcon as ChakraStarIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -290,6 +292,22 @@ const Dashboard: React.FC = () => {
                 />
                 <Box position="absolute" top="-1px" right="-1px" boxSize="12px" borderRadius="full" bg="green.400" border="2px solid" borderColor={cardBg} boxShadow="sm" />
               </Box>
+              <Tooltip label="Logout" placement="bottom">
+                <IconButton
+                  aria-label="Logout"
+                  variant="ghost"
+                  size="md"
+                  onClick={() => void logoutUser()}
+                  icon={
+                    <Icon viewBox="0 0 24 24" boxSize="20px">
+                      <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </Icon>
+                  }
+                  color={useColorModeValue('gray.500', 'gray.400')}
+                  _hover={{ bg: 'red.50', color: 'red.500' }}
+                  transition="all 0.2s ease"
+                />
+              </Tooltip>
             </HStack>
             <Box display={{ base: 'block', md: 'none' }}>
               <IconButton onClick={toggleDrawer} aria-label="Open Menu" variant="ghost" size="lg" icon={<Icon viewBox="0 0 24 24" boxSize="24px"><path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path></Icon>} _hover={{ bg: useColorModeValue('gray.200', 'gray.700') }} />
@@ -329,7 +347,7 @@ const Dashboard: React.FC = () => {
             <Button
               w="full" bg="red.500" color="white"
               _hover={{ bg: 'red.600', transform: 'translateY(-2px)', boxShadow: 'lg' }}
-              onClick={() => { navigateTo('/'); toggleDrawer(); }}
+              onClick={() => void logoutUser()}
               borderRadius="lg" h="56px" fontWeight="bold" transition="all 0.2s ease"
               leftIcon={<Text as="span" fontSize="xl" mr={3}>🚪</Text>}
               mt="auto"

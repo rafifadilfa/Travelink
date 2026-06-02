@@ -1,0 +1,95 @@
+<?php
+
+namespace App\Http\Controllers\Api\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\Guide;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Password as PasswordRules;
+
+class GuideApiController extends Controller
+{
+    /**
+     * Register pemandu wisata baru.
+     * Status default = 'pending' (dikontrol oleh nilai default DB, tidak perlu di-set manual).
+     */
+    public function register(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name'     => ['required', 'string', 'max:100'],
+            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:guides'],
+            'password' => ['required', 'confirmed', PasswordRules::defaults()],
+        ]);
+
+        try {
+            $guide = Guide::create([
+                'name'              => $validated['name'],
+                'email'             => $validated['email'],
+                'password'          => $validated['password'],
+                'email_verified_at' => now(),
+                // verification_status otomatis 'pending' dari default DB
+            ]);
+
+            return response()->json([
+                'message' => 'Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi dari admin.',
+                'guide'   => $guide,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal membuat akun: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Login pemandu wisata.
+     * Kembalikan token + data guide (termasuk verification_status) supaya frontend bisa
+     * langsung tahu apakah guide sudah verified atau masih pending.
+     */
+    public function login(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
+        if (Auth::guard('guides')->attempt($validated)) {
+            $guide = Auth::guard('guides')->user();
+            $token = $guide->createToken('guide-api-token')->plainTextToken;
+
+            return response()->json([
+                'message' => 'Login berhasil!',
+                'token'   => $token,
+                'guide'   => $guide,
+            ], 200);
+        }
+
+        return response()->json([
+            'message' => 'Email atau password tidak sesuai dengan records kami.',
+        ], 401);
+    }
+
+    /**
+     * Logout pemandu wisata — hapus semua token aktif.
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->tokens()->delete();
+
+        return response()->json([
+            'message' => 'Logout berhasil!',
+        ], 200);
+    }
+
+    /**
+     * Ambil data guide yang sedang login (termasuk verification_status terkini dari DB).
+     */
+    public function getGuide(Request $request): JsonResponse
+    {
+        return response()->json([
+            'guide' => $request->user(),
+        ], 200);
+    }
+}
