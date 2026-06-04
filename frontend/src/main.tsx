@@ -41,7 +41,7 @@ const customTheme = extendTheme({
       // Variants
       variants: {
         // Customizing the 'solid' variant
-        solid: (props: any) => ({ // props can be used for colorMode specifics if needed
+        solid: (_props: any) => ({
           bg: "brand.500", // Use your brand color
           color: "white",
           _hover: {
@@ -62,7 +62,7 @@ const customTheme = extendTheme({
         }),
         // You can define other variants like 'outline', 'ghost' here
         // Example for 'outline':
-        outline: (props: any) => ({
+        outline: (_props: any) => ({
           borderColor: "brand.500",
           color: "brand.500",
           _hover: {

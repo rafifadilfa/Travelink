@@ -24,13 +24,14 @@ class TourItinerarySeeder extends Seeder
             'Return to Hotel',
         ];
 
+        // Kolom start_time bertipe timestamp — prefix tanggal placeholder agar valid di MySQL strict mode
         $startTimes = [
-            '08:30',
-            '09:30',
-            '11:00',
-            '12:30',
-            '14:00',
-            '16:30',
+            '2026-01-01 08:30:00',
+            '2026-01-01 09:30:00',
+            '2026-01-01 11:00:00',
+            '2026-01-01 12:30:00',
+            '2026-01-01 14:00:00',
+            '2026-01-01 16:30:00',
         ];
 
         $descriptions = [

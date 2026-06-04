@@ -2,25 +2,26 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        Storage::disk('public')->deleteDirectory('tour_images');
-        Storage::disk('public')->makeDirectory('tour_images');
-        Storage::disk('public')->deleteDirectory('guide-profile-photos');
-        Storage::disk('public')->makeDirectory('guide-profile-photos');
-        Storage::disk('public')->deleteDirectory('user-profile-photos');
-        Storage::disk('public')->makeDirectory('user-profile-photos');
+        // Bersihkan direktori storage yang dikelola seeder
+        foreach (['tour_images', 'guide-profile-photos', 'user-profile-photos', 'kyc', 'payment_proofs'] as $dir) {
+            Storage::disk('public')->deleteDirectory($dir);
+            Storage::disk('public')->makeDirectory($dir);
+        }
+
+        // Disable FK checks agar truncate di semua seeder tidak gagal karena constraint.
+        // Di-enable kembali setelah semua seeder selesai.
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
 
         $this->call([
+            // -- Data referensi (tidak bergantung satu sama lain) --
             CountrySeeder::class,
             CategorySeeder::class,
             OpenTripActivitySeeder::class,
@@ -32,10 +33,15 @@ class DatabaseSeeder extends Seeder
             TagSeeder::class,
             PhoneCountryCodeSeeder::class,
             LocationSeeder::class,
+
+            // -- Akun pengguna --
+            AdminSeeder::class,          // Admin WAJIB ada sebelum TransactionSeeder (payment_verified_by)
             UserSeeder::class,
-            GuideSeeder::class,
+            GuideSeeder::class,          // 4 guide (verified/pending/menunggu_verifikasi/rejected)
             GuideSpecialitySeeder::class,
             GuideLanguageSeeder::class,
+
+            // -- Data tour --
             MeetingPointSeeder::class,
             TourSeeder::class,
             DummyTourSeeder::class,
@@ -47,5 +53,7 @@ class DatabaseSeeder extends Seeder
             TransactionSeeder::class,
             OpenTripParticipantSeeder::class,
         ]);
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }
