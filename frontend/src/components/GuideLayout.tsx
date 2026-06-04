@@ -29,6 +29,7 @@ import {
     FiBell,
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { logoutGuide } from '../utils/logout';
 
 // --- TYPE DEFINITIONS ---
 interface NavItemProps extends FlexProps {
@@ -44,12 +45,6 @@ interface SidebarProps extends BoxProps {
 interface GuideLayoutProps {
     children: ReactNode;
 }
-
-// --- MOCK DATA & CONFIG ---
-const guideData = {
-    name: "Budi Hartono",
-    avatar: "https://randomuser.me/api/portraits/men/32.jpg"
-};
 
 // --- PERUBAHAN 1: "Settings" DIHAPUS DARI SINI ---
 const LinkItems = [
@@ -89,6 +84,10 @@ const NavItem = ({ icon, children, path, ...rest }: NavItemProps) => {
 };
 
 const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
+  const logoutItemColor = useColorModeValue('gray.600', 'gray.200');
+
+  const handleLogout = () => void logoutGuide();
+
   return (
     <Box
         bg={useColorModeValue('white', 'gray.800')}
@@ -111,20 +110,32 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
           </NavItem>
         ))}
 
-        {/* --- PERUBAHAN 2: GRUP BARU UNTUK SETTINGS & LOGOUT DI BAWAH --- */}
-        <VStack 
-            pos="absolute" 
-            bottom="8" 
-            w="full" 
-            spacing={2} 
+        <VStack
+            pos="absolute"
+            bottom="8"
+            w="full"
+            spacing={2}
             align="stretch"
         >
             <NavItem icon={FiSettings} path="/guide/settings">
                 Settings
             </NavItem>
-            <NavItem icon={FiLogOut} path="/">
+            {/* Logout: pakai Flex dengan onClick, bukan NavItem dengan path,
+                supaya bisa menjalankan handleLogout sebelum berpindah halaman */}
+            <Flex
+                onClick={handleLogout}
+                align="center"
+                p="3"
+                mx="4"
+                borderRadius="lg"
+                role="group"
+                cursor="pointer"
+                color={logoutItemColor}
+                _hover={{ bg: 'red.400', color: 'white' }}
+            >
+                <Icon mr="4" fontSize="16" as={FiLogOut} />
                 Logout
-            </NavItem>
+            </Flex>
         </VStack>
     </Box>
   );
@@ -133,9 +144,20 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
 // --- MAIN LAYOUT COMPONENT ---
 const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    
+
     const pageBg = useColorModeValue('gray.100', 'gray.900');
     const cardBg = useColorModeValue('white', 'gray.800');
+
+    // Baca data guide dari localStorage — disimpan saat login di GuideAuth.tsx
+    const guideRaw = localStorage.getItem('guide');
+    const guide = guideRaw ? JSON.parse(guideRaw) : null;
+
+    // Konversi path storage Laravel ke URL penuh untuk foto profil
+    // Contoh: "public/guides/photos/file.jpg" → "http://localhost:8000/storage/guides/photos/file.jpg"
+    const apiBase = ((import.meta.env.VITE_API_URL as string) ?? '').replace('/api', '');
+    const avatarSrc = guide?.profile_picture
+        ? `${apiBase}/${guide.profile_picture.replace('public/', 'storage/')}`
+        : undefined;
 
     return (
         <Box minH="100vh" bg={pageBg}>
@@ -190,11 +212,11 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
                         />
                         <Flex alignItems={'center'}>
                             <HStack>
-                                <Avatar size={'sm'} src={guideData.avatar}/>
+                                <Avatar size={'sm'} src={avatarSrc} name={guide?.name ?? 'Guide'} />
                                 <VStack display={{ base: 'none', md: 'flex' }} alignItems="flex-start" spacing="1px" ml="2">
-                                    <Text fontSize="sm">{guideData.name}</Text>
+                                    <Text fontSize="sm">{guide?.name ?? 'Guide'}</Text>
                                     <Text fontSize="xs" color="gray.500">
-                                        Pro Guide
+                                        Pemandu Wisata
                                     </Text>
                                 </VStack>
                             </HStack>

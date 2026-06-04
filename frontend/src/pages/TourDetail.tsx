@@ -16,7 +16,7 @@ import {
     VStack,
     Avatar
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 
 import { FiClock, FiCalendar, FiUsers, FiMessageCircle, FiStar } from 'react-icons/fi';
@@ -74,6 +74,10 @@ const tourSteps = [
 
 const TourDetail: React.FC = () => {
     const navigate = useNavigate();
+    const { id } = useParams<{ id: string }>();
+    const { state } = useLocation() as { state: { is_open_trip?: boolean; tour_id?: number } | null };
+    const isOpenTrip = state?.is_open_trip === true;
+
     const [activeImage, setActiveImage] = useState(0);
     const [activeTab, setActiveTab] = useState(0);
     const [participants, setParticipants] = useState(2);
@@ -179,7 +183,7 @@ const TourDetail: React.FC = () => {
                         </Flex>
                         <HStack spacing={3}>
                             <Button {...secondaryNavButtonStyle} size="sm" onClick={() => navigate('/tours')} leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}>Explore</Button>
-                            <Button {...primaryNavButtonStyle} size="sm" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}>My Trips</Button>
+                            <Button {...primaryNavButtonStyle} size="sm" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}>My Bookings</Button>
                         </HStack>
                     </Flex>
                 </Container>
@@ -272,6 +276,24 @@ const TourDetail: React.FC = () => {
                                 </Flex>
                                 <Text fontSize="xs" color={secondaryTextColor} mt={1}>{participants} {participants === 1 ? 'person' : 'people'} × {formatPrice(tourPrice)}</Text>
                             </Box>
+
+                            {isOpenTrip && (
+                                <Box>
+                                    <Button
+                                        {...ctaButtonStyle}
+                                        w="full"
+                                        bgGradient="linear(to-r, purple.500, blue.500)"
+                                        _hover={{ bgGradient: "linear(to-r, purple.600, blue.600)", transform: 'translateY(-3px)', boxShadow: 'xl' }}
+                                        onClick={() => navigate(`/open-trip/join/${id}`)}
+                                        leftIcon={<Text fontSize="xl">✨</Text>}
+                                    >
+                                        Ikut Smart Open Trip
+                                    </Button>
+                                    <Text fontSize="xs" color={secondaryTextColor} textAlign="center" mt={2}>
+                                        Bergabung dengan wisatawan lain & hemat biaya bersama
+                                    </Text>
+                                </Box>
+                            )}
 
                             <Button {...ctaButtonStyle} bgGradient="linear(to-r, green.400, green.500)" _hover={{ bgGradient: "linear(to-r, green.500, green.600)" }} onClick={handleBookNow} leftIcon={<Text fontSize="xl">🎫</Text>}>Book Now & Secure Your Spot</Button>
 

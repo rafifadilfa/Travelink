@@ -1,5 +1,5 @@
 import React, { ReactNode, useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 // Corrected import paths based on your file structure
 import Auth from './pages/Auth';
@@ -19,6 +19,12 @@ import GuideEditProfile from './pages/GuideEditProfile';
 import GuideAuth from './pages/GuideAuth';
 import CancelBooking from './pages/CancelBooking';
 import GuideSettings from './pages/GuideSettings';
+import AdminAuth from './pages/AdminAuth';
+import AdminKycList from './pages/AdminKycList';
+import AdminKycDetail from './pages/AdminKycDetail';
+import AdminGuideList from './pages/AdminGuideList';
+import SmartOpenTripForm from './pages/SmartOpenTripForm';
+import WaitingRoom from './pages/WaitingRoom';
 
 // Type definitions
 interface ComingSoonProps {
@@ -27,6 +33,14 @@ interface ComingSoonProps {
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  /** 'tourist' (default) | 'guide' | 'admin' — menentukan localStorage key mana yang dicek */
+  role?: 'tourist' | 'guide' | 'admin';
+  /**
+   * Khusus role 'guide': kalau true, guide dengan status 'pending' atau 'rejected'
+   * akan di-redirect ke /guide/dashboard (yang menampilkan halaman menunggu verifikasi).
+   * Gunakan ini untuk route yang butuh akun guide sudah verified, misal: buat/edit tour.
+   */
+  requireVerified?: boolean;
 }
 
 // NotFound component for 404 routes
@@ -71,8 +85,37 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
-  const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    // In a real app, you would add logic here to check if the user is authenticated.
+  const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+    children,
+    role = 'tourist',
+    requireVerified = false,
+  }) => {
+    if (role === 'admin') {
+      const adminToken = localStorage.getItem('admin_token');
+      if (!adminToken) return <Navigate to="/admin/auth" replace />;
+      return <>{children}</>;
+    }
+
+    if (role === 'guide') {
+      const guideToken = localStorage.getItem('guide_token');
+      if (!guideToken) return <Navigate to="/guide/auth" replace />;
+
+      // Kalau route ini butuh guide sudah verified, cek status dari localStorage
+      if (requireVerified) {
+        const guideRaw = localStorage.getItem('guide');
+        const guide = guideRaw ? JSON.parse(guideRaw) : null;
+        if (guide?.verification_status !== 'verified') {
+          // Redirect ke dashboard — di sana guide akan melihat halaman "menunggu verifikasi"
+          return <Navigate to="/guide/dashboard" replace />;
+        }
+      }
+
+      return <>{children}</>;
+    }
+
+    // Default: tourist
+    const token = localStorage.getItem('token');
+    if (!token) return <Navigate to="/" replace />;
     return <>{children}</>;
   };
 
@@ -81,20 +124,29 @@ const App: React.FC = () => {
       {/* Public route */}
       <Route path="/" element={<Auth />} />
       <Route path="/guide/auth" element={<GuideAuth />} />
+      <Route path="/admin/auth" element={<AdminAuth />} />
+
+      {/* --- Admin Section Routes --- */}
+      <Route path="/admin/kyc" element={<ProtectedRoute role="admin"><AdminKycList /></ProtectedRoute>} />
+      <Route path="/admin/kyc/:id" element={<ProtectedRoute role="admin"><AdminKycDetail /></ProtectedRoute>} />
+      <Route path="/admin/guides" element={<ProtectedRoute role="admin"><AdminGuideList /></ProtectedRoute>} />
 
       {/* --- Guide Section Routes --- */}
-      <Route path="/guide/dashboard" element={<ProtectedRoute><GuideDashboard /></ProtectedRoute>} />
-      <Route path="/guide/tours" element={<ProtectedRoute><GuideTours /></ProtectedRoute>} />
-      {/* Corrected component name in the route */}
-      <Route path="/guide/tours/new" element={<ProtectedRoute><CreateTour /></ProtectedRoute>} />
-      <Route path="/guide/bookings" element={<ProtectedRoute><GuideBookings /></ProtectedRoute>} />
-      <Route path="/guide/tours/edit/:tourId" element={<ProtectedRoute><EditTour /></ProtectedRoute>} />
-      <Route path="/guide/profile" element={<ProtectedRoute><GuideEditProfile /></ProtectedRoute>} />
-      <Route path="/guide/bookings/cancel/:bookingId" element={<ProtectedRoute><CancelBooking /></ProtectedRoute>} />
-      <Route path="/guide/settings" element={<ProtectedRoute><GuideSettings /></ProtectedRoute>} />
+      {/* Dashboard & info akun bisa diakses guide pending (untuk lihat status verifikasi) */}
+      <Route path="/guide/dashboard" element={<ProtectedRoute role="guide"><GuideDashboard /></ProtectedRoute>} />
+      <Route path="/guide/profile" element={<ProtectedRoute role="guide"><GuideEditProfile /></ProtectedRoute>} />
+      <Route path="/guide/settings" element={<ProtectedRoute role="guide"><GuideSettings /></ProtectedRoute>} />
+      {/* Route berikut BUTUH guide sudah verified — guide pending akan di-redirect ke dashboard */}
+      <Route path="/guide/tours" element={<ProtectedRoute role="guide" requireVerified><GuideTours /></ProtectedRoute>} />
+      <Route path="/guide/tours/new" element={<ProtectedRoute role="guide" requireVerified><CreateTour /></ProtectedRoute>} />
+      <Route path="/guide/tours/edit/:tourId" element={<ProtectedRoute role="guide" requireVerified><EditTour /></ProtectedRoute>} />
+      <Route path="/guide/bookings" element={<ProtectedRoute role="guide" requireVerified><GuideBookings /></ProtectedRoute>} />
+      <Route path="/guide/bookings/cancel/:bookingId" element={<ProtectedRoute role="guide" requireVerified><CancelBooking /></ProtectedRoute>} />
       
       
       {/* --- User Section Routes --- */}
+      <Route path="/open-trip/join/:tourId" element={<ProtectedRoute><SmartOpenTripForm /></ProtectedRoute>} />
+      <Route path="/open-trip/waiting/:participantId" element={<ProtectedRoute><WaitingRoom /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/tours" element={<ProtectedRoute><ViewAllTours /></ProtectedRoute>} />
       <Route path="/tours/:id" element={<ProtectedRoute><TourDetail /></ProtectedRoute>} />

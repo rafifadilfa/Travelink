@@ -46,6 +46,11 @@ return [
             'driver' => 'session',
             'provider' => 'guides',
         ],
+
+        'admins' => [
+            'driver' => 'session',
+            'provider' => 'admins',
+        ],
     ],
 
     /*
@@ -79,6 +84,11 @@ return [
         'guides' => [
             'driver' => 'eloquent',
             'model' => App\Models\Guide::class
+        ],
+
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Admin::class
         ],
 
         // 'users' => [

@@ -16,7 +16,9 @@ import {
   VStack,
   HStack,
   Avatar,
+  Tooltip,
 } from '@chakra-ui/react';
+import { logoutUser } from '../utils/logout';
 import { ArrowForwardIcon, StarIcon as ChakraStarIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -290,6 +292,22 @@ const Dashboard: React.FC = () => {
                 />
                 <Box position="absolute" top="-1px" right="-1px" boxSize="12px" borderRadius="full" bg="green.400" border="2px solid" borderColor={cardBg} boxShadow="sm" />
               </Box>
+              <Tooltip label="Logout" placement="bottom">
+                <IconButton
+                  aria-label="Logout"
+                  variant="ghost"
+                  size="md"
+                  onClick={() => void logoutUser()}
+                  icon={
+                    <Icon viewBox="0 0 24 24" boxSize="20px">
+                      <path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+                    </Icon>
+                  }
+                  color={useColorModeValue('gray.500', 'gray.400')}
+                  _hover={{ bg: 'red.50', color: 'red.500' }}
+                  transition="all 0.2s ease"
+                />
+              </Tooltip>
             </HStack>
             <Box display={{ base: 'block', md: 'none' }}>
               <IconButton onClick={toggleDrawer} aria-label="Open Menu" variant="ghost" size="lg" icon={<Icon viewBox="0 0 24 24" boxSize="24px"><path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path></Icon>} _hover={{ bg: useColorModeValue('gray.200', 'gray.700') }} />
@@ -329,7 +347,7 @@ const Dashboard: React.FC = () => {
             <Button
               w="full" bg="red.500" color="white"
               _hover={{ bg: 'red.600', transform: 'translateY(-2px)', boxShadow: 'lg' }}
-              onClick={() => { navigateTo('/'); toggleDrawer(); }}
+              onClick={() => void logoutUser()}
               borderRadius="lg" h="56px" fontWeight="bold" transition="all 0.2s ease"
               leftIcon={<Text as="span" fontSize="xl" mr={3}>🚪</Text>}
               mt="auto"
@@ -476,6 +494,166 @@ const Dashboard: React.FC = () => {
               </Box>
             ))}
           </Grid>
+        </Box>
+
+        {/* ── Smart Open Trip ── */}
+        <Box mb={16} animation={`${slideInUp} 0.7s ease-out 0.15s both`}>
+          <Box
+            borderRadius={{ base: '2xl', md: '3xl' }}
+            overflow="hidden"
+            position="relative"
+            bgGradient="linear(135deg, teal.700 0%, teal.600 50%, green.600 100%)"
+            boxShadow="xl"
+          >
+            <Box position="absolute" top="-80px" left="-80px" boxSize="300px"
+              borderRadius="full" bg="whiteAlpha.100" filter="blur(50px)" pointerEvents="none" />
+            <Box position="absolute" bottom="-50px" right="15%" boxSize="220px"
+              borderRadius="full" bg="whiteAlpha.100" filter="blur(40px)" pointerEvents="none" />
+
+            <Flex
+              direction={{ base: 'column', lg: 'row' }}
+              align={{ base: 'flex-start', lg: 'center' }}
+              px={{ base: 6, md: 10, lg: 14 }}
+              py={{ base: 10, md: 12 }}
+              gap={{ base: 8, lg: 10 }}
+              minH={{ lg: '320px' }}
+            >
+              <Box flex="1" zIndex={1}>
+                <Badge
+                  display="inline-flex" alignItems="center"
+                  bg="whiteAlpha.200" color="white"
+                  border="1px solid" borderColor="whiteAlpha.300"
+                  backdropFilter="blur(8px)"
+                  px={3} py={1} borderRadius="full" fontSize="xs" fontWeight="bold" mb={5}
+                >
+                  <ShineIcon boxSize="10px" color="yellow.200" mr={1.5} />
+                  Fitur Unggulan
+                </Badge>
+
+                <Heading
+                  as="h2"
+                  fontSize={{ base: '2xl', md: '3xl', lg: '3xl' }}
+                  color="white" fontWeight="black" lineHeight="1.2"
+                  mb={3} textShadow="0 2px 8px rgba(0,0,0,0.15)"
+                >
+                  Traveling Lebih Hemat,
+                  <br />Bareng Sesama Traveler
+                </Heading>
+
+                <Text
+                  color="whiteAlpha.900"
+                  fontSize={{ base: 'sm', md: 'md' }}
+                  lineHeight="1.75" mb={7}
+                  maxW={{ base: 'full', lg: '500px' }}
+                >
+                  Smart Open Trip mencocokkan kamu dengan traveler lain yang punya
+                  selera perjalanan serupa. Daftar, tunggu match, berangkat bareng —
+                  biaya dibagi adil.
+                </Text>
+
+                <VStack spacing={3} align="flex-start" mb={8}>
+                  {[
+                    'Harga lebih hemat karena biaya dibagi bersama',
+                    'Dicocokkan otomatis berdasarkan minat & budgetmu',
+                    'Pemandu wisata lokal terverifikasi',
+                  ].map((benefit) => (
+                    <HStack key={benefit} spacing={3} align="flex-start">
+                      <Flex
+                        align="center" justify="center" flexShrink={0}
+                        boxSize="20px" mt="2px" borderRadius="full"
+                        bg="whiteAlpha.300" border="1px solid" borderColor="whiteAlpha.400"
+                      >
+                        <Icon viewBox="0 0 24 24" boxSize="11px" color="white">
+                          <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                        </Icon>
+                      </Flex>
+                      <Text color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                        {benefit}
+                      </Text>
+                    </HStack>
+                  ))}
+                </VStack>
+
+                <Button
+                  bg="white" color="teal.700" fontWeight="bold"
+                  h="50px" px={8} borderRadius="lg" fontSize="sm" boxShadow="lg"
+                  onClick={() => navigateTo('/tours')}
+                  rightIcon={<ArrowForwardIcon />}
+                  _hover={{ bg: 'gray.50', transform: 'translateY(-2px)', boxShadow: 'xl' }}
+                  _active={{ transform: 'translateY(1px)', boxShadow: 'md' }}
+                  transition="all 0.25s cubic-bezier(.08,.52,.52,1)"
+                >
+                  Cari Tour Open Trip
+                </Button>
+              </Box>
+
+              <Flex
+                display={{ base: 'none', lg: 'flex' }}
+                flexShrink={0} w="260px"
+                direction="column" align="center"
+                gap={4} zIndex={1}
+              >
+                <Box position="relative" h="68px" w="252px">
+                  {[
+                    { init: 'AR', bg: 'teal.400', left: 0 },
+                    { init: 'NF', bg: 'green.400', left: 48 },
+                    { init: 'DW', bg: 'teal.300', left: 96 },
+                    { init: 'SK', bg: 'green.500', left: 144 },
+                  ].map(({ init, bg, left }, i) => (
+                    <Flex
+                      key={init}
+                      position="absolute" left={`${left}px`} top={0}
+                      boxSize="60px" borderRadius="full"
+                      bg={bg} border="3px solid" borderColor="teal.800"
+                      align="center" justify="center"
+                      zIndex={4 - i} boxShadow="md"
+                    >
+                      <Text color="white" fontWeight="bold" fontSize="xs">{init}</Text>
+                    </Flex>
+                  ))}
+                  <Flex
+                    position="absolute" left="192px" top={0}
+                    boxSize="60px" borderRadius="full"
+                    bg="whiteAlpha.200" border="3px solid" borderColor="whiteAlpha.400"
+                    align="center" justify="center" zIndex={0}
+                  >
+                    <Text color="white" fontWeight="bold" fontSize="xs">+3</Text>
+                  </Flex>
+                </Box>
+
+                <Box
+                  bg="whiteAlpha.200" borderRadius="xl" px={5} py={4}
+                  border="1px solid" borderColor="whiteAlpha.300"
+                  backdropFilter="blur(12px)" w="full" textAlign="center"
+                >
+                  <Text color="white" fontWeight="bold" fontSize="sm" mb={1}>
+                    8 traveler bergabung
+                  </Text>
+                  <Text color="whiteAlpha.700" fontSize="xs">
+                    ⚡ Masih ada 2 slot tersisa
+                  </Text>
+                  <Flex mt={3} gap={1.5}>
+                    {[...Array(5)].map((_, i) => (
+                      <Box key={i} flex={1} h="5px" borderRadius="full"
+                        bg={i < 4 ? 'white' : 'whiteAlpha.300'} />
+                    ))}
+                  </Flex>
+                  <Text color="whiteAlpha.500" fontSize="xs" mt={1.5}>
+                    4 dari 5 slot terisi
+                  </Text>
+                </Box>
+
+                <HStack spacing={1} opacity={0.8}>
+                  {[...Array(5)].map((_, i) => (
+                    <ShineIcon key={i} boxSize="12px" color="yellow.200" />
+                  ))}
+                  <Text color="whiteAlpha.700" fontSize="xs" ml={1}>
+                    Dicocokkan algoritma
+                  </Text>
+                </HStack>
+              </Flex>
+            </Flex>
+          </Box>
         </Box>
 
         <Grid templateColumns={{ base: "1fr", lg: "minmax(0, 2.2fr) minmax(0, 1fr)" }} gap={{ base: 10, md: 8 }} mb={16}>

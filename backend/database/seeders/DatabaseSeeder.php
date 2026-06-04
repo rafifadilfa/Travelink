@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CountrySeeder::class,
             CategorySeeder::class,
+            OpenTripActivitySeeder::class,
             DayPhaseSeeder::class,
             LanguageSeeder::class,
             ItemSeeder::class,
@@ -37,12 +38,14 @@ class DatabaseSeeder extends Seeder
             GuideLanguageSeeder::class,
             MeetingPointSeeder::class,
             TourSeeder::class,
+            DummyTourSeeder::class,
             TourImageSeeder::class,
             TourItinerarySeeder::class,
             TourItemSeeder::class,
             TourCategorySeeder::class,
             TourTagSeeder::class,
             TransactionSeeder::class,
+            OpenTripParticipantSeeder::class,
         ]);
     }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../services/api';
 
 interface AuthProps {
   onLogin?: () => void;
@@ -52,49 +53,128 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [isHoveringSocialGoogle, setIsHoveringSocialGoogle] = useState(false);
   const [isHoveringSocialFacebook, setIsHoveringSocialFacebook] = useState(false);
   const [isHoveringGuideLogin, setIsHoveringGuideLogin] = useState(false);
+  const [loginErrors, setLoginErrors] = useState<{ [key: string]: string }>({});
+  const [registerErrors, setRegisterErrors] = useState<{ [key: string]: string }>({});
+  const [resetErrors, setResetErrors] = useState<{ [key: string]: string }>({});
 
 
   useEffect(() => {
+    // Kalau sudah login, langsung redirect ke dashboard
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/dashboard');
+    }
+
     const interval = setInterval(() => {
       setCurrentDestination((prev) => (prev + 1) % destinations.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>): void => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setLoading(true);
+    setLoginErrors({});
 
-    setTimeout(() => {
-      if (onLogin) {
-        onLogin();
+    try {
+      const response = await apiClient.post('/auth/login', {
+        email: email,
+        password: password,
+      });
+
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+
+        if (onLogin) {
+          onLogin();
+        }
+        navigate('/dashboard');
       }
-      navigate('/dashboard');
-    }, 1000);
-  };
-
-  const handleSignUp = (e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    setLoading(true);
-
-    setTimeout(() => {
-      if (onLogin) {
-        onLogin();
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        setLoginErrors(error.response.data.errors);
+      } else if (error.response?.data?.message) {
+        setLoginErrors({ general: error.response.data.message });
+      } else {
+        setLoginErrors({ general: 'Login gagal. Silakan cek email dan password Anda.' });
       }
-      navigate('/dashboard');
-    }, 1000);
-  };
-
-  const handleReset = (e: FormEvent<HTMLFormElement>): void => {
-    e.preventDefault();
-    setLoading(true);
-
-    setTimeout(() => {
-      alert(`Reset email sent to ${email || 'your email'}!`);
-      setActiveTab('login');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  const handleSignUp = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    setRegisterErrors({});
+    
+    setLoading(true);
+
+    try {
+      console.log('Register attempt:', { email, password, confirmPassword, username });
+      const response = await apiClient.post('/auth/register', {
+        name: username,
+        email: email,
+        password: password,
+        password_confirmation: confirmPassword,
+      });
+
+      console.log('Register success:', response.data);
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+
+        if (onLogin) {
+          onLogin();
+        }
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Register error:', {
+        status: error.response?.status,
+        message: error.response?.data?.message,
+        errors: error.response?.data?.errors,
+        fullError: error
+      });
+
+      if (error.response?.data?.errors) {
+        setRegisterErrors(error.response.data.errors);
+      } else if (error.response?.data?.message) {
+        setRegisterErrors({ general: error.response.data.message });
+      } else {
+        setRegisterErrors({ general: `Pendaftaran gagal: ${error.message}` });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    setResetErrors({});
+    setLoading(true);
+
+    try {
+      const response = await apiClient.post('/auth/forgot-password', {
+        email: email,
+      });
+
+      alert(response.data.message || `Email reset password telah dikirim ke ${email}!`);
+      setActiveTab('login');
+      setEmail('');
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        setResetErrors(error.response.data.errors);
+      } else if (error.response?.data?.message) {
+        setResetErrors({ general: error.response.data.message });
+      } else {
+        setResetErrors({ general: 'Gagal mengirim email reset. Silakan cek email Anda.' });
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: string): void => {
@@ -321,7 +401,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   textAlign: 'center',
                   fontSize: '16px',
                 }}
-                onClick={() => setActiveTab(tabName as 'login' | 'signup')}
+                onClick={() => {
+                  setActiveTab(tabName as 'login' | 'signup');
+                  setLoginErrors({});
+                  setRegisterErrors({});
+                }}
               >
                 {tabName === 'login' ? 'Sign In' : 'Sign Up'}
               </div>
@@ -331,6 +415,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           {activeTab === 'login' && (
             <form onSubmit={handleLogin}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {loginErrors.general && (
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#f8d7da',
+                    borderRadius: '6px',
+                    color: '#721c24',
+                    fontSize: '14px',
+                  }}>
+                    {loginErrors.general}
+                  </div>
+                )}
+
                 <div>
                   <label style={{
                     fontWeight: '500',
@@ -345,10 +441,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     placeholder="your@email.com or username"
                     value={email}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      borderColor: loginErrors.email ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                    }}
                     onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = loginErrors.email ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                   />
+                  {loginErrors.email && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{loginErrors.email}</p>}
                 </div>
 
                 <div>
@@ -372,7 +472,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                         fontWeight: '500',
                         transition: 'color 0.2s ease',
                       }}
-                      onClick={() => setActiveTab('reset')}
+                      onClick={() => {
+                        setActiveTab('reset');
+                        setLoginErrors({});
+                        setResetErrors({});
+                      }}
                       onMouseEnter={(e) => (e.currentTarget.style.color = '#0056b3')}
                       onMouseLeave={(e) => (e.currentTarget.style.color = '#007bff')}
                     >
@@ -385,10 +489,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                      style={inputStyle}
+                      style={{
+                        ...inputStyle,
+                        borderColor: loginErrors.password ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                      }}
                       onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                      onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                      onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = loginErrors.password ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                     />
+                    {loginErrors.password && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{loginErrors.password}</p>}
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
@@ -426,6 +534,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           {activeTab === 'signup' && (
             <form onSubmit={handleSignUp}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {registerErrors.general && (
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#f8d7da',
+                    borderRadius: '6px',
+                    color: '#721c24',
+                    fontSize: '14px',
+                  }}>
+                    {registerErrors.general}
+                  </div>
+                )}
+
                 <div>
                   <label style={{ fontWeight: '500', marginBottom: '8px', display: 'block', color: '#343a40' }}>
                     Username
@@ -435,10 +555,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     placeholder="Choose a username"
                     value={username}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      borderColor: registerErrors.name ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                    }}
                     onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = registerErrors.name ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                   />
+                  {registerErrors.name && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{registerErrors.name}</p>}
                 </div>
 
                 <div>
@@ -450,10 +574,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      borderColor: registerErrors.email ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                    }}
                     onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = registerErrors.email ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                   />
+                  {registerErrors.email && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{registerErrors.email}</p>}
                 </div>
 
                 <div>
@@ -466,10 +594,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                       placeholder="Create a strong password"
                       value={password}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                      style={inputStyle}
+                      style={{
+                        ...inputStyle,
+                        borderColor: registerErrors.password ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                      }}
                       onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                      onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                      onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = registerErrors.password ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                     />
+                    {registerErrors.password && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{registerErrors.password}</p>}
                        <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -500,10 +632,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      borderColor: registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                    }}
                     onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                   />
+                  {registerErrors.password_confirmation && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{registerErrors.password_confirmation}</p>}
                 </div>
 
                 <button
@@ -522,6 +658,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           {activeTab === 'reset' && (
             <form onSubmit={handleReset}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {resetErrors.general && (
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#f8d7da',
+                    borderRadius: '6px',
+                    color: '#721c24',
+                    fontSize: '14px',
+                  }}>
+                    {resetErrors.general}
+                  </div>
+                )}
+
                 <p style={{ color: '#495057', lineHeight: '1.6', fontSize: '15px', textAlign: 'center' }}>
                   Enter the email address associated with your account, and we'll send you a link to reset your password.
                 </p>
@@ -534,10 +682,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     placeholder="your@email.com"
                     value={email}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      borderColor: resetErrors.email ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                    }}
                     onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = BASE_INPUT_BORDER_COLOR}
+                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = resetErrors.email ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
                   />
+                  {resetErrors.email && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{resetErrors.email}</p>}
                 </div>
 
                 <button
@@ -552,7 +704,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('login')}
+                  onClick={() => {
+                    setActiveTab('login');
+                    setLoginErrors({});
+                    setResetErrors({});
+                  }}
                   style={{
                     backgroundColor: 'transparent',
                     color: '#007bff',

@@ -2,52 +2,61 @@
 
 namespace Database\Seeders;
 
-use App\Models\Guide;
 use App\Models\Country;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Guide;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Http;
 
 class GuideSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $country = Country::where('ISO_code_2', 'ID')->first();
-        $response = Http::get('https://randomuser.me/api/portraits/women/44.jpg');
 
-        if (!$country) {
-            $this->command->error('Country with ISO code "ID" not found. Please run the CountrySeeder first.');
-            return; // Stop the seeder
+        if (! $country) {
+            $this->command->error('Country Indonesia (ISO: ID) tidak ditemukan. Jalankan CountrySeeder dulu.');
+            return;
         }
 
-        Guide::truncate(); // Clear existing guides before seeding
+        $phoneCode = $country->phoneCountryCode;
 
-        if ($response->successful()){
-            $extension = 'jpg'; // Unsplash returns jpgs by default
-            $fileName = Str::random(20) . '.' . $extension;
+        $guides = [
+            [
+                'name'                => 'Sarah Johnson',
+                'email'               => 'sarah.johnson@example.com',
+                'password'            => bcrypt('sarah123'),
+                'phone_number'        => '082112345678',
+                'about'               => 'Pemandu wisata profesional dengan pengalaman 5+ tahun di Bali. Spesialisasi tour budaya, pantai, dan aktivitas air. Senang berbagi keindahan dan keunikan Indonesia kepada wisatawan dari seluruh dunia.',
+                'experience_years'    => 5,
+                'verification_status' => 'verified',
+                'rating'              => 4.9,
+            ],
+            [
+                'name'                => 'Budi Santoso',
+                'email'               => 'budi.santoso@example.com',
+                'password'            => bcrypt('budi123'),
+                'phone_number'        => '081298765432',
+                'about'               => 'Pemandu wisata lokal Lombok dan Yogyakarta. Ahli trekking Rinjani dan tur candi Borobudur. Sudah memandu lebih dari 300 wisatawan mancanegara maupun domestik.',
+                'experience_years'    => 7,
+                'verification_status' => 'verified',
+                'rating'              => 4.8,
+            ],
+        ];
 
-            // Save to public disk (storage/app/public/tour_images)
-            Storage::disk('public')->put("guide-profile-photos/{$fileName}", $response->body());
-
-            Guide::Create([
-                'name' => 'Sarah Johnson',
-                'email' => 'sarah.johnson@example.com',
-                'email_verified_at' => now(),
-                'phone_country_code_id' => $country?->phoneCountryCode?->id,
-                'phone_number' => '082112345678',
-                'country_id' => $country?->id,
-                'rating' => 0,
-                'review' => 0,
-                'profile_picture' => "guide-profile-photos/{$fileName}",
-                'about' => 'Professional travel guide with 5+ years of experience in Bali. Specialized in cultural tours and beach activities. I love sharing the beauty and culture of Indonesia with travelers from around the world. Lets create unforgettable memories together!',
-                'experience_years' => 0,
-                'password' => bcrypt('sarah123'),
-            ]);            
+        foreach ($guides as $data) {
+            Guide::updateOrCreate(
+                // Kunci unik: cari berdasarkan email
+                ['email' => $data['email']],
+                // Data yang di-set atau di-update
+                array_merge($data, [
+                    'email_verified_at'    => now(),
+                    'country_id'           => $country->id,
+                    'phone_country_code_id'=> $phoneCode?->id,
+                    'profile_picture'      => null,
+                ])
+            );
         }
+
+        $count = Guide::whereIn('email', array_column($guides, 'email'))->count();
+        $this->command->info("GuideSeeder selesai: {$count} guide tersedia (semua verified).");
     }
 }
