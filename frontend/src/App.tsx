@@ -93,6 +93,8 @@ const App: React.FC = () => {
       <Route path="/guide/dashboard"        element={<ProtectedRoute role="guide"><GuideDashboard /></ProtectedRoute>} />
       <Route path="/guide/profile"          element={<ProtectedRoute role="guide"><GuideEditProfile /></ProtectedRoute>} />
       <Route path="/guide/settings"         element={<ProtectedRoute role="guide"><GuideSettings /></ProtectedRoute>} />
+      <Route path="/guide/reviews"          element={<ProtectedRoute role="guide"><GuideReviews /></ProtectedRoute>} />
+      <Route path="/guide/wallet"           element={<ProtectedRoute role="guide"><GuideWallet /></ProtectedRoute>} />
 
       {/* Guide — butuh verified */}
       <Route path="/guide/tours"            element={<ProtectedRoute role="guide" requireVerified><GuideTours /></ProtectedRoute>} />
