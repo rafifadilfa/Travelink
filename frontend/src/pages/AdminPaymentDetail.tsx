@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Flex, Heading, Text, useColorModeValue, Spinner,
-  VStack, HStack, Button, Alert, AlertIcon,
+  VStack, HStack, Button, Link, Alert, AlertIcon,
   Image, Divider, SimpleGrid, useToast,
 } from '@chakra-ui/react';
 import { FiArrowLeft, FiCheckCircle, FiXCircle } from 'react-icons/fi';
@@ -144,9 +144,15 @@ const AdminPaymentDetail: React.FC = () => {
                   borderRadius="md" maxH="400px" objectFit="contain" w="full"
                   fallback={<Flex h="300px" align="center" justify="center" bg={emptyProofBg} borderRadius="md" color={secondary}><Text>Pratinjau tidak tersedia</Text></Flex>}
                 />
-                <Button as="a" href={booking.payment_proof_url} target="_blank" size="sm" variant="outline">
+                <Link
+                  href={booking.payment_proof_url}
+                  isExternal
+                  fontSize="sm"
+                  color="blue.500"
+                  textDecoration="underline"
+                >
                   Buka di tab baru
-                </Button>
+                </Link>
               </VStack>
             ) : (
               <Flex h="200px" align="center" justify="center" bg={emptyProofBg} borderRadius="md">

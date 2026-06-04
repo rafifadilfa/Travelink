@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box, Flex, Heading, useColorModeValue, VStack, HStack, Stack,
-  Button, FormControl, FormLabel, Input, Textarea, Avatar,
+  Button, Link, FormControl, FormLabel, Input, Textarea, Avatar,
   Icon, Tag, TagLabel, TagCloseButton, InputGroup, InputRightElement,
   Divider, Text, Badge, Spinner, useToast, Alert, AlertIcon,
   Tabs, TabList, TabPanels, Tab, TabPanel, NumberInput,
@@ -52,10 +52,9 @@ const DocStatus = ({ uploaded, url, label }: { uploaded: boolean; url: string | 
       {uploaded ? 'Sudah diupload' : (label ?? 'Belum diupload')}
     </Text>
     {uploaded && url && (
-      <Text as="a" href={url} target="_blank" rel="noopener noreferrer"
-        fontSize="sm" color="blue.500" textDecoration="underline">
+      <Link href={url} isExternal fontSize="sm" color="blue.500" textDecoration="underline">
         Lihat file
-      </Text>
+      </Link>
     )}
   </HStack>
 );

@@ -24,6 +24,9 @@ import AdminAuth from './pages/AdminAuth';
 import AdminKycList from './pages/AdminKycList';
 import AdminKycDetail from './pages/AdminKycDetail';
 import AdminGuideList from './pages/AdminGuideList';
+import AdminPaymentList from './pages/AdminPaymentList';
+import AdminPaymentDetail from './pages/AdminPaymentDetail';
+import AdminWithdrawalList from './pages/AdminWithdrawalList';
 import SmartOpenTripForm from './pages/SmartOpenTripForm';
 import WaitingRoom from './pages/WaitingRoom';
 
