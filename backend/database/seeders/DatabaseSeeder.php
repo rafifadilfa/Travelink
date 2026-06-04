@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             // -- Data referensi (tidak bergantung satu sama lain) --
             CountrySeeder::class,
             CategorySeeder::class,
+            OpenTripActivitySeeder::class,
             DayPhaseSeeder::class,
             LanguageSeeder::class,
             ItemSeeder::class,
@@ -43,16 +44,14 @@ class DatabaseSeeder extends Seeder
             // -- Data tour --
             MeetingPointSeeder::class,
             TourSeeder::class,
+            DummyTourSeeder::class,
             TourImageSeeder::class,
             TourItinerarySeeder::class,
             TourItemSeeder::class,
             TourCategorySeeder::class,
             TourTagSeeder::class,
-            TourAvailabilitySeeder::class, // Jadwal hari dalam seminggu (UC-14)
-
-            // -- Transaksi & keuangan --
-            TransactionSeeder::class,      // 9 booking (semua status), wallet_transactions income
-            WithdrawalSeeder::class,       // 2 withdrawal + wallet_transaction debit
+            TransactionSeeder::class,
+            OpenTripParticipantSeeder::class,
         ]);
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1');

@@ -36,7 +36,8 @@ class Tour extends Model
         'tour_status',
         'tour_rating',
         'featured',
-    ];
+        'is_open_trip',
+    ]; // specify the fillable attributes for mass assignment
 
     public function location()
     {

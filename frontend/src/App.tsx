@@ -24,9 +24,8 @@ import AdminAuth from './pages/AdminAuth';
 import AdminKycList from './pages/AdminKycList';
 import AdminKycDetail from './pages/AdminKycDetail';
 import AdminGuideList from './pages/AdminGuideList';
-import AdminPaymentList from './pages/AdminPaymentList';
-import AdminPaymentDetail from './pages/AdminPaymentDetail';
-import AdminWithdrawalList from './pages/AdminWithdrawalList';
+import SmartOpenTripForm from './pages/SmartOpenTripForm';
+import WaitingRoom from './pages/WaitingRoom';
 
 interface ComingSoonProps { pageName: string; }
 interface ProtectedRouteProps {
@@ -98,18 +97,25 @@ const App: React.FC = () => {
       <Route path="/guide/tours/edit/:tourId" element={<ProtectedRoute role="guide" requireVerified><EditTour /></ProtectedRoute>} />
       <Route path="/guide/bookings"         element={<ProtectedRoute role="guide" requireVerified><GuideBookings /></ProtectedRoute>} />
       <Route path="/guide/bookings/cancel/:bookingId" element={<ProtectedRoute role="guide" requireVerified><CancelBooking /></ProtectedRoute>} />
-      <Route path="/guide/reviews"          element={<ProtectedRoute role="guide" requireVerified><GuideReviews /></ProtectedRoute>} />
-      <Route path="/guide/wallet"           element={<ProtectedRoute role="guide" requireVerified><GuideWallet /></ProtectedRoute>} />
-
-      {/* Tourist */}
-      <Route path="/dashboard"              element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/tours"                  element={<ProtectedRoute><ViewAllTours /></ProtectedRoute>} />
-      <Route path="/tours/:id"              element={<ProtectedRoute><TourDetail /></ProtectedRoute>} />
-      <Route path="/bookings"               element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
-      <Route path="/payment/:bookingId"     element={<ProtectedRoute><Payment /></ProtectedRoute>} />
-      <Route path="/guides/:id"             element={<ProtectedRoute><GuideProfile /></ProtectedRoute>} />
-      <Route path="/profile"               element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/settings"              element={<ProtectedRoute><ComingSoon pageName="Pengaturan" /></ProtectedRoute>} />
+      
+      
+      {/* --- User Section Routes --- */}
+      <Route path="/open-trip/join/:tourId" element={<ProtectedRoute><SmartOpenTripForm /></ProtectedRoute>} />
+      <Route path="/open-trip/waiting/:participantId" element={<ProtectedRoute><WaitingRoom /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/tours" element={<ProtectedRoute><ViewAllTours /></ProtectedRoute>} />
+      <Route path="/tours/:id" element={<ProtectedRoute><TourDetail /></ProtectedRoute>} />
+      <Route path="/bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+      <Route path="/payment/:bookingId" element={<ProtectedRoute><Payment /></ProtectedRoute>} />
+      <Route path="/guides/:id" element={<ProtectedRoute><GuideProfile /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+     
+      
+      {/* Settings (if needed) */}
+      <Route
+        path="/settings"
+        element={<ProtectedRoute><ComingSoon pageName="Settings Page" /></ProtectedRoute>}
+      />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -10,11 +10,16 @@ use App\Http\Controllers\Api\Guide\GuideBookingApiController;
 use App\Http\Controllers\Api\Guide\GuideProfileApiController;
 use App\Http\Controllers\Api\Guide\GuideReviewApiController;
 use App\Http\Controllers\Api\Guide\GuideTourApiController;
-use App\Http\Controllers\Api\Guide\GuideWalletApiController;
-use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
+use App\Http\Controllers\Api\Tourist\OpenTripController;
+use App\Http\Controllers\Api\Tourist\TourListApiController;
 use App\Http\Middleware\EnsureGuideIsVerified;
 use App\Http\Middleware\EnsureIsAdmin;
 use Illuminate\Support\Facades\Route;
+
+// ============================================================
+// PUBLIC TOUR ROUTES
+// ============================================================
+Route::get('tours', [TourListApiController::class, 'index']);
 
 // ============================================================
 // TOURIST AUTH ROUTES
@@ -31,7 +36,40 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // ============================================================
-// GUIDE ROUTES
+// SMART OPEN TRIP ROUTES
+// ============================================================
+Route::prefix('open-trip')->group(function () {
+    // Form data bisa diakses tanpa login (untuk preview), dengan login untuk cek status
+    Route::get('form-data', [OpenTripController::class, 'formData']);
+
+    // Endpoint berikut wajib login sebagai wisatawan
+    Route::middleware('auth:sanctum')->group(function () {
+        // Simpan preferensi & masuk pool — memicu matching otomatis
+        Route::post('join', [OpenTripController::class, 'join']);
+
+        // Cek status peserta di pool (Tahap 1 polling)
+        Route::get('status', [OpenTripController::class, 'status']);
+
+        // Detail grup + anggota + skor kecocokan (Tahap 2)
+        Route::get('group/{groupId}', [OpenTripController::class, 'groupDetail']);
+
+        // Daftar semua Smart Open Trip yang diikuti user login
+        Route::get('my-trips', [OpenTripController::class, 'myTrips']);
+
+        // Cancel peserta (hanya Tahap 1 / status = waiting)
+        Route::delete('participants/{participantId}', [OpenTripController::class, 'cancel']);
+
+        // Pembayaran split bill (Tahap 2)
+        Route::post('payment/create',                  [OpenTripController::class, 'createPayment']);
+        Route::get('payment/check/{participantId}',    [OpenTripController::class, 'checkPaymentStatus']);
+
+        // DEBUG SEMENTARA — hapus setelah bug ditemukan
+        Route::get('debug-pool', [OpenTripController::class, 'debugPool']);
+    });
+});
+
+// ============================================================
+// GUIDE AUTH ROUTES
 // ============================================================
 Route::prefix('guide')->group(function () {
 
