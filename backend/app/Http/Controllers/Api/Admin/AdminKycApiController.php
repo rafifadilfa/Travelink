@@ -12,13 +12,13 @@ class AdminKycApiController extends Controller
 {
     /**
      * GET /api/admin/kyc
-     * Daftar guide dengan status 'menunggu_verifikasi' — sudah submit dokumen, siap ditinjau.
+     * Daftar semua guide dengan status pending — antrian KYC yang perlu ditinjau.
      */
     public function index(): JsonResponse
     {
-        $guides = Guide::where('verification_status', Guide::STATUS_MENUNGGU_VERIFIKASI)
+        $guides = Guide::where('verification_status', 'pending')
             ->orderBy('created_at', 'asc')
-            ->get(['id', 'name', 'email', 'created_at', 'ktp_document', 'selfie_ktp_document', 'certificate_document']);
+            ->get(['id', 'name', 'email', 'created_at', 'ktp_document', 'certificate_document']);
 
         return response()->json(['guides' => $guides], 200);
     }
@@ -39,20 +39,16 @@ class AdminKycApiController extends Controller
                 'languages'       => $guide->languages->pluck('name'),
                 'specialities'    => $guide->specialities->pluck('name'),
                 'ktp_url'         => $guide->ktp_document
-                    ? $host . '/storage/' . $guide->ktp_document : null,
-                'selfie_ktp_url'  => $guide->selfie_ktp_document
-                    ? $host . '/storage/' . $guide->selfie_ktp_document : null,
+                    ? $host . Storage::disk('public')->url($guide->ktp_document) : null,
                 'certificate_url' => $guide->certificate_document
-                    ? $host . '/storage/' . $guide->certificate_document : null,
-                'portfolio_url'   => $guide->portfolio_document
-                    ? $host . '/storage/' . $guide->portfolio_document : null,
+                    ? $host . Storage::disk('public')->url($guide->certificate_document) : null,
             ]),
         ], 200);
     }
 
     /**
      * GET /api/admin/guides
-     * Daftar SEMUA guide — semua status.
+     * Daftar SEMUA guide — semua status (pending, verified, rejected).
      */
     public function allGuides(): JsonResponse
     {
@@ -64,14 +60,14 @@ class AdminKycApiController extends Controller
 
     /**
      * POST /api/admin/kyc/{id}/approve
-     * Setujui guide: ubah verification_status → verified, hapus rejection_reason lama.
+     * Setujui guide: ubah verification_status → 'verified', hapus rejection_reason lama.
      */
     public function approve(int $id): JsonResponse
     {
         $guide = Guide::findOrFail($id);
 
         $guide->update([
-            'verification_status' => Guide::STATUS_VERIFIED,
+            'verification_status' => 'verified',
             'rejection_reason'    => null,
         ]);
 
@@ -83,7 +79,7 @@ class AdminKycApiController extends Controller
 
     /**
      * POST /api/admin/kyc/{id}/reject
-     * Tolak guide: ubah verification_status → rejected, simpan alasan penolakan.
+     * Tolak guide: ubah verification_status → 'rejected', simpan alasan penolakan.
      */
     public function reject(Request $request, int $id): JsonResponse
     {
@@ -94,7 +90,7 @@ class AdminKycApiController extends Controller
         $guide = Guide::findOrFail($id);
 
         $guide->update([
-            'verification_status' => Guide::STATUS_REJECTED,
+            'verification_status' => 'rejected',
             'rejection_reason'    => $validated['rejection_reason'],
         ]);
 

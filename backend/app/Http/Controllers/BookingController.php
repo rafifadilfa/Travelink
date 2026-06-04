@@ -48,14 +48,13 @@ class BookingController extends Controller
 
         $guide = Auth::guard('guides')->User();
         $transaction = Transaction::findOrFail($request->transaction_id);
-        $booking = Booking::where('transaction_id', '=', $transaction->id);
+        $booking = Booking::where('transaction_id', '=' ,$transaction->id);
 
         if ($transaction->guide_id !== $guide->id) {
             abort(403);
         }
 
-        // Guide menerima pesanan → wisatawan perlu melakukan pembayaran
-        $booking->update(['booking_status' => Booking::STATUS_MENUNGGU_PEMBAYARAN]);
+        $booking->update(['booking_status' => 'confirmed']);
 
         return back();
     }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+// use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -11,19 +12,13 @@ class Guide extends Authenticatable
 {
     use HasFactory, Notifiable, HasApiTokens;
 
-    protected $table = 'guides';
-
-    // ---------------------------------------------------------------
-    // Konstanta verification_status — satu-satunya sumber kebenaran.
-    // Label UI ada di frontend; nilai DB ada di sini.
-    //
-    // Alur: pending → menunggu_verifikasi → verified
-    //                                     → rejected (bisa upload ulang → menunggu_verifikasi)
-    // ---------------------------------------------------------------
-    const STATUS_PENDING             = 'pending';            // Belum Diverifikasi
-    const STATUS_MENUNGGU_VERIFIKASI = 'menunggu_verifikasi'; // Menunggu Verifikasi
-    const STATUS_VERIFIED            = 'verified';           // Aktif
-    const STATUS_REJECTED            = 'rejected';           // Ditolak
+    protected $table = 'guides'; // specify the table name if it doesn't follow Laravel's naming convention
+    
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
 
     protected $fillable = [
         'name',
@@ -36,23 +31,10 @@ class Guide extends Authenticatable
         'about',
         'password',
         'rating',
-        'experience_years',
         'verification_status',
-        // KYC documents (UC-12)
         'ktp_document',
-        'selfie_ktp_document',
         'certificate_document',
-        'portfolio_document',
         'rejection_reason',
-        // Profil profesional (UC-13)
-        'base_rate',
-        // Rekening bank (UC-13, UC-17)
-        'bank_name',
-        'bank_account_number',
-        'bank_account_holder',
-        // Saldo dompet (UC-17, UC-22)
-        'pending_balance',
-        'available_balance',
     ];
 
     protected $hidden = [
@@ -65,54 +47,42 @@ class Guide extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
-            'pending_balance'   => 'decimal:2',
-            'available_balance' => 'decimal:2',
-            'base_rate'         => 'decimal:2',
         ];
     }
 
+
     public function languages()
     {
-        return $this->belongsToMany(Language::class, 'guide_languages', 'guide_id', 'language_id')->withTimestamps();
+        return $this->belongsToMany(Language::class, 'guide_languages', 'guide_id', 'language_id')->withTimestamps(); // every guide can speak many languages through guide_languages
     }
 
     public function tours()
     {
-        return $this->hasMany(Tour::class, 'tour_guide_id');
+        return $this->hasMany(Tour::class, 'tour_guide_id'); // every guide can be associated with many tours through tour_guides
     }
 
     public function reviews()
     {
-        return $this->hasMany(GuideReview::class, 'guide_id');
+        return $this->hasMany(GuideReview::class, 'guide_id'); // every guide can have many reviews
     }
 
     public function specialities()
     {
-        return $this->belongsToMany(Speciality::class, 'guide_specialities', 'guide_id', 'speciality_id')->withTimestamps();
+        return $this->belongsToMany(Speciality::class, 'guide_specialities', 'guide_id', 'speciality_id')->withTimestamps(); // every guide can have many specialities through guide_specialities
     }
 
     public function country()
     {
-        return $this->belongsTo(Country::class, 'country_id');
+        return $this->belongsTo(Country::class, 'country_id'); // every guide belongs to one country
     }
 
     public function phoneCountryCode()
     {
-        return $this->belongsTo(PhoneCountryCode::class, 'phone_country_code_id');
+        return $this->belongsTo(PhoneCountryCode::class, 'phone_country_code_id'); // every guide belongs to one phone country code
     }
 
     public function transactions()
     {
-        return $this->hasMany(Transaction::class, 'guide_id');
-    }
-
-    public function withdrawals()
-    {
-        return $this->hasMany(Withdrawal::class, 'guide_id');
-    }
-
-    public function walletTransactions()
-    {
-        return $this->hasMany(WalletTransaction::class, 'guide_id');
+        return $this->hasMany(Transaction::class, 'guide_id'); // every guide can be associated with many transactions
     }
 }

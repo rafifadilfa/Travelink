@@ -44,7 +44,7 @@ const GuideSettings: React.FC = () => {
   };
 
   const cardBg = useColorModeValue('white', 'gray.800');
-
+  const dangerZoneBg = useColorModeValue('red.50', 'red.900');
   const dangerZoneBorder = useColorModeValue('red.200', 'red.700');
   const secondaryTextColor = useColorModeValue('gray.600', 'gray.400');
 

@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Models\Transaction;
+use App\Models\User;
 use App\Models\Booking;
 
 class CancelBookingController extends Controller
@@ -15,7 +16,7 @@ class CancelBookingController extends Controller
         $guide = Auth::guard('guides')->User();
         $transaction->load(['user', 'tour', 'booking'])->where('guide_id', $guide->id)->get();
 
-        if($transaction->booking->booking_status === Booking::STATUS_DIBATALKAN){
+        if($transaction->booking->booking_status === 'cancelled'){
             return redirect()->route('guide.bookings')->with('error', 'You have already cancelled this booking');
         }
 
@@ -41,14 +42,14 @@ class CancelBookingController extends Controller
             abort(403);
         }
 
-        if($booking->booking_status === Booking::STATUS_DIBATALKAN){
+        if($booking->booking_status === 'cancelled'){
             return redirect()->route('guide.bookings')->with('error', 'You have already cancelled this booking');
         }
 
         $booking->update([
             'cancelation_reason' => $request->cancelation_reason,
-            'booking_status'     => Booking::STATUS_DIBATALKAN,
-        ]);
+            'booking_status' => 'canceled'
+            ]);
 
         return redirect()->route('guide.bookings')->with('success', 'booking successfully cancelled');
     }
@@ -69,14 +70,14 @@ class CancelBookingController extends Controller
             abort(403);
         }
 
-        if($booking->booking_status === Booking::STATUS_DIBATALKAN){
+        if($booking->booking_status === 'cancelled'){
             return back()->with('error', 'You have already cancelled this booking');
         }
 
         $booking->update([
             'cancelation_reason' => $request->cancelation_reason,
-            'booking_status'     => Booking::STATUS_DIBATALKAN,
-        ]);
+            'booking_status' => 'canceled'
+            ]);
 
         return back()->with('success', 'Tour has been canceled');
     }
