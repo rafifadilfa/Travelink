@@ -4,6 +4,7 @@ import {
   Heading,
   Text,
   Button,
+  Link,
   Spinner,
   Flex,
   HStack,
@@ -79,18 +80,20 @@ const DocPreview = ({ label, url }: { label: string; url: string | null }) => {
         <HStack>
           <Icon as={FiFile} color="purple.400" />
           <Text fontSize="sm" fontWeight="semibold">{label}</Text>
-          <Button
-            as="a"
+          <Link
             href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            size="xs"
-            colorScheme="purple"
-            variant="ghost"
+            isExternal
             ml="auto"
+            fontSize="xs"
+            color="purple.500"
+            fontWeight="semibold"
+            px={2}
+            py={1}
+            borderRadius="md"
+            _hover={{ bg: 'purple.50', textDecoration: 'none' }}
           >
             Buka di tab baru
-          </Button>
+          </Link>
         </HStack>
       </Box>
       {isPdf ? (
@@ -133,7 +136,6 @@ const AdminKycDetail: React.FC = () => {
   const [rejectError, setRejectError]   = useState('');
   const initialFocusRef = useRef<HTMLTextAreaElement>(null);
 
-  // Base URL server untuk foto profil
   const apiBase = ((import.meta.env.VITE_API_URL as string) ?? '').replace('/api', '');
 
   useEffect(() => {
@@ -203,7 +205,7 @@ const AdminKycDetail: React.FC = () => {
     });
 
   const avatarSrc = guide?.profile_picture
-    ? `${apiBase}/${guide.profile_picture.replace('public/', 'storage/')}`
+    ? `${apiBase}/storage/${guide.profile_picture}`
     : undefined;
 
   if (loading) {

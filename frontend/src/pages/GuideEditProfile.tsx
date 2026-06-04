@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  Box, Flex, Heading, useColorModeValue, VStack, HStack, Stack,
+  Button, Link, FormControl, FormLabel, Input, Textarea, Avatar,
+  Icon, Tag, TagLabel, TagCloseButton, InputGroup, InputRightElement,
+  Divider, Text, Badge, Spinner, useToast, Alert, AlertIcon,
+  Tabs, TabList, TabPanels, Tab, TabPanel, NumberInput,
+  NumberInputField, NumberInputStepper, NumberIncrementStepper,
+  NumberDecrementStepper, Progress,
   Box,
   Flex,
   Heading,
@@ -66,6 +73,36 @@ interface GuideProfile {
   is_profile_complete: boolean;
 }
 
+// ── Komponen badge status dokumen ────────────────────────────────────────────
+const DocStatus = ({ uploaded, url, label }: { uploaded: boolean; url: string | null; label?: string }) => (
+  <HStack spacing={2}>
+    <Icon as={uploaded ? FiCheckCircle : FiAlertCircle} color={uploaded ? 'green.500' : 'orange.400'} />
+    <Text fontSize="sm" color={uploaded ? 'green.600' : 'orange.500'} fontWeight="medium">
+      {uploaded ? 'Sudah diupload' : (label ?? 'Belum diupload')}
+    </Text>
+    {uploaded && url && (
+      <Link href={url} isExternal fontSize="sm" color="blue.500" textDecoration="underline">
+        Lihat file
+      </Link>
+    )}
+  </HStack>
+);
+
+// ── Komponen card upload dokumen ─────────────────────────────────────────────
+const UploadCard = ({
+  title, badge, uploaded, url, file, inputRef,
+  onFileChange, onUpload, isUploading, optional = false,
+}: {
+  title: string; badge: string; uploaded: boolean; url: string | null;
+  file: File | null; inputRef: React.RefObject<HTMLInputElement | null>;
+  onFileChange: (f: File | null) => void;
+  onUpload: () => void; isUploading: boolean; optional?: boolean;
+}) => {
+  const cardBorder = uploaded ? 'green.300' : optional ? 'gray.300' : 'orange.300';
+  const cardBg = useColorModeValue(
+    uploaded ? 'green.50' : optional ? 'gray.50' : 'orange.50',
+    uploaded ? 'green.900' : optional ? 'gray.700' : 'orange.900'
+  );
 // ── Komponen badge status dokumen ─────────────────────────────────────────
 const DocStatus = ({ uploaded, url }: { uploaded: boolean; url: string | null }) => {
   if (uploaded && url) {

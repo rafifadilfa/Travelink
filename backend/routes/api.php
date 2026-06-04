@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\Auth\AuthApiController;
 use App\Http\Controllers\Api\Auth\GuideApiController;
 use App\Http\Controllers\Api\Guide\GuideProfileApiController;
 use App\Http\Controllers\Api\Guide\GuideTourApiController;
+use App\Http\Controllers\Api\Guide\GuideWalletApiController;
+use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
 use App\Http\Controllers\Api\Tourist\OpenTripController;
 use App\Http\Controllers\Api\Tourist\TourListApiController;
 use App\Http\Middleware\EnsureGuideIsVerified;

@@ -23,6 +23,9 @@ import AdminAuth from './pages/AdminAuth';
 import AdminKycList from './pages/AdminKycList';
 import AdminKycDetail from './pages/AdminKycDetail';
 import AdminGuideList from './pages/AdminGuideList';
+import AdminPaymentList from './pages/AdminPaymentList';
+import AdminPaymentDetail from './pages/AdminPaymentDetail';
+import AdminWithdrawalList from './pages/AdminWithdrawalList';
 import SmartOpenTripForm from './pages/SmartOpenTripForm';
 import WaitingRoom from './pages/WaitingRoom';
 
@@ -126,6 +129,24 @@ const App: React.FC = () => {
       <Route path="/guide/auth" element={<GuideAuth />} />
       <Route path="/admin/auth" element={<AdminAuth />} />
 
+      {/* Admin */}
+      <Route path="/admin/kyc"              element={<ProtectedRoute role="admin"><AdminKycList /></ProtectedRoute>} />
+      <Route path="/admin/kyc/:id"          element={<ProtectedRoute role="admin"><AdminKycDetail /></ProtectedRoute>} />
+      <Route path="/admin/guides"           element={<ProtectedRoute role="admin"><AdminGuideList /></ProtectedRoute>} />
+      <Route path="/admin/payments"         element={<ProtectedRoute role="admin"><AdminPaymentList /></ProtectedRoute>} />
+      <Route path="/admin/payments/:id"     element={<ProtectedRoute role="admin"><AdminPaymentDetail /></ProtectedRoute>} />
+      <Route path="/admin/withdrawals"      element={<ProtectedRoute role="admin"><AdminWithdrawalList /></ProtectedRoute>} />
+
+      {/* Guide — tidak butuh verified */}
+      <Route path="/guide/dashboard"        element={<ProtectedRoute role="guide"><GuideDashboard /></ProtectedRoute>} />
+      <Route path="/guide/profile"          element={<ProtectedRoute role="guide"><GuideEditProfile /></ProtectedRoute>} />
+      <Route path="/guide/settings"         element={<ProtectedRoute role="guide"><GuideSettings /></ProtectedRoute>} />
+      <Route path="/guide/reviews"          element={<ProtectedRoute role="guide"><GuideReviews /></ProtectedRoute>} />
+      <Route path="/guide/wallet"           element={<ProtectedRoute role="guide"><GuideWallet /></ProtectedRoute>} />
+
+      {/* Guide — butuh verified */}
+      <Route path="/guide/tours"            element={<ProtectedRoute role="guide" requireVerified><GuideTours /></ProtectedRoute>} />
+      <Route path="/guide/tours/new"        element={<ProtectedRoute role="guide" requireVerified><CreateTour /></ProtectedRoute>} />
       {/* --- Admin Section Routes --- */}
       <Route path="/admin/kyc" element={<ProtectedRoute role="admin"><AdminKycList /></ProtectedRoute>} />
       <Route path="/admin/kyc/:id" element={<ProtectedRoute role="admin"><AdminKycDetail /></ProtectedRoute>} />
