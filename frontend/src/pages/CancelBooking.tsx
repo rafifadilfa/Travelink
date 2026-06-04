@@ -14,50 +14,49 @@ import {
   FormLabel,
   Divider,
   HStack,
-  Icon
+  Icon,
 } from '@chakra-ui/react';
 import { FiCalendar, FiUser } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import GuideLayout from '../components/GuideLayout';
+import { guideApiClient } from '../services/api';
 
-// --- DATA & FUNGSI SIMULASI ---
-// Di aplikasi nyata, data ini akan diambil dari API
-const getBookingDetails = (bookingId: string) => {
-  const mockBookings = [
-    { bookingId: 'BK-001', touristName: 'Sarah Anderson', tourTitle: 'Jakarta Historical City Tour', date: 'July 15, 2025' },
-    { bookingId: 'BK-002', touristName: 'Michael Chen', tourTitle: 'Bali Highlands Cultural Trip', date: 'August 02, 2025' }
-  ];
-  return mockBookings.find(b => b.bookingId === bookingId);
-};
+interface BookingDetail {
+  id: number;
+  booking_status: string;
+  transaction: {
+    tour_date: string | null;
+    tour: { name: string } | null;
+    user: { name: string } | null;
+  } | null;
+}
 
-// --- KOMPONEN UTAMA ---
 const CancelBooking: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [booking, setBooking] = useState<{ touristName: string; tourTitle: string; date: string; } | null>(null);
+  const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (bookingId) {
-      // Simulasi pengambilan data
-      setTimeout(() => {
-        const details = getBookingDetails(bookingId);
-        if (details) {
-          setBooking(details);
-        }
-        setIsLoading(false);
-      }, 500);
-    }
+    if (!bookingId) return;
+    guideApiClient.get(`/guide/bookings/${bookingId}`)
+      .then(res => setBooking(res.data.booking))
+      .catch(() => {
+        toast({ title: 'Booking tidak ditemukan', status: 'error', duration: 3000 });
+        navigate('/guide/bookings');
+      })
+      .finally(() => setIsLoading(false));
   }, [bookingId]);
 
-  const handleConfirmCancellation = () => {
-    if (reason.trim() === '') {
+  const handleConfirmCancellation = async () => {
+    if (!reason.trim()) {
       toast({
-        title: 'Reason is required',
-        description: 'Please provide a reason for cancellation.',
+        title: 'Alasan wajib diisi',
+        description: 'Mohon berikan alasan penolakan/pembatalan.',
         status: 'error',
         duration: 4000,
         isClosable: true,
@@ -65,16 +64,29 @@ const CancelBooking: React.FC = () => {
       return;
     }
 
-    console.log(`Booking ${bookingId} cancelled. Reason: ${reason}`);
-
-    toast({
-      title: 'Booking Cancelled',
-      description: 'The booking has been successfully cancelled.',
-      status: 'success',
-      duration: 4000,
-      isClosable: true,
-    });
-    navigate('/guide/bookings');
+    setIsSubmitting(true);
+    try {
+      await guideApiClient.post(`/guide/bookings/${bookingId}/reject`, {
+        rejection_reason: reason,
+      });
+      toast({
+        title: 'Booking berhasil ditolak',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
+      navigate('/guide/bookings');
+    } catch (err: any) {
+      toast({
+        title: 'Gagal menolak booking',
+        description: err.response?.data?.message ?? 'Coba lagi.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -90,12 +102,18 @@ const CancelBooking: React.FC = () => {
   if (!booking) {
     return (
       <GuideLayout>
-        <Heading>Booking Not Found</Heading>
-        <Text>The requested booking could not be found.</Text>
-        <Button mt={4} onClick={() => navigate('/guide/bookings')}>Go Back to Bookings</Button>
+        <Heading>Booking Tidak Ditemukan</Heading>
+        <Text>Booking yang diminta tidak ada.</Text>
+        <Button mt={4} onClick={() => navigate('/guide/bookings')}>Kembali ke Bookings</Button>
       </GuideLayout>
     );
   }
+
+  const tourName    = booking.transaction?.tour?.name ?? '—';
+  const touristName = booking.transaction?.user?.name ?? 'Wisatawan';
+  const tourDate    = booking.transaction?.tour_date
+    ? new Date(booking.transaction.tour_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '—';
 
   return (
     <GuideLayout>
@@ -104,7 +122,7 @@ const CancelBooking: React.FC = () => {
           Cancel Booking
         </Heading>
         <Text color={useColorModeValue('gray.600', 'gray.400')} mb={8}>
-          You are about to cancel the booking for {booking.touristName}. Please provide a reason for the cancellation.
+          Anda akan menolak booking dari {touristName}. Mohon berikan alasan yang jelas.
         </Text>
 
         <VStack
@@ -116,29 +134,34 @@ const CancelBooking: React.FC = () => {
           align="stretch"
         >
           <Box>
-            <Heading size="md" mb={4}>{booking.tourTitle}</Heading>
+            <Heading size="md" mb={4}>{tourName}</Heading>
             <HStack spacing={6} color={useColorModeValue('gray.500', 'gray.400')}>
-              <HStack><Icon as={FiUser} /><Text>{booking.touristName}</Text></HStack>
-              <HStack><Icon as={FiCalendar} /><Text>{booking.date}</Text></HStack>
+              <HStack><Icon as={FiUser} /><Text>{touristName}</Text></HStack>
+              <HStack><Icon as={FiCalendar} /><Text>{tourDate}</Text></HStack>
             </HStack>
           </Box>
           <Divider />
           <FormControl isRequired>
-            <FormLabel htmlFor="cancellation-reason">Reason for Cancellation</FormLabel>
+            <FormLabel htmlFor="cancellation-reason">Alasan Penolakan/Pembatalan</FormLabel>
             <Textarea
               id="cancellation-reason"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g., Unexpected personal matter, tour slot is no longer available, etc."
+              onChange={e => setReason(e.target.value)}
+              placeholder="cth. Saya tidak tersedia pada tanggal tersebut, slot penuh, dsb."
               rows={5}
             />
           </FormControl>
           <HStack justify="flex-end" spacing={4}>
             <Button variant="ghost" onClick={() => navigate('/guide/bookings')}>
-              Go Back
+              Kembali
             </Button>
-            <Button colorScheme="red" onClick={handleConfirmCancellation}>
-              Confirm Cancellation
+            <Button
+              colorScheme="red"
+              onClick={handleConfirmCancellation}
+              isLoading={isSubmitting}
+              loadingText="Memproses..."
+            >
+              Konfirmasi Penolakan
             </Button>
           </HStack>
         </VStack>

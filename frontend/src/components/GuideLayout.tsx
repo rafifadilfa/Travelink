@@ -27,6 +27,8 @@ import {
     FiLogOut,
     FiMenu,
     FiBell,
+    FiStar,
+    FiDollarSign,
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logoutGuide } from '../utils/logout';
@@ -46,12 +48,13 @@ interface GuideLayoutProps {
     children: ReactNode;
 }
 
-// --- PERUBAHAN 1: "Settings" DIHAPUS DARI SINI ---
 const LinkItems = [
     { name: 'Dashboard', icon: FiHome, path: '/guide/dashboard' },
     { name: 'My Tours', icon: FiBriefcase, path: '/guide/tours' },
     { name: 'Bookings', icon: FiCalendar, path: '/guide/bookings' },
     { name: 'Profile', icon: FiUser, path: '/guide/profile' },
+    { name: 'Ulasan', icon: FiStar, path: '/guide/reviews' },
+    { name: 'Keuangan', icon: FiDollarSign, path: '/guide/wallet' },
 ];
 
 // --- CHILD COMPONENTS ---

@@ -4,7 +4,9 @@ use App\Http\Controllers\Api\Admin\AdminKycApiController;
 use App\Http\Controllers\Api\Auth\AdminApiController;
 use App\Http\Controllers\Api\Auth\AuthApiController;
 use App\Http\Controllers\Api\Auth\GuideApiController;
+use App\Http\Controllers\Api\Guide\GuideBookingApiController;
 use App\Http\Controllers\Api\Guide\GuideProfileApiController;
+use App\Http\Controllers\Api\Guide\GuideReviewApiController;
 use App\Http\Controllers\Api\Guide\GuideTourApiController;
 use App\Http\Controllers\Api\Guide\GuideWalletApiController;
 use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
@@ -83,18 +85,37 @@ Route::prefix('guide')->group(function () {
         Route::get('auth/guide',   [GuideApiController::class, 'getGuide']);
 
         // Profil guide — bisa diakses meski masih pending (untuk isi data KYC)
-        Route::get('profile',                  [GuideProfileApiController::class, 'getProfile']);
-        Route::post('profile',                 [GuideProfileApiController::class, 'updateProfile']);
-        Route::post('profile/ktp',             [GuideProfileApiController::class, 'uploadKtp']);
-        Route::post('profile/certificate',     [GuideProfileApiController::class, 'uploadCertificate']);
+        Route::get('profile',                    [GuideProfileApiController::class, 'getProfile']);
+        Route::post('profile',                   [GuideProfileApiController::class, 'updateProfile']);
+        Route::post('profile/ktp',               [GuideProfileApiController::class, 'uploadKtp']);
+        Route::post('profile/selfie-ktp',        [GuideProfileApiController::class, 'uploadSelfieKtp']);
+        Route::post('profile/certificate',       [GuideProfileApiController::class, 'uploadCertificate']);
+        Route::post('profile/portfolio',         [GuideProfileApiController::class, 'uploadPortfolio']);
+        Route::post('profile/submit',            [GuideProfileApiController::class, 'submitKyc']);
 
         // Endpoint yang HANYA bisa diakses guide dengan status 'verified'
         Route::middleware(EnsureGuideIsVerified::class)->group(function () {
+            // Tour management
             Route::get('tours',           [GuideTourApiController::class, 'index']);
             Route::post('tours',          [GuideTourApiController::class, 'store']);
             Route::get('tours/{id}',      [GuideTourApiController::class, 'show']);
             Route::put('tours/{id}',      [GuideTourApiController::class, 'update']);
             Route::delete('tours/{id}',   [GuideTourApiController::class, 'destroy']);
+
+            // Booking management
+            Route::get('bookings',                    [GuideBookingApiController::class, 'index']);
+            Route::get('bookings/{id}',               [GuideBookingApiController::class, 'show']);
+            Route::post('bookings/{id}/accept',       [GuideBookingApiController::class, 'accept']);
+            Route::post('bookings/{id}/reject',       [GuideBookingApiController::class, 'reject']);
+
+            // Ulasan & rating
+            Route::get('reviews',                     [GuideReviewApiController::class, 'index']);
+
+            // Dashboard keuangan
+            Route::get('wallet',                      [GuideWalletApiController::class, 'index']);
+
+            // Pencairan dana
+            Route::post('withdrawals',                [GuideWithdrawalApiController::class, 'store']);
         });
     });
 });

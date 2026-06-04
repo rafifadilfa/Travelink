@@ -29,12 +29,21 @@ class Guide extends Authenticatable
         'country_id',
         'profile_picture',
         'about',
+        'experience_years',
         'password',
         'rating',
         'verification_status',
         'ktp_document',
+        'selfie_ktp_document',
         'certificate_document',
+        'portfolio_document',
         'rejection_reason',
+        'base_rate',
+        'bank_name',
+        'bank_account_number',
+        'bank_account_holder',
+        'pending_balance',
+        'available_balance',
     ];
 
     protected $hidden = [
