@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Http\Controllers\Api\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\Admin;
+use App\Models\Withdrawal;
+use App\Services\WalletService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Verifikasi pencairan dana oleh admin (UC-20).
+ * Dilindungi EnsureIsAdmin.
+ */
+class AdminWithdrawalApiController extends Controller
+{
+    // ----------------------------------------------------------------
+    // Helper: format withdrawal untuk response
+    // ----------------------------------------------------------------
+    private function formatWithdrawal(Withdrawal $withdrawal): array
+    {
+        return [
+            'id'                  => $withdrawal->id,
+            'amount'              => (float) $withdrawal->amount,
+            'bank_name'           => $withdrawal->bank_name,
+            'bank_account_number' => $withdrawal->bank_account_number,
+            'bank_account_holder' => $withdrawal->bank_account_holder,
+            'status'              => $withdrawal->status,
+            'rejection_reason'    => $withdrawal->rejection_reason,
+            'processed_at'        => $withdrawal->processed_at,
+            'created_at'          => $withdrawal->created_at,
+            'guide' => $withdrawal->guide ? [
+                'id'                => $withdrawal->guide->id,
+                'name'              => $withdrawal->guide->name,
+                'email'             => $withdrawal->guide->email,
+                'available_balance' => (float) $withdrawal->guide->available_balance,
+                'bank_name'         => $withdrawal->guide->bank_name,
+                'bank_account_number' => $withdrawal->guide->bank_account_number,
+            ] : null,
+        ];
+    }
+
+    // ================================================================
+    // GET /api/admin/withdrawals
+    // Daftar withdrawal menunggu_verifikasi (untuk UC-20)
+    // ================================================================
+    public function index(): JsonResponse
+    {
+        $withdrawals = Withdrawal::where('status', Withdrawal::STATUS_MENUNGGU_VERIFIKASI)
+            ->with('guide:id,name,email,available_balance,bank_name,bank_account_number')
+            ->orderBy('created_at', 'asc')
+            ->paginate(20);
+
+        return response()->json([
+            'data' => collect($withdrawals->items())->map(fn($w) => $this->formatWithdrawal($w)),
+            'meta' => [
+                'current_page' => $withdrawals->currentPage(),
+                'last_page'    => $withdrawals->lastPage(),
+                'total'        => $withdrawals->total(),
+            ],
+        ], 200);
+    }
+
+    // ================================================================
+    // GET /api/admin/withdrawals/{id}
+    // Detail satu withdrawal
+    // ================================================================
+    public function show(int $id): JsonResponse
+    {
+        $withdrawal = Withdrawal::with('guide')->findOrFail($id);
+
+        return response()->json(['withdrawal' => $this->formatWithdrawal($withdrawal)], 200);
+    }
+
+    // ================================================================
+    // POST /api/admin/withdrawals/{id}/process
+    // Admin transfer manual + tandai selesai (UC-20 Normal Flow)
+    // menunggu_verifikasi → selesai
+    // Efek: WalletService::debitAvailable() (available_balance guide -)
+    // ================================================================
+    public function process(Request $request, int $id): JsonResponse
+    {
+        /** @var Admin $admin */
+        $admin = $request->user();
+
+        $withdrawal = Withdrawal::where('status', Withdrawal::STATUS_MENUNGGU_VERIFIKASI)
+            ->with('guide')
+            ->findOrFail($id);
+
+        $guide = $withdrawal->guide;
+
+        // A2: validasi saldo masih mencukupi saat diproses
+        if ($guide->available_balance < $withdrawal->amount) {
+            return response()->json([
+                'message'           => 'Saldo available pemandu tidak mencukupi untuk memproses pencairan ini.',
+                'available_balance' => (float) $guide->available_balance,
+                'withdrawal_amount' => (float) $withdrawal->amount,
+            ], 422);
+        }
+
+        $withdrawal->update([
+            'status'       => Withdrawal::STATUS_SELESAI,
+            'processed_by' => $admin->id,
+            'processed_at' => now(),
+        ]);
+
+        // Kurangi available_balance + buat wallet_transaction (WalletService — satu-satunya sumber kebenaran)
+        WalletService::debitAvailable($guide, $withdrawal);
+
+        // TODO: notifikasi pemandu (out of scope)
+
+        $withdrawal->load('guide');
+
+        return response()->json([
+            'message'    => "Pencairan Rp " . number_format($withdrawal->amount, 0, ',', '.') .
+                " untuk {$guide->name} berhasil diproses.",
+            'withdrawal' => $this->formatWithdrawal($withdrawal),
+        ], 200);
+    }
+
+    // ================================================================
+    // POST /api/admin/withdrawals/{id}/reject
+    // Data rekening tidak valid (UC-20 Alternate Flow A1)
+    // menunggu_verifikasi → ditolak
+    // ================================================================
+    public function reject(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $withdrawal = Withdrawal::where('status', Withdrawal::STATUS_MENUNGGU_VERIFIKASI)
+            ->with('guide')
+            ->findOrFail($id);
+
+        $withdrawal->update([
+            'status'           => Withdrawal::STATUS_DITOLAK,
+            'rejection_reason' => $validated['rejection_reason'],
+        ]);
+
+        // TODO: notifikasi pemandu (out of scope)
+
+        return response()->json([
+            'message'    => 'Permintaan pencairan ditolak.',
+            'withdrawal' => $this->formatWithdrawal($withdrawal),
+        ], 200);
+    }
+}

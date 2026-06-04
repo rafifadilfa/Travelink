@@ -427,7 +427,7 @@ const AdminKycDetail: React.FC = () => {
       <Modal
         isOpen={isOpen}
         onClose={onClose}
-        initialFocusRef={initialFocusRef}
+        initialFocusRef={initialFocusRef as any}
         isCentered
       >
         <ModalOverlay />

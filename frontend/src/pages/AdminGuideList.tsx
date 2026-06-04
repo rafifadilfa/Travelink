@@ -26,26 +26,15 @@ interface GuideRow {
   id: number;
   name: string;
   email: string;
-  verification_status: 'pending' | 'verified' | 'rejected';
+  verification_status: string;
   created_at: string;
 }
 
-const statusConfig = {
-  pending: {
-    label: 'Menunggu',
-    colorScheme: 'orange',
-    icon: FiClock,
-  },
-  verified: {
-    label: 'Terverifikasi',
-    colorScheme: 'green',
-    icon: FiCheckCircle,
-  },
-  rejected: {
-    label: 'Ditolak',
-    colorScheme: 'red',
-    icon: FiXCircle,
-  },
+const statusConfig: Record<string, { label: string; colorScheme: string; icon: React.ElementType }> = {
+  pending:             { label: 'Belum Verifikasi', colorScheme: 'gray',   icon: FiClock       },
+  menunggu_verifikasi: { label: 'Menunggu Review',  colorScheme: 'orange', icon: FiClock       },
+  verified:            { label: 'Aktif',            colorScheme: 'green',  icon: FiCheckCircle },
+  rejected:            { label: 'Ditolak',          colorScheme: 'red',    icon: FiXCircle     },
 };
 
 const AdminGuideList: React.FC = () => {
@@ -54,6 +43,8 @@ const AdminGuideList: React.FC = () => {
   const borderColor  = useColorModeValue('gray.200', 'gray.700');
   const secondaryTxt = useColorModeValue('gray.500', 'gray.400');
   const tableHover   = useColorModeValue('purple.50', 'gray.700');
+  // Dipindah ke sini (top-level) agar tidak melanggar Rules of Hooks
+  const theadBg      = useColorModeValue('gray.50', 'gray.750');
 
   const [guides, setGuides]   = useState<GuideRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,9 +70,12 @@ const AdminGuideList: React.FC = () => {
     });
 
   // Hitung ringkasan per status
-  const counts = guides.reduce(
-    (acc, g) => { acc[g.verification_status]++; return acc; },
-    { pending: 0, verified: 0, rejected: 0 }
+  const counts: Record<string, number> = guides.reduce(
+    (acc: Record<string, number>, g) => {
+      acc[g.verification_status] = (acc[g.verification_status] ?? 0) + 1;
+      return acc;
+    },
+    {}
   );
 
   return (
@@ -108,7 +102,7 @@ const AdminGuideList: React.FC = () => {
             >
               <Icon as={cfg.icon} color={`${cfg.colorScheme}.400`} boxSize={5} />
               <Box>
-                <Text fontSize="xl" fontWeight="bold" lineHeight={1}>{counts[status]}</Text>
+                <Text fontSize="xl" fontWeight="bold" lineHeight={1}>{counts[status] ?? 0}</Text>
                 <Text fontSize="xs" color={secondaryTxt}>{cfg.label}</Text>
               </Box>
             </Box>
@@ -145,7 +139,7 @@ const AdminGuideList: React.FC = () => {
           overflow="hidden"
         >
           <Table variant="simple">
-            <Thead bg={useColorModeValue('gray.50', 'gray.750')}>
+            <Thead bg={theadBg}>
               <Tr>
                 <Th>Nama Guide</Th>
                 <Th>Email</Th>

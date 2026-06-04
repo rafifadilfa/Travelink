@@ -34,7 +34,7 @@ class TourSeeder extends Seeder
                 'tour_guide_id' => $guide->id,
                 'tour_price' => 1200000, // Price in IDR
                 'tour_duration' => 8, // Duration in hours
-                'tour_start_time' => '08:30:00',
+                'tour_start_time' => '2026-01-01 08:30:00', // timestamp placeholder; jam 08:30 adalah jam mulai standar tour ini
                 'tour_period_id' => $dayphase->id,
                 'tour_rating' => 0.00,
                 'tour_review_count' => 0,
