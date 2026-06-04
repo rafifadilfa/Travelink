@@ -22,12 +22,8 @@ class CategorySeeder extends Seeder
             'Nature',
         ];
 
-        Category::truncate(); // Clear existing categories before seeding
-
         foreach ($categories as $category) {
-            Category::create([
-                'name' => $category,
-            ]);
+            Category::firstOrCreate(['name' => $category]);
         }
     }
 }

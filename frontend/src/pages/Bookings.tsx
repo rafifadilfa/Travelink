@@ -1,505 +1,918 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Box, Flex, Text, Button, Image, Badge, Container, Grid, GridItem,
-  useColorModeValue, Icon, Heading, Divider, Tabs, TabList, TabPanels, Tab, TabPanel, HStack,
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
-  useDisclosure, Textarea, VStack
+  Avatar,
+  Badge,
+  Box,
+  Button,
+  Container,
+  Divider,
+  Flex,
+  HStack,
+  Heading,
+  Icon,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Skeleton,
+  SkeletonText,
+  Stat,
+  StatHelpText,
+  StatLabel,
+  StatNumber,
+  Tag,
+  TagLabel,
+  Text,
+  Tooltip,
+  VStack,
+  Wrap,
+  WrapItem,
+  useColorModeValue,
+  useDisclosure,
+  useToast,
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
 import {
-  ChevronRightIcon, CalendarIcon, StarIcon, TimeIcon, InfoOutlineIcon,
-  CheckCircleIcon, WarningIcon, CloseIcon, LinkIcon
+  CalendarIcon,
+  CheckCircleIcon,
+  InfoOutlineIcon,
+  StarIcon,
+  TimeIcon,
 } from '@chakra-ui/icons';
 import { keyframes } from '@emotion/react';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '../services/api';
+import TouristNavbar from '../components/TouristNavbar';
 
-const slideInUp = keyframes`
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+// ─── Animasi ────────────────────────────────────────────────────────────────
+
+const fadeUp = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 `;
+
 const fadeIn = keyframes`
   from { opacity: 0; }
-  to { opacity: 1; }
-`;
-const iconWiggle = keyframes`
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  25% { transform: rotate(8deg) scale(1.08); }
-  50% { transform: rotate(-4deg) scale(1.04); }
-  75% { transform: rotate(8deg) scale(1.08); }
-`;
-const subtleFloat = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3px); }
+  to   { opacity: 1; }
 `;
 
-const upcomingBookingsData = [
-  {
-    id: 1,
-    tourName: 'Bali Beach Hopping Adventure',
-    location: 'Bali',
-    date: 'August 15, 2025',
-    time: '08:30 AM',
-    status: 'confirmed',
-    image: 'https://images.unsplash.com/photo-1573790387438-4da905039392',
-    price: 1200000,
-    people: 2,
-    guideName: 'Wayan Sudiarta',
-    meetingPoint: 'Hotel Lobby Central',
-    paymentStatus: 'paid',
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+interface GroupInfo {
+  id: number;
+  member_count: number;
+  expires_at: string | null;
+  seconds_remaining: number;
+  is_active: boolean;
+}
+
+interface OpenTripBooking {
+  participant_id: number;
+  tour_id: number;
+  tour_name: string;
+  tour_location: string | null;
+  tour_price: number;
+  trip_date: string;
+  status: 'waiting' | 'matched' | 'cancelled';
+  matching_score: number | null;
+  group_id: number | null;
+  group: GroupInfo | null;
+}
+
+// Tipe minimal untuk modal detail grup (reuse dari groupDetail endpoint)
+interface CriteriaMatch { age: boolean; interest: boolean; preference: boolean; budget: boolean }
+interface ScoreDetail {
+  weights: { age: number; interest: number; preference: number; budget: number };
+  ncf: number; nsf: number; score: number;
+  criteria_match: CriteriaMatch; match_count: number;
+}
+interface Member {
+  participant_id: number; user_id: number; name: string;
+  profile_picture: string | null; age: number; budget_level: number;
+  interests: string[]; activities: string[];
+  matching_score: number; score_detail: ScoreDetail;
+}
+interface GroupDetail {
+  id: number; tour_id: number; tour_name: string;
+  tour_location: string | null; tour_price: number;
+  trip_date: string; member_count: number;
+}
+interface GroupDetailResponse {
+  group: GroupDetail;
+  members: Member[];
+}
+
+// ─── Konstanta ──────────────────────────────────────────────────────────────
+
+const BUDGET_LABELS: Record<number, string> = {
+  1: '< Rp 500rb', 2: 'Rp 500rb–1jt', 3: 'Rp 1jt–2jt', 4: 'Rp 2jt–5jt', 5: '> Rp 5jt',
+};
+
+const CRITERIA_LABELS: Record<keyof CriteriaMatch, string> = {
+  age: 'Umur', interest: 'Minat', preference: 'Aktivitas', budget: 'Budget',
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const formatRupiah = (n: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
+
+const formatDate = (dateStr: string) =>
+  new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
+    weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+const isPast = (dateStr: string) => {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return new Date(dateStr + 'T00:00:00') < today;
+};
+
+const scorePercent = (score: number) => Math.round((score / 5) * 100);
+
+// ─── Config badge status ─────────────────────────────────────────────────────
+
+const STATUS_CONFIG = {
+  waiting: {
+    label: 'Menunggu Dicocokkan',
+    colorScheme: 'orange',
+    icon: TimeIcon,
   },
-  {
-    id: 2,
-    tourName: 'Gili Islands Snorkeling Expedition',
-    location: 'Lombok',
-    date: 'September 02, 2025',
-    time: '09:00 AM',
-    status: 'pending',
-    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5',
-    price: 1500000,
-    people: 1,
-    guideName: 'Putu Wijaya',
-    meetingPoint: 'Lombok Main Harbor, Pier B',
-    paymentStatus: 'unpaid',
+  matched: {
+    label: 'Grup Terbentuk',
+    colorScheme: 'green',
+    icon: CheckCircleIcon,
   },
-];
-
-const initialPastBookings = [
-  {
-    id: 4,
-    tourName: 'Historical Jakarta City Tour',
-    location: 'Jakarta',
-    date: 'April 10, 2025',
-    time: '10:00 AM',
-    status: 'completed',
-    image: 'https://images.unsplash.com/photo-1555899434-94d1368aa7af',
-    price: 800000,
-    people: 3,
-    guideName: 'Wayan Sudiarta',
-    rating: 5,
-    hasReview: true,
-    paymentStatus: 'paid',
+  cancelled: {
+    label: 'Dibatalkan',
+    colorScheme: 'red',
+    icon: InfoOutlineIcon,
   },
-  {
-    id: 5,
-    tourName: 'Borobudur Temple Sunrise Experience',
-    location: 'Yogyakarta',
-    date: 'March 25, 2025',
-    time: '04:30 AM',
-    status: 'completed',
-    image: 'https://images.unsplash.com/photo-1580655653885-65763b2597d0',
-    price: 950000,
-    people: 2,
-    guideName: 'Putu Wijaya',
-    rating: 0,
-    hasReview: false,
-    paymentStatus: 'paid',
-  },
-];
+} as const;
 
-const Bookings: React.FC = () => {
-  const navigate = useNavigate();
-  const [activeTabIndex, setActiveTabIndex] = useState(0);
+// ─── Sub-komponen: Skeleton card ─────────────────────────────────────────────
 
-  const [pastBookings, setPastBookings] = useState(initialPastBookings);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const [selectedBooking, setSelectedBooking] = useState<any>(null);
-  const [currentRating, setCurrentRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
-  const [reviewText, setReviewText] = useState('');
+const SkeletonCard: React.FC = () => (
+  <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" p={5} boxShadow="sm">
+    <Flex justify="space-between" align="flex-start" mb={4}>
+      <Skeleton height="22px" width="130px" borderRadius="full" />
+      <Skeleton height="18px" width="100px" borderRadius="md" />
+    </Flex>
+    <SkeletonText mt={2} noOfLines={1} skeletonHeight="20px" width="70%" />
+    <SkeletonText mt={3} noOfLines={1} skeletonHeight="14px" width="40%" />
+    <Skeleton mt={4} height="58px" borderRadius="lg" />
+    <Flex mt={4} gap={3}>
+      <Skeleton flex={1} height="38px" borderRadius="lg" />
+      <Skeleton flex={1} height="38px" borderRadius="lg" />
+    </Flex>
+  </Box>
+);
 
-  const overallBg = useColorModeValue('blue.50', 'gray.900');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const glassBg = useColorModeValue('rgba(255, 255, 255, 0.85)', 'rgba(26, 32, 44, 0.80)');
-  const primaryColor = useColorModeValue('blue.500', 'blue.400');
-  const primaryHoverColor = useColorModeValue('blue.600', 'blue.500');
-  const primaryTextColor = useColorModeValue('gray.700', 'whiteAlpha.900');
-  const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
-  const subtleBorderColor = useColorModeValue('gray.200', 'gray.700');
-  const infoBoxBg = useColorModeValue('gray.50', 'gray.700');
-  const accentGradient = `linear(to-br, ${useColorModeValue('purple.400', 'purple.300')}, ${primaryColor})`;
-  const yellowStarColor = useColorModeValue('yellow.400', 'yellow.300');
+// ─── Sub-komponen: Empty state ────────────────────────────────────────────────
 
-  const baseButtonStyle = {
-    borderRadius: "lg", fontWeight: "semibold", h: "42px", px: 5, fontSize: "md",
-    transition: "all 0.25s cubic-bezier(.08,.52,.52,1)",
-    _active: { transform: 'translateY(1px) scale(0.97)', boxShadow: 'sm' },
-    _focus: { boxShadow: `0 0 0 3px ${useColorModeValue('blue.200', 'blue.700')}` }
-  };
-  const primaryButtonStyle = {
-    ...baseButtonStyle, bgGradient: `linear(to-r, ${primaryColor}, ${useColorModeValue('blue.400', 'blue.300')})`, color: 'white',
-    boxShadow: "md",
-    _hover: { bgGradient: `linear(to-r, ${primaryHoverColor}, ${useColorModeValue('blue.500', 'blue.400')})`, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg' },
-  };
-  const secondaryButtonStyle = {
-    ...baseButtonStyle, bg: 'transparent', color: primaryColor, border: "2px solid", borderColor: primaryColor,
-    _hover: { bg: useColorModeValue('blue.50', 'rgba(49,130,206,0.1)'), borderColor: primaryHoverColor, color: primaryHoverColor, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'md' },
-  };
-  const successButtonStyle = {
-    ...baseButtonStyle, bgGradient: `linear(to-r, ${useColorModeValue('green.500','green.400')}, ${useColorModeValue('green.400','green.300')})`, color: 'white',
-    boxShadow: "md",
-    _hover: { bgGradient: `linear(to-r, ${useColorModeValue('green.600','green.500')}, ${useColorModeValue('green.500','green.400')})`, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg' },
-  };
-  const warningButtonStyle = {
-    ...baseButtonStyle, bgGradient: `linear(to-r, ${useColorModeValue('yellow.500','yellow.400')}, ${useColorModeValue('yellow.400','yellow.300')})`, color: 'white',
-    boxShadow: "md",
-    _hover: { bgGradient: `linear(to-r, ${useColorModeValue('yellow.600','yellow.500')}, ${useColorModeValue('yellow.500','yellow.400')})`, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg' },
-  };
-  const dangerButtonStyle = {
-    ...baseButtonStyle, bg: useColorModeValue('red.500', 'red.600'), color: 'white',
-    boxShadow: "md",
-    _hover: { bg: useColorModeValue('red.600', 'red.700'), transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg' },
-  };
+interface EmptyStateProps {
+  tab: 'upcoming' | 'past';
+  onExplore: () => void;
+}
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency', currency: 'IDR', minimumFractionDigits: 0,
-    }).format(price);
-  };
+const EmptyState: React.FC<EmptyStateProps> = ({ tab, onExplore }) => {
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+  const subtleColor = useColorModeValue('gray.400', 'gray.500');
 
-  const handlePayment = (bookingId: number) => {
-    navigate(`/payment/${bookingId}`);
-  };
-
-  const getPaymentStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return (
-          <Badge colorScheme="green" px={3} py={1} borderRadius="full" display="inline-flex" alignItems="center" variant="solid">
-            <Icon as={CheckCircleIcon} mr={1.5} boxSize={3.5}/> Paid
-          </Badge>
-        );
-      case 'unpaid':
-        return (
-          <Badge colorScheme="red" px={3} py={1} borderRadius="full" display="inline-flex" alignItems="center" variant="solid">
-            <Icon as={WarningIcon} mr={1.5} boxSize={3.5}/> Unpaid
-          </Badge>
-        );
-      default:
-        return (
-          <Badge colorScheme="gray" px={3} py={1} borderRadius="full" display="inline-flex" alignItems="center">
-            <Icon as={InfoOutlineIcon} mr={1.5} boxSize={3.5}/> {status}
-          </Badge>
-        );
-    }
-  };
-
-  const calculateDaysDifference = (dateStr: string) => {
-    const bookingDate = new Date(dateStr).getTime();
-    const today = new Date().setHours(0,0,0,0);
-    const diffTime = bookingDate - today;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-  
-  const handleOpenReviewModal = (booking: any) => {
-    setSelectedBooking(booking);
-    setCurrentRating(0);
-    setReviewText('');
-    onOpen();
-  };
-
-  const handleReviewSubmit = () => {
-    if (currentRating === 0) {
-      alert("Please select a star rating.");
-      return;
-    }
-    setPastBookings(prevBookings =>
-      prevBookings.map(b =>
-        b.id === selectedBooking.id
-          ? { ...b, hasReview: true, rating: currentRating }
-          : b
-      )
-    );
-    console.log(`Review Submitted for booking ${selectedBooking.id}: ${currentRating} stars, Text: "${reviewText}"`);
-    onClose();
-  };
-
-
-  const DetailItem: React.FC<{ icon: React.ElementType, label: string, value: string | number, isPrice?: boolean }> = ({ icon, label, value, isPrice }) => (
-    <Box>
-      <HStack spacing={1.5} mb={0.5} alignItems="center">
-        <Icon as={icon} color={primaryColor} boxSize="1em" />
-        <Text fontSize="sm" color={secondaryTextColor} fontWeight="medium" textTransform="uppercase">
-          {label}
+  if (tab === 'upcoming') {
+    return (
+      <Box
+        textAlign="center" py={16} px={6}
+        bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100"
+        boxShadow="sm" animation={`${fadeIn} 0.3s ease`}
+      >
+        <Text fontSize="3xl" mb={4}>🧭</Text>
+        <Heading size="md" color={textColor} mb={2}>Belum ada perjalanan mendatang</Heading>
+        <Text color={subtleColor} fontSize="sm" mb={6} maxW="320px" mx="auto">
+          Ikut Smart Open Trip untuk otomatis dicocokkan dengan peserta lain yang punya minat serupa.
         </Text>
-      </HStack>
-      <Text fontSize="md" fontWeight={isPrice ? "bold" : "medium"} color={isPrice ? primaryColor : primaryTextColor} noOfLines={1}>
-        {value}
+        <Button
+          colorScheme="blue" size="md" onClick={onExplore}
+          rightIcon={<Icon as={CalendarIcon} />}
+        >
+          Jelajahi Tour
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      textAlign="center" py={16} px={6}
+      bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100"
+      boxShadow="sm" animation={`${fadeIn} 0.3s ease`}
+    >
+      <Text fontSize="3xl" mb={4}>🗺️</Text>
+      <Heading size="md" color={textColor} mb={2}>Riwayat perjalanan masih kosong</Heading>
+      <Text color={subtleColor} fontSize="sm" maxW="300px" mx="auto">
+        Trip yang sudah selesai atau dibatalkan akan tercatat di sini.
       </Text>
     </Box>
   );
+};
 
-  const renderBookingCard = (booking: any, isUpcoming: boolean) => {
-    const daysDiff = isUpcoming ? calculateDaysDifference(booking.date) : Math.floor((new Date().getTime() - new Date(booking.date).getTime()) / (1000 * 60 * 60 * 24));
-    let countdownText = "";
-    if (isUpcoming) {
-        if (daysDiff > 0) countdownText = `${daysDiff} day${daysDiff > 1 ? 's' : ''} left`;
-        else if (daysDiff === 0) countdownText = "Today!";
-        else countdownText = "Tour has passed";
-    } else {
-        countdownText = `${daysDiff} day${daysDiff !== 1 ? 's' : ''} ago`;
-    }
+// ─── Sub-komponen: Stat row (info grup) ──────────────────────────────────────
 
-    return (
-      <Box
-        key={booking.id}
-        borderRadius="xl" overflow="hidden" bg={cardBg} boxShadow="xl"
-        transition="all 0.3s ease" _hover={{ boxShadow: "2xl", transform: "translateY(-4px)" }}
-        border="1px solid" borderColor={subtleBorderColor} animation={`${slideInUp} 0.5s ease-out forwards`}
-      >
-        <Flex direction={{ base: 'column', md: 'row' }}>
-          <Box w={{ base: '100%', md: '280px' }} h={{ base: '220px', md: 'auto' }} position="relative">
-            <Image
-              src={booking.image} alt={booking.tourName} objectFit="cover" w="100%" h="100%"
-              filter={!isUpcoming ? "grayscale(50%)" : "none"} opacity={!isUpcoming ? "0.8" : "1"}
-            />
-            <Badge
-              position="absolute" top={3} right={3}
-              colorScheme={booking.status === 'confirmed' ? 'green' : booking.status === 'pending' ? 'orange' : 'blue'}
-              variant="solid" px={3} py={1.5} borderRadius="md" fontSize="xs" fontWeight="bold" textTransform="uppercase" boxShadow="md"
-            >
-              {booking.status}
-            </Badge>
-            <Badge
-              position="absolute" bottom={3} left={3} bg="blackAlpha.700" color="white"
-              px={3} py={1.5} borderRadius="md" fontSize="xs" fontWeight="bold"
-              display="flex" alignItems="center"
-            >
-              <Icon as={isUpcoming ? TimeIcon : CalendarIcon} mr={1.5} /> {countdownText}
-            </Badge>
-          </Box>
+interface StatRowProps {
+  memberCount: number;
+  matchingScore: number | null;
+  tourPrice: number;
+  memberCountForSplit: number;
+}
 
-          <Box p={{ base: 4, md: 6 }} flex="1">
-            <Flex justify="space-between" align="flex-start" mb={{base: 2, md: 3}}>
-              <Heading as="h3" size="md" color={primaryTextColor} fontWeight="bold" lineHeight="1.3" mr={3}>
-                {booking.tourName}
-              </Heading>
-              {getPaymentStatusBadge(booking.paymentStatus)}
-            </Flex>
+const StatRow: React.FC<StatRowProps> = ({ memberCount, matchingScore, tourPrice, memberCountForSplit }) => {
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
+  const borderColor = useColorModeValue('gray.100', 'gray.600');
+  const labelColor = useColorModeValue('gray.500', 'gray.400');
+  const valueColor = useColorModeValue('gray.800', 'white');
 
-            <HStack color={secondaryTextColor} fontSize="sm" mb={4} alignItems="center">
-              <Icon as={LinkIcon} color={primaryColor} boxSize={4}/>
-              <Text fontWeight="medium">{booking.location}</Text>
-            </HStack>
-            
-            <Grid
-              templateColumns={{ base: "repeat(2, 1fr)", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)"}}
-              gap={{ base: 3, md: 4 }} mb={5} p={4} bg={infoBoxBg} borderRadius="lg"
-              border="1px solid" borderColor={useColorModeValue('gray.200', 'gray.600')}
-            >
-              <DetailItem icon={CalendarIcon} label="Date" value={booking.date} />
-              <DetailItem icon={TimeIcon} label="Time" value={booking.time} />
-              <DetailItem icon={InfoOutlineIcon} label="People" value={booking.people} />
-              <DetailItem icon={InfoOutlineIcon} label="Total Price" value={formatPrice(booking.price * booking.people)} isPrice />
-              <GridItem colSpan={{ base: 2, md: 2 }}>
-                <DetailItem icon={InfoOutlineIcon} label="Meeting Point" value={booking.meetingPoint} />
-              </GridItem>
-            </Grid>
-            
-            <Divider my={4} borderColor={subtleBorderColor} />
-
-            <Flex
-              justify="space-between" align={{ base: "stretch", sm: "center" }}
-              direction={{ base: "column", sm: "row" }} gap={{ base: 4, sm: 2 }}
-            >
-              <Flex align="center" gap={3} mb={{base: isUpcoming && booking.paymentStatus === 'unpaid' ? 0 : 3, sm: 0}}>
-                <Box
-                  width="40px" height="40px" borderRadius="full" bgGradient={accentGradient}
-                  display="flex" alignItems="center" justifyContent="center" boxShadow="md"
-                  color="white" fontSize="lg" fontWeight="bold"
-                >
-                  {booking.guideName.substring(0,1)}
-                </Box>
-                <Box>
-                  <Text fontSize="sm" fontWeight="bold" color={primaryTextColor}>{booking.guideName}</Text>
-                  <Text fontSize="xs" color={secondaryTextColor}>Your Guide</Text>
-                </Box>
-              </Flex>
-
-              <Flex gap={3} wrap={{ base: "wrap", md: "nowrap" }} justify={{ base: "center", md: "flex-end" }} width={{base:"100%", sm:"auto"}}>
-                {isUpcoming && booking.paymentStatus === 'unpaid' && (
-                  <Button {...successButtonStyle} leftIcon={<Icon as={CheckCircleIcon} />} onClick={() => handlePayment(booking.id)} flexGrow={{base:1, sm:0}}>
-                    Pay Now
-                  </Button>
-                )}
-                {!isUpcoming && !booking.hasReview && (
-                  <Button {...warningButtonStyle} leftIcon={<Icon as={StarIcon} />} onClick={() => handleOpenReviewModal(booking)} flexGrow={{base:1, sm:0}}>
-                    Leave Review
-                  </Button>
-                )}
-                <Button {...secondaryButtonStyle} onClick={() => navigate(`/tours/${booking.id}`)} flexGrow={{base:1, sm:0}}>
-                  {isUpcoming ? 'Tour Details' : 'Book Again'}
-                </Button>
-                {isUpcoming && (
-                  <Button {...dangerButtonStyle} leftIcon={<Icon as={CloseIcon} boxSize={3}/>} onClick={() => alert(`Cancel booking ${booking.id}`)} flexGrow={{base:1, sm:0}}>
-                    Cancel
-                  </Button>
-                )}
-              </Flex>
-            </Flex>
-            
-            {!isUpcoming && booking.hasReview && (
-              <Flex alignItems="center" mt={4} p={2} bg={useColorModeValue("green.50", "green.800")} borderRadius="md" borderLeft="3px solid" borderColor={useColorModeValue("green.500", "green.300")}>
-                  <Icon as={CheckCircleIcon} color={useColorModeValue("green.500", "green.300")} mr={2} />
-                  <Text fontSize="sm" fontWeight="medium" color={useColorModeValue("green.700", "green.200")}>You've left a review for this tour.</Text>
-              </Flex>
-            )}
-            {!isUpcoming && booking.hasReview && (
-              <Flex alignItems="center" mt={booking.hasReview ? 2 : 4}>
-                <Text fontSize="sm" color={secondaryTextColor} mr={2}>Your Rating:</Text>
-                {[...Array(5)].map((_, i) => (
-                    <Icon key={i} as={StarIcon} color={i < booking.rating ? yellowStarColor : useColorModeValue("gray.300", "gray.600")} boxSize={4}/>
-                ))}
-                <Text fontWeight="bold" fontSize="sm" ml={1.5} color={primaryTextColor}>
-                    {booking.rating}/5
-                </Text>
-              </Flex>
-            )}
-          </Box>
-        </Flex>
-      </Box>
-    );
-  };
-  
-  const EmptyState: React.FC<{icon: React.ElementType, title: string, description: string, buttonText: string}> = ({icon, title, description, buttonText}) => (
-    <Box
-      textAlign="center" py={16} px={6} bg={cardBg} borderRadius="xl" boxShadow="xl"
-      border="1px solid" borderColor={subtleBorderColor}
-      animation={`${fadeIn} 0.5s ease-out`}
-      minH="400px" display="flex" flexDirection="column" justifyContent="center" alignItems="center"
-    >
-      <Icon as={icon} boxSize="56px" color={primaryColor} mb={5} animation={`${iconWiggle} 3.5s ease-in-out infinite`} />
-      <Heading size="lg" color={primaryTextColor} mb={3}>{title}</Heading>
-      <Text color={secondaryTextColor} mb={8} maxW="md" fontSize="md">{description}</Text>
-      <Button {...primaryButtonStyle} size="lg" onClick={() => navigate('/tours')} rightIcon={<ChevronRightIcon />} animation={`${subtleFloat} 2s ease-in-out infinite 0.5s`}>
-          {buttonText}
-      </Button>
-    </Box>
-  );
+  const items = [
+    {
+      icon: '👥',
+      label: 'Anggota',
+      value: `${memberCount} orang`,
+    },
+    ...(matchingScore !== null ? [{
+      icon: '🎯',
+      label: 'Kecocokan',
+      value: `${scorePercent(matchingScore)}%`,
+    }] : []),
+    {
+      icon: '💰',
+      label: 'Est. per orang',
+      value: formatRupiah(Math.round(tourPrice / memberCountForSplit)),
+    },
+  ];
 
   return (
-    <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
-      <Box bg={glassBg} backdropFilter="blur(12px) saturate(180%)" boxShadow="md" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={subtleBorderColor}>
-        <Container maxW="container.xl">
-          <Flex h="68px" justify="space-between" align="center">
-            <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-              <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
-              </Flex>
-              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">
-                Travelink
-              </Heading>
-            </Flex>
-            <HStack spacing={3}>
-              <Button {...secondaryButtonStyle} size="sm" onClick={() => navigate('/tours')} leftIcon={<Text as="span" role="img" aria-label="explore" mr={0.5}>🧭</Text>}>Explore Tours</Button>
-              <Button {...primaryButtonStyle} size="sm" onClick={() => navigate('/profile')} leftIcon={<Text as="span" role="img" aria-label="profile" mr={0.5}>👤</Text>}>My Profile</Button>
-            </HStack>
-          </Flex>
-        </Container>
-      </Box>
+    <Flex
+      bg={bgColor} border="1px solid" borderColor={borderColor}
+      borderRadius="lg" overflow="hidden"
+    >
+      {items.map((item, idx) => (
+        <React.Fragment key={item.label}>
+          {idx > 0 && <Divider orientation="vertical" h="auto" />}
+          <Box flex={1} px={3} py={2.5} textAlign="center">
+            <Text fontSize="xs" color={labelColor} mb={0.5}>{item.icon} {item.label}</Text>
+            <Text fontSize="sm" fontWeight="semibold" color={valueColor}>{item.value}</Text>
+          </Box>
+        </React.Fragment>
+      ))}
+    </Flex>
+  );
+};
 
-      <Container maxW="container.xl" py={{ base: 6, md: 10 }}>
-        <Flex align="center" mb={{ base: 5, md: 8 }} animation={`${slideInUp} 0.6s ease-out 0.1s both`}>
-          <Icon as={CalendarIcon} color={primaryColor} boxSize={{ base: 6, md: 7 }} mr={3} />
-          <Heading as="h2" size={{ base: "lg", md: "xl" }} fontWeight="bold" color={primaryTextColor}>
-            My Bookings
-          </Heading>
+// ─── Sub-komponen: Trip card ──────────────────────────────────────────────────
+
+interface TripCardProps {
+  item: OpenTripBooking;
+  isUpcoming: boolean;
+  index: number;
+  onViewDetail: (item: OpenTripBooking) => void;
+  myUserId: number | null;
+}
+
+const TripCard: React.FC<TripCardProps> = ({ item, isUpcoming, index, onViewDetail }) => {
+  const navigate = useNavigate();
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.100', 'gray.700');
+  const titleColor = useColorModeValue('gray.800', 'white');
+  const subtleColor = useColorModeValue('gray.500', 'gray.400');
+  const hoverBorderColor = useColorModeValue('blue.200', 'blue.600');
+  const waitingBoxBg = useColorModeValue('orange.50', 'orange.900');
+  const waitingTextColor = useColorModeValue('orange.700', 'orange.200');
+  const dividerColor = useColorModeValue('gray.100', 'gray.700');
+
+  const cfg = STATUS_CONFIG[item.status];
+  const tripIsPast = isPast(item.trip_date);
+
+  // Tentukan status label yang lebih kontekstual
+  const statusLabel =
+    item.status === 'matched' && tripIsPast ? 'Selesai' : cfg.label;
+  const statusColorScheme =
+    item.status === 'matched' && tripIsPast ? 'blue' : cfg.colorScheme;
+
+  const handlePrimaryAction = () => {
+    if (isUpcoming) {
+      navigate(
+        `/open-trip/waiting/${item.participant_id}?tour_id=${item.tour_id}&date=${item.trip_date}`
+      );
+    } else {
+      onViewDetail(item);
+    }
+  };
+
+  return (
+    <Box
+      bg={cardBg}
+      borderRadius="xl"
+      border="1px solid"
+      borderColor={borderColor}
+      boxShadow="sm"
+      transition="border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease"
+      _hover={{ borderColor: hoverBorderColor, boxShadow: 'md', transform: 'translateY(-1px)' }}
+      animation={`${fadeUp} 0.2s ease ${index * 0.05}s both`}
+      overflow="hidden"
+    >
+      {/* Status strip — bukan side-stripe, melainkan top bar tipis berwarna */}
+      <Box
+        h="3px"
+        bgGradient={
+          statusColorScheme === 'green' ? 'linear(to-r, green.300, teal.300)' :
+          statusColorScheme === 'orange' ? 'linear(to-r, orange.300, yellow.300)' :
+          statusColorScheme === 'blue' ? 'linear(to-r, blue.300, cyan.300)' :
+          'linear(to-r, gray.300, gray.200)'
+        }
+      />
+
+      <Box p={5}>
+        {/* Baris atas: badge + tanggal */}
+        <Flex justify="space-between" align="center" mb={3}>
+          <Badge
+            colorScheme={statusColorScheme}
+            variant="subtle"
+            px={2.5} py={1}
+            borderRadius="full"
+            fontSize="xs"
+            fontWeight="semibold"
+            display="flex" alignItems="center" gap={1.5}
+          >
+            <Icon as={cfg.icon} boxSize={3} />
+            {statusLabel}
+          </Badge>
+          <HStack spacing={1} color={subtleColor}>
+            <Icon as={CalendarIcon} boxSize={3} />
+            <Text fontSize="xs">{formatDate(item.trip_date)}</Text>
+          </HStack>
         </Flex>
 
-        <Tabs index={activeTabIndex} onChange={(index) => setActiveTabIndex(index)} variant="unstyled" isLazy>
-          <TabList display="flex" justifyContent="space-around" bg={cardBg} p={1.5} borderRadius="lg" boxShadow="lg" mb={8} border="1px solid" borderColor={subtleBorderColor} animation={`${slideInUp} 0.7s ease-out 0.2s both`}>
-            {[
-              { label: "Upcoming", icon: TimeIcon, count: upcomingBookingsData.length },
-              { label: "Past", icon: CheckCircleIcon, count: pastBookings.length }
-            ].map((tab, index) => (
-              <Tab
-                key={tab.label} flex={1} py={3} borderRadius="md" fontWeight="semibold" fontSize="md"
-                color={activeTabIndex === index ? 'white' : secondaryTextColor}
-                bg={activeTabIndex === index ? primaryColor : 'transparent'}
-                boxShadow={activeTabIndex === index ? 'md' : 'none'}
-                transition="all 0.3s ease"
-                _hover={{ bg: activeTabIndex !== index ? useColorModeValue('blue.100', 'gray.700') : primaryHoverColor, color: activeTabIndex !== index ? primaryColor : 'white' }}
-                _selected={{ color: 'white', bg: primaryColor, boxShadow: 'lg' }}
-                display="flex" alignItems="center" justifyContent="center"
+        {/* Nama tour */}
+        <Heading as="h3" size="sm" color={titleColor} mb={1.5} noOfLines={2} lineHeight="1.4">
+          {item.tour_name}
+        </Heading>
+
+        {/* Lokasi */}
+        {item.tour_location && (
+          <HStack spacing={1} color={subtleColor} mb={4}>
+            <Text fontSize="xs">📍</Text>
+            <Text fontSize="sm">{item.tour_location}</Text>
+          </HStack>
+        )}
+
+        {/* Stat row — hanya tampil jika sudah ada grup */}
+        {item.group && item.status !== 'cancelled' && (
+          <Box mb={4}>
+            <StatRow
+              memberCount={item.group.member_count}
+              matchingScore={item.matching_score}
+              tourPrice={item.tour_price}
+              memberCountForSplit={item.group.member_count}
+            />
+          </Box>
+        )}
+
+        {/* Jika masih waiting, tampilkan info status */}
+        {item.status === 'waiting' && (
+          <Box
+            bg={waitingBoxBg}
+            borderRadius="lg"
+            px={3} py={2.5}
+            mb={4}
+          >
+            <Text fontSize="xs" color={waitingTextColor}>
+              Sistem sedang mencocokkan preferensimu dengan peserta lain di pool yang sama.
+              Halaman ini diperbarui otomatis.
+            </Text>
+          </Box>
+        )}
+
+        <Divider mb={4} borderColor={dividerColor} />
+
+        {/* Tombol aksi */}
+        <Flex gap={2.5} wrap="wrap">
+          {/* Tombol utama */}
+          {item.status !== 'cancelled' && (
+            <Button
+              size="sm"
+              colorScheme="blue"
+              variant={isUpcoming ? 'solid' : 'outline'}
+              onClick={handlePrimaryAction}
+              flex={1}
+              minW="100px"
+            >
+              {isUpcoming ? 'Lihat Status' : 'Lihat Detail Grup'}
+            </Button>
+          )}
+
+          {/* Placeholder: Bayar Sekarang (Upcoming) */}
+          {isUpcoming && item.status === 'matched' && (
+            <Tooltip
+              label="Fitur pembayaran akan segera hadir"
+              hasArrow
+              placement="top"
+            >
+              {/* wrapper span needed for disabled button tooltip */}
+              <Box flex={1} minW="100px">
+                <Button
+                  size="sm"
+                  colorScheme="green"
+                  isDisabled
+                  width="100%"
+                  cursor="not-allowed"
+                  opacity={0.5}
+                >
+                  Bayar Sekarang
+                </Button>
+              </Box>
+            </Tooltip>
+          )}
+
+          {/* Placeholder: Tulis Ulasan (Past, completed) */}
+          {!isUpcoming && item.status === 'matched' && (
+            <Tooltip
+              label="Fitur ulasan akan segera hadir"
+              hasArrow
+              placement="top"
+            >
+              <Box flex={1} minW="100px">
+                <Button
+                  size="sm"
+                  colorScheme="yellow"
+                  variant="outline"
+                  isDisabled
+                  width="100%"
+                  cursor="not-allowed"
+                  opacity={0.5}
+                  leftIcon={<Icon as={StarIcon} boxSize={3} />}
+                >
+                  Tulis Ulasan
+                </Button>
+              </Box>
+            </Tooltip>
+          )}
+
+          {/* Dibatalkan — tidak ada aksi */}
+          {item.status === 'cancelled' && (
+            <Text fontSize="xs" color={subtleColor} alignSelf="center">
+              Pendaftaran ini dibatalkan.
+            </Text>
+          )}
+        </Flex>
+      </Box>
+    </Box>
+  );
+};
+
+// ─── Sub-komponen: Modal detail grup (Past) ──────────────────────────────────
+
+interface GroupDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  item: OpenTripBooking | null;
+  myUserId: number | null;
+}
+
+const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ isOpen, onClose, item, myUserId }) => {
+  const [groupData, setGroupData] = useState<GroupDetailResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+
+  const subtleColor = useColorModeValue('gray.500', 'gray.400');
+  const bgColor = useColorModeValue('gray.50', 'gray.700');
+  const borderColor = useColorModeValue('gray.100', 'gray.600');
+  const memberMeBg = useColorModeValue('blue.50', 'blue.900');
+
+  useEffect(() => {
+    if (!isOpen || !item?.group_id) return;
+
+    setLoading(true);
+    setGroupData(null);
+
+    apiClient.get<GroupDetailResponse>(`/open-trip/group/${item.group_id}`)
+      .then(res => setGroupData(res.data))
+      .catch(() => {
+        toast({ title: 'Gagal memuat detail grup.', status: 'error', duration: 4000, isClosable: true });
+      })
+      .finally(() => setLoading(false));
+  }, [isOpen, item?.group_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!item) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" scrollBehavior="inside">
+      <ModalOverlay bg="blackAlpha.400" backdropFilter="blur(4px)" />
+      <ModalContent borderRadius="2xl" mx={4}>
+        <ModalHeader borderBottomWidth="1px" borderColor={borderColor} pb={4}>
+          <Text fontSize="md" fontWeight="bold" noOfLines={1}>{item.tour_name}</Text>
+          <Text fontSize="xs" color={subtleColor} fontWeight="normal" mt={0.5}>
+            {formatDate(item.trip_date)}{item.tour_location ? ` · ${item.tour_location}` : ''}
+          </Text>
+        </ModalHeader>
+        <ModalCloseButton />
+
+        <ModalBody py={5}>
+          {loading && (
+            <VStack spacing={3}>
+              <Skeleton height="60px" borderRadius="lg" />
+              <SkeletonText noOfLines={3} skeletonHeight="14px" />
+              <SkeletonText noOfLines={3} skeletonHeight="14px" />
+            </VStack>
+          )}
+
+          {!loading && groupData && (
+            <VStack spacing={5} align="stretch">
+              {/* Ringkasan grup */}
+              <Flex
+                bg={bgColor} border="1px solid" borderColor={borderColor}
+                borderRadius="lg" overflow="hidden"
               >
-                <Icon as={tab.icon} mr={2} boxSize={5} /> {tab.label} ({tab.count})
-              </Tab>
-            ))}
-          </TabList>
+                <Box flex={1} px={3} py={3} textAlign="center">
+                  <Text fontSize="xs" color={subtleColor}>Anggota</Text>
+                  <Text fontWeight="bold" fontSize="lg">{groupData.members.length}</Text>
+                </Box>
+                <Divider orientation="vertical" h="auto" />
+                <Box flex={1} px={3} py={3} textAlign="center">
+                  <Text fontSize="xs" color={subtleColor}>Harga Paket</Text>
+                  <Text fontWeight="bold" fontSize="md">
+                    {formatRupiah(groupData.group.tour_price)}
+                  </Text>
+                </Box>
+                <Divider orientation="vertical" h="auto" />
+                <Box flex={1} px={3} py={3} textAlign="center">
+                  <Text fontSize="xs" color={subtleColor}>Per Orang</Text>
+                  <Text fontWeight="bold" fontSize="md" color="blue.500">
+                    {formatRupiah(Math.round(groupData.group.tour_price / groupData.members.length))}
+                  </Text>
+                </Box>
+              </Flex>
 
-          <TabPanels>
-            <TabPanel p={0}>
-              {upcomingBookingsData.length === 0 ? (
-                <EmptyState icon={InfoOutlineIcon} title="No Upcoming Adventures Yet" description="Your next journey awaits! Find incredible tours and experiences to fill this space." buttonText="Explore Tours Now"/>
-              ) : (
-                <Flex direction="column" gap={8}>
-                  {upcomingBookingsData.map((booking) => renderBookingCard(booking, true))}
-                </Flex>
-              )}
-            </TabPanel>
-            <TabPanel p={0}>
-              {pastBookings.length === 0 ? (
-                <EmptyState icon={LinkIcon} title="No Past Journeys Logged" description="Once you've completed a tour, it will appear here. Let's make some memories!" buttonText="Find Your Next Tour"/>
-              ) : (
-                <Flex direction="column" gap={8}>
-                  {pastBookings.map((booking) => renderBookingCard(booking, false))}
-                </Flex>
-              )}
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </Container>
+              {/* Daftar anggota */}
+              <Box>
+                <Text fontSize="sm" fontWeight="semibold" color={subtleColor} mb={3}>
+                  ANGGOTA GRUP
+                </Text>
+                <VStack spacing={3} align="stretch">
+                  {groupData.members.map((m, idx) => {
+                    const isMe = m.user_id === myUserId;
+                    const pct = scorePercent(m.matching_score);
+                    const scoreColor = pct >= 80 ? 'green.500' : pct >= 60 ? 'blue.500' : 'orange.500';
 
-      {selectedBooking && (
-        <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
-          <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(5px)" />
-          <ModalContent bg={cardBg} borderRadius="xl" boxShadow="2xl">
-            <ModalHeader color={primaryTextColor} fontWeight="bold" borderBottomWidth="1px" borderColor={subtleBorderColor}>
-              Leave a review for "{selectedBooking.tourName}"
-            </ModalHeader>
-            <ModalCloseButton _focus={{ boxShadow: 'outline' }} />
-            <ModalBody py={6}>
-              <VStack spacing={5}>
-                <Text color={secondaryTextColor} fontWeight="medium">How was your experience?</Text>
-                <HStack spacing={1} onMouseLeave={() => setHoverRating(0)}>
-                  {[...Array(5)].map((_, index) => {
-                    const ratingValue = index + 1;
                     return (
-                      <Icon
-                        key={ratingValue}
-                        as={StarIcon}
-                        boxSize={{base: 8, md: 10}}
-                        color={ratingValue <= (hoverRating || currentRating) ? yellowStarColor : useColorModeValue("gray.300", "gray.600")}
-                        onClick={() => setCurrentRating(ratingValue)}
-                        onMouseEnter={() => setHoverRating(ratingValue)}
-                        cursor="pointer"
-                        transition="all 0.2s ease"
-                        _hover={{ transform: 'scale(1.2)' }}
-                      />
+                      <Box
+                        key={m.participant_id}
+                        border="1px solid"
+                        borderColor={isMe ? 'blue.200' : borderColor}
+                        bg={isMe ? memberMeBg : bgColor}
+                        borderRadius="xl"
+                        p={3}
+                        animation={`${fadeUp} 0.2s ease ${idx * 0.06}s both`}
+                      >
+                        <Flex align="center" gap={3} mb={m.interests.length > 0 ? 2 : 0}>
+                          <Avatar
+                            size="sm"
+                            name={m.name}
+                            src={m.profile_picture ?? undefined}
+                            bg="blue.400"
+                          />
+                          <Box flex={1}>
+                            <HStack spacing={2}>
+                              <Text fontSize="sm" fontWeight="semibold">{m.name}</Text>
+                              {isMe && (
+                                <Badge colorScheme="blue" fontSize="2xs">Kamu</Badge>
+                              )}
+                            </HStack>
+                            <Text fontSize="xs" color={subtleColor}>
+                              Umur {m.age} · {BUDGET_LABELS[m.budget_level] ?? `Level ${m.budget_level}`}
+                            </Text>
+                          </Box>
+                          <Box textAlign="right">
+                            <Text fontWeight="bold" fontSize="sm" color={scoreColor}>{pct}%</Text>
+                            <Text fontSize="2xs" color={subtleColor}>cocok</Text>
+                          </Box>
+                        </Flex>
+
+                        {m.interests.length > 0 && (
+                          <Wrap mt={1.5}>
+                            {m.interests.map(i => (
+                              <WrapItem key={i}>
+                                <Tag size="sm" colorScheme="teal" borderRadius="full" variant="subtle">
+                                  <TagLabel fontSize="xs">{i}</TagLabel>
+                                </Tag>
+                              </WrapItem>
+                            ))}
+                          </Wrap>
+                        )}
+
+                        {/* Kriteria cocok */}
+                        <Flex mt={2} gap={1.5} flexWrap="wrap">
+                          {(Object.keys(CRITERIA_LABELS) as Array<keyof CriteriaMatch>).map(key => (
+                            <Badge
+                              key={key}
+                              colorScheme={m.score_detail.criteria_match[key] ? 'green' : 'gray'}
+                              variant="subtle"
+                              fontSize="2xs"
+                              px={1.5} py={0.5}
+                              borderRadius="md"
+                            >
+                              {m.score_detail.criteria_match[key] ? '✓' : '✗'} {CRITERIA_LABELS[key]}
+                            </Badge>
+                          ))}
+                        </Flex>
+                      </Box>
                     );
                   })}
-                </HStack>
-                
-                <Textarea
-                  placeholder="Share details of your own experience on this tour. What did you like or dislike?"
-                  bg={infoBoxBg}
-                  borderColor={subtleBorderColor}
-                  focusBorderColor={primaryColor}
-                  rows={5}
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
+                </VStack>
+              </Box>
+
+              {/* Breakdown NCF/NSF saya */}
+              {(() => {
+                const myMember = groupData.members.find(m => m.user_id === myUserId);
+                if (!myMember) return null;
+                return (
+                  <Box>
+                    <Text fontSize="sm" fontWeight="semibold" color={subtleColor} mb={3}>
+                      SKOR KECOCOKANMU
+                    </Text>
+                    <Flex gap={3}>
+                      <Stat flex={1} bg={bgColor} border="1px solid" borderColor={borderColor} borderRadius="xl" p={3}>
+                        <StatLabel fontSize="xs" color="blue.500">Core Factor (60%)</StatLabel>
+                        <StatNumber fontSize="lg">{myMember.score_detail.ncf}</StatNumber>
+                        <StatHelpText fontSize="xs">Minat + Aktivitas</StatHelpText>
+                      </Stat>
+                      <Stat flex={1} bg={bgColor} border="1px solid" borderColor={borderColor} borderRadius="xl" p={3}>
+                        <StatLabel fontSize="xs" color="purple.500">Secondary (40%)</StatLabel>
+                        <StatNumber fontSize="lg">{myMember.score_detail.nsf}</StatNumber>
+                        <StatHelpText fontSize="xs">Umur + Budget</StatHelpText>
+                      </Stat>
+                    </Flex>
+                  </Box>
+                );
+              })()}
+
+              {/* Placeholder: Tulis Ulasan */}
+              <Tooltip label="Fitur ulasan akan segera hadir" hasArrow>
+                <Box>
+                  <Button
+                    width="100%" colorScheme="yellow" variant="outline"
+                    isDisabled opacity={0.5} cursor="not-allowed"
+                    leftIcon={<Icon as={StarIcon} boxSize={3.5} />}
+                  >
+                    Tulis Ulasan untuk Trip Ini
+                  </Button>
+                </Box>
+              </Tooltip>
+            </VStack>
+          )}
+
+          {!loading && !groupData && (
+            <Box textAlign="center" py={8}>
+              <Text color={subtleColor} fontSize="sm">Gagal memuat data grup.</Text>
+            </Box>
+          )}
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+// ─── Komponen Tab selector ────────────────────────────────────────────────────
+
+interface TabButtonProps {
+  label: string;
+  count: number;
+  isActive: boolean;
+  onClick: () => void;
+  icon: React.ElementType;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ label, count, isActive, onClick, icon }) => {
+  const activeColor = useColorModeValue('blue.500', 'blue.300');
+  const inactiveColor = useColorModeValue('gray.500', 'gray.400');
+  const inactiveHoverColor = useColorModeValue('gray.700', 'gray.200');
+  const activeBg = useColorModeValue('white', 'gray.800');
+  const inactiveBg = 'transparent';
+
+  return (
+    <Button
+      flex={1}
+      variant="unstyled"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      gap={2}
+      py={2.5}
+      borderRadius="lg"
+      bg={isActive ? activeBg : inactiveBg}
+      color={isActive ? activeColor : inactiveColor}
+      fontWeight={isActive ? 'semibold' : 'medium'}
+      fontSize="sm"
+      boxShadow={isActive ? 'sm' : 'none'}
+      transition="all 0.15s ease"
+      _hover={{ color: isActive ? activeColor : inactiveHoverColor }}
+      onClick={onClick}
+      h="auto"
+    >
+      <Icon as={icon} boxSize={4} />
+      {label}
+      <Badge
+        ml={0.5}
+        colorScheme={isActive ? 'blue' : 'gray'}
+        variant={isActive ? 'solid' : 'subtle'}
+        borderRadius="full"
+        fontSize="xs"
+        px={1.5}
+        minW="18px"
+        textAlign="center"
+      >
+        {count}
+      </Badge>
+    </Button>
+  );
+};
+
+// ─── Komponen utama ───────────────────────────────────────────────────────────
+
+const Bookings: React.FC = () => {
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const [trips, setTrips] = useState<OpenTripBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [selectedItem, setSelectedItem] = useState<OpenTripBooking | null>(null);
+  const [myUserId, setMyUserId] = useState<number | null>(null);
+
+  const pageBg = useColorModeValue('gray.50', 'gray.900');
+  const titleColor = useColorModeValue('gray.800', 'white');
+  const subtleColor = useColorModeValue('gray.500', 'gray.400');
+  const tabBarBg = useColorModeValue('gray.100', 'gray.800');
+  const placeholderBorderColor = useColorModeValue('gray.200', 'gray.600');
+  const placeholderBg = useColorModeValue('white', 'gray.800');
+  const placeholderTextColor = useColorModeValue('gray.400', 'gray.500');
+
+  // Ambil user ID dari localStorage
+  useEffect(() => {
+    const raw = localStorage.getItem('user');
+    if (raw) {
+      try { setMyUserId(JSON.parse(raw)?.id ?? null); } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Fetch semua Smart Open Trip user ini
+  const fetchTrips = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiClient.get<{ data: OpenTripBooking[] }>('/open-trip/my-trips');
+      setTrips(res.data.data);
+    } catch {
+      toast({
+        title: 'Gagal memuat data pesanan',
+        description: 'Coba muat ulang halaman.',
+        status: 'error', duration: 4000, isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => { fetchTrips(); }, [fetchTrips]);
+
+  // Pisahkan upcoming vs past
+  const upcomingTrips = trips.filter(t => {
+    return (t.status === 'waiting' || t.status === 'matched') && !isPast(t.trip_date);
+  });
+
+  const pastTrips = trips.filter(t => {
+    return t.status === 'cancelled' || (t.status === 'matched' && isPast(t.trip_date));
+  });
+
+  const activeTrips = activeTab === 'upcoming' ? upcomingTrips : pastTrips;
+
+  const handleViewDetail = (item: OpenTripBooking) => {
+    setSelectedItem(item);
+    onOpen();
+  };
+
+  return (
+    <Box minH="100vh" bg={pageBg} animation={`${fadeIn} 0.25s ease`}>
+      {/* Navbar */}
+      <TouristNavbar />
+
+      <Container maxW="container.md" py={{ base: 6, md: 10 }}>
+        {/* Header halaman */}
+        <Box mb={8} animation={`${fadeUp} 0.2s ease`}>
+          <Heading size="lg" color={titleColor} fontWeight="bold">
+            Pesanan Saya
+          </Heading>
+          <Text color={subtleColor} fontSize="sm" mt={1}>
+            Smart Open Trip yang kamu ikuti
+          </Text>
+        </Box>
+
+        {/* Tab selector */}
+        <Box
+          bg={tabBarBg} borderRadius="xl" p={1.5} mb={6}
+          animation={`${fadeUp} 0.25s ease 0.05s both`}
+        >
+          <Flex gap={1}>
+            <TabButton
+              label="Upcoming"
+              count={loading ? 0 : upcomingTrips.length}
+              isActive={activeTab === 'upcoming'}
+              onClick={() => setActiveTab('upcoming')}
+              icon={TimeIcon}
+            />
+            <TabButton
+              label="Riwayat"
+              count={loading ? 0 : pastTrips.length}
+              isActive={activeTab === 'past'}
+              onClick={() => setActiveTab('past')}
+              icon={CheckCircleIcon}
+            />
+          </Flex>
+        </Box>
+
+        {/* Konten tab */}
+        <Box animation={`${fadeIn} 0.2s ease`}>
+          {/* Loading skeleton */}
+          {loading && (
+            <VStack spacing={4} align="stretch">
+              {[1, 2].map(i => <SkeletonCard key={i} />)}
+            </VStack>
+          )}
+
+          {/* Daftar trip */}
+          {!loading && activeTrips.length > 0 && (
+            <VStack spacing={4} align="stretch">
+              {activeTrips.map((item, idx) => (
+                <TripCard
+                  key={item.participant_id}
+                  item={item}
+                  isUpcoming={activeTab === 'upcoming'}
+                  index={idx}
+                  onViewDetail={handleViewDetail}
+                  myUserId={myUserId}
                 />
-              </VStack>
-            </ModalBody>
-            <ModalFooter borderTopWidth="1px" borderColor={subtleBorderColor}>
-              <Button {...secondaryButtonStyle} mr={3} onClick={onClose}>
-                Cancel
-              </Button>
-              <Button {...primaryButtonStyle} onClick={handleReviewSubmit} isDisabled={currentRating === 0}>
-                Submit Review
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-      )}
+              ))}
+
+              {/* Placeholder: Booking Private Trip */}
+              <Box
+                border="1px dashed"
+                borderColor={placeholderBorderColor}
+                borderRadius="xl"
+                p={5}
+                textAlign="center"
+                bg={placeholderBg}
+              >
+                <Text fontSize="sm" color={subtleColor} mb={1}>
+                  🏷️ Booking Private Trip
+                </Text>
+                <Text fontSize="xs" color={placeholderTextColor}>
+                  Booking private trip dan open trip partner akan ditampilkan di sini.
+                </Text>
+              </Box>
+            </VStack>
+          )}
+
+          {/* Empty state */}
+          {!loading && activeTrips.length === 0 && (
+            <VStack spacing={4} align="stretch">
+              <EmptyState tab={activeTab} onExplore={() => navigate('/tours')} />
+
+              {/* Placeholder: Booking Private Trip (tetap tampil di empty state) */}
+              <Box
+                border="1px dashed"
+                borderColor={useColorModeValue('gray.200', 'gray.600')}
+                borderRadius="xl"
+                p={5}
+                textAlign="center"
+                bg={useColorModeValue('white', 'gray.800')}
+              >
+                <Text fontSize="sm" color={subtleColor} mb={1}>
+                  🏷️ Booking Private Trip
+                </Text>
+                <Text fontSize="xs" color={useColorModeValue('gray.400', 'gray.500')}>
+                  Booking private trip dan open trip partner akan ditampilkan di sini.
+                </Text>
+              </Box>
+            </VStack>
+          )}
+        </Box>
+      </Container>
+
+      {/* Modal detail grup (Past) */}
+      <GroupDetailModal
+        isOpen={isOpen}
+        onClose={onClose}
+        item={selectedItem}
+        myUserId={myUserId}
+      />
     </Box>
   );
 };

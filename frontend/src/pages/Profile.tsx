@@ -168,7 +168,7 @@ const Profile: React.FC = () => {
             </Flex>
             <HStack spacing={3}>
               <Button {...secondaryButtonStyle} size="sm" onClick={() => navigate('/tours')} leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}>Explore</Button>
-              <Button {...primaryButtonStyle} size="sm" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}>My Trips</Button>
+              <Button {...primaryButtonStyle} size="sm" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}>My Bookings</Button>
             </HStack>
           </Flex>
         </Container>

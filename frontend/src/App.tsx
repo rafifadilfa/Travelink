@@ -23,6 +23,8 @@ import AdminAuth from './pages/AdminAuth';
 import AdminKycList from './pages/AdminKycList';
 import AdminKycDetail from './pages/AdminKycDetail';
 import AdminGuideList from './pages/AdminGuideList';
+import SmartOpenTripForm from './pages/SmartOpenTripForm';
+import WaitingRoom from './pages/WaitingRoom';
 
 // Type definitions
 interface ComingSoonProps {
@@ -143,6 +145,8 @@ const App: React.FC = () => {
       
       
       {/* --- User Section Routes --- */}
+      <Route path="/open-trip/join/:tourId" element={<ProtectedRoute><SmartOpenTripForm /></ProtectedRoute>} />
+      <Route path="/open-trip/waiting/:participantId" element={<ProtectedRoute><WaitingRoom /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/tours" element={<ProtectedRoute><ViewAllTours /></ProtectedRoute>} />
       <Route path="/tours/:id" element={<ProtectedRoute><TourDetail /></ProtectedRoute>} />
