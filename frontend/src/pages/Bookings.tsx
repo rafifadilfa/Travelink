@@ -888,16 +888,16 @@ const Bookings: React.FC = () => {
               {/* Placeholder: Booking Private Trip (tetap tampil di empty state) */}
               <Box
                 border="1px dashed"
-                borderColor={useColorModeValue('gray.200', 'gray.600')}
+                borderColor={placeholderBorderColor}
                 borderRadius="xl"
                 p={5}
                 textAlign="center"
-                bg={useColorModeValue('white', 'gray.800')}
+                bg={placeholderBg}
               >
                 <Text fontSize="sm" color={subtleColor} mb={1}>
                   🏷️ Booking Private Trip
                 </Text>
-                <Text fontSize="xs" color={useColorModeValue('gray.400', 'gray.500')}>
+                <Text fontSize="xs" color={placeholderTextColor}>
                   Booking private trip dan open trip partner akan ditampilkan di sini.
                 </Text>
               </Box>

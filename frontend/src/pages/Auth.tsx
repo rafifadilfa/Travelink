@@ -50,8 +50,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [currentDestination, setCurrentDestination] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [isHoveringSubmit, setIsHoveringSubmit] = useState(false);
-  const [isHoveringSocialGoogle, setIsHoveringSocialGoogle] = useState(false);
-  const [isHoveringSocialFacebook, setIsHoveringSocialFacebook] = useState(false);
   const [isHoveringGuideLogin, setIsHoveringGuideLogin] = useState(false);
   const [loginErrors, setLoginErrors] = useState<{ [key: string]: string }>({});
   const [registerErrors, setRegisterErrors] = useState<{ [key: string]: string }>({});
@@ -175,17 +173,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSocialLogin = (provider: string): void => {
-    setLoading(true);
-    console.log(`Attempting login with ${provider}`);
-    setTimeout(() => {
-      if (onLogin) {
-        onLogin();
-      }
-      navigate('/dashboard');
-    }, 1000);
   };
 
   const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 768;
@@ -739,70 +726,16 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           )}
 
           {activeTab !== 'reset' && (
-            <>
-              <div style={{
-                position: 'relative',
-                margin: '32px 0',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  height: '1px',
-                  backgroundColor: '#dee2e6',
-                }}></div>
-                <div style={{
-                  position: 'absolute',
-                  top: '-11px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'white',
-                  padding: '0 16px'
-                }}>
-                  <span style={{
-                    color: '#6c757d',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    textTransform: 'uppercase',
-                  }}>
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {[
-                  { provider: 'Google', color: '#DB4437', hoverColor: '#C33D2E', icon: 'G', stateSetter: setIsHoveringSocialGoogle, isHovering: isHoveringSocialGoogle },
-                  { provider: 'Facebook', color: '#4267B2', hoverColor: '#365899', icon: 'f', stateSetter: setIsHoveringSocialFacebook, isHovering: isHoveringSocialFacebook },
-                ].map(({ provider, color, hoverColor, icon, stateSetter, isHovering }) => (
-                  <button
-                    key={provider}
-                    type="button"
-                    onClick={() => handleSocialLogin(provider)}
-                    style={{
-                      ...buttonBaseStyle,
-                      backgroundColor: isHovering ? hoverColor : color,
-                      color: 'white',
-                      marginTop: '0',
-                      ...(isHovering && { boxShadow: '0 6px 8px rgba(0, 0, 0, 0.15)', transform: 'translateY(-1px)'}),
-                    }}
-                    onMouseEnter={() => stateSetter(true)}
-                    onMouseLeave={() => stateSetter(false)}
-                    disabled={loading}
-                  >
-                    <span style={{ fontSize: '18px', width: '20px', textAlign: 'center' }}>{icon}</span>
-                    Sign in with {provider}
-                  </button>
-                ))}
-                 <button
-                    style={isHoveringGuideLogin ? {...guideButtonStyle, ...guideButtonHoverStyle} : guideButtonStyle}
-                    onMouseEnter={() => setIsHoveringGuideLogin(true)}
-                    onMouseLeave={() => setIsHoveringGuideLogin(false)}
-                    // PERUBAHAN DI SINI: Mengarahkan ke halaman autentikasi pemandu
-                    onClick={() => navigate('/guide/auth')}
-                 >
-                    Guide Login / Sign Up
-                </button>
-                </div>
-            </>
+            <div style={{ marginTop: '24px' }}>
+              <button
+                style={isHoveringGuideLogin ? {...guideButtonStyle, ...guideButtonHoverStyle} : guideButtonStyle}
+                onMouseEnter={() => setIsHoveringGuideLogin(true)}
+                onMouseLeave={() => setIsHoveringGuideLogin(false)}
+                onClick={() => navigate('/guide/auth')}
+              >
+                Guide Login / Sign Up
+              </button>
+            </div>
           )}
 
           <div style={{

@@ -106,6 +106,7 @@ Route::prefix('guide')->group(function () {
             Route::post('tours',            [GuideTourApiController::class, 'store']);
             Route::get('tours/{id}',        [GuideTourApiController::class, 'show']);
             Route::put('tours/{id}',        [GuideTourApiController::class, 'update']);
+            Route::post('tours/{id}',       [GuideTourApiController::class, 'update']); // method override dari PUT via FormData
             Route::delete('tours/{id}',     [GuideTourApiController::class, 'destroy']);
 
             // UC-21 & UC-15: Manajemen Pesanan Masuk

@@ -55,6 +55,7 @@ class GuideTourApiController extends Controller
             'review_count'         => $tour->tour_review_count,
             'booking_count'        => $tour->tour_booking_count,
             'featured'             => (bool) $tour->featured,
+            'is_open_trip'         => (bool) $tour->is_open_trip,
             'images'               => $images,
             'first_image_url'      => $images->first()['url'] ?? null,
             'availabilities'       => $availabilities,
@@ -153,6 +154,7 @@ class GuideTourApiController extends Controller
             // Minimal 1 hari ketersediaan wajib (UC-14 A1)
             'availability_days'   => ['required', 'array', 'min:1'],
             'availability_days.*' => ['integer', 'between:0,6'],
+            'is_open_trip'       => ['sometimes', 'boolean'],
             'status'             => ['sometimes', 'in:draft,published'],
             // Gambar opsional saat buat
             'images'             => ['sometimes', 'array'],
@@ -175,6 +177,7 @@ class GuideTourApiController extends Controller
             'tour_max_participants' => $validated['max_participants'],
             'tour_min_participants' => $validated['min_participants'],
             'tour_status'           => $validated['status'] ?? 'draft',
+            'is_open_trip'          => $validated['is_open_trip'] ?? false,
         ]);
 
         // Sync jadwal ketersediaan
@@ -232,6 +235,7 @@ class GuideTourApiController extends Controller
             'period_id'            => ['sometimes', 'exists:day_phases,id'],
             'max_participants'     => ['sometimes', 'integer', 'min:1'],
             'min_participants'     => ['sometimes', 'integer', 'min:1'],
+            'is_open_trip'         => ['sometimes', 'boolean'],
             'status'               => ['sometimes', 'in:draft,published'],
             'availability_days'    => ['sometimes', 'array', 'min:1'],
             'availability_days.*'  => ['integer', 'between:0,6'],
@@ -260,6 +264,7 @@ class GuideTourApiController extends Controller
             'tour_max_participants' => $validated['max_participants'] ?? null,
             'tour_min_participants' => $validated['min_participants'] ?? null,
             'tour_status'           => $validated['status'] ?? null,
+            'is_open_trip'          => $validated['is_open_trip'] ?? null,
         ], fn($v) => $v !== null);
 
         $tour->update($updateData);

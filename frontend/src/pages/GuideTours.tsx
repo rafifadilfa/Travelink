@@ -15,6 +15,7 @@ interface Tour {
   name: string;
   status: string;
   type: string;
+  is_open_trip: boolean;
   price: number;
   duration: number;
   rating: number;
@@ -114,7 +115,8 @@ const GuideTours: React.FC = () => {
                     <Heading size="md" noOfLines={1}>{tour.name}</Heading>
                     <HStack flexWrap="wrap" gap={2}>
                       <Tag size="sm" colorScheme={st.color}>{st.label}</Tag>
-                      <Tag size="sm" variant="outline">{tour.type === 'regular' ? 'Reguler' : 'Open Trip'}</Tag>
+                      {tour.type === 'regular' && <Tag size="sm" variant="outline">Reguler</Tag>}
+                      {(tour.type === 'open_trip' || tour.is_open_trip) && <Tag size="sm" variant="outline" colorScheme="purple">Open Trip</Tag>}
                       {tour.location && <Text fontSize="xs" color={secondary}>{tour.location.name}</Text>}
                     </HStack>
                     <HStack spacing={4} color={secondary} fontSize="sm" flexWrap="wrap">

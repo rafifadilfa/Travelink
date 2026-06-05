@@ -35,7 +35,8 @@ const EditTour: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [name,         setName]         = useState('');
-  const [type,         setType]         = useState('regular');
+  const [isPrivate,    setIsPrivate]    = useState(true);
+  const [isOpenTrip,   setIsOpenTrip]   = useState(false);
   const [description,  setDescription]  = useState('');
   const [locationId,   setLocationId]   = useState('');
   const [meetingId,    setMeetingId]    = useState('');
@@ -64,7 +65,8 @@ const EditTour: React.FC = () => {
 
         setRefData(ref);
         setName(t.name ?? '');
-        setType(t.type ?? 'regular');
+        setIsPrivate(t.type === 'regular' || !t.is_open_trip);
+        setIsOpenTrip(!!t.is_open_trip);
         setDescription(t.description ?? '');
         setLocationId(String(t.location?.id ?? ''));
         setMeetingId(String(t.meeting_point?.id ?? ''));
@@ -121,14 +123,20 @@ const EditTour: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPrivate && !isOpenTrip) {
+      toast({ title: 'Pilih minimal satu tipe tour', status: 'warning', duration: 3000, isClosable: true });
+      return;
+    }
     if (availDays.length === 0) {
       toast({ title: 'Pilih minimal 1 hari ketersediaan', status: 'warning', duration: 3000, isClosable: true });
       return;
     }
     setIsSubmitting(true);
+    const tourType = isPrivate ? 'regular' : 'open_trip';
     try {
       const fd = new FormData();
-      fd.append('name', name); fd.append('type', type);
+      fd.append('name', name); fd.append('type', tourType);
+      fd.append('is_open_trip', isOpenTrip ? '1' : '0');
       fd.append('description', description); fd.append('location_id', locationId);
       fd.append('meeting_point_id', meetingId); fd.append('price', price);
       fd.append('duration', duration); fd.append('start_time', startTime);
@@ -138,8 +146,11 @@ const EditTour: React.FC = () => {
       deleteIds.forEach(id => fd.append('delete_image_ids[]', String(id)));
       newImages.forEach(f => fd.append('new_images[]', f));
 
-      await guideApiClient.put(`/guide/tours/${tourId}`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      await guideApiClient.post(`/guide/tours/${tourId}`, fd, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'X-HTTP-Method-Override': 'PUT',
+        },
       });
       toast({ title: 'Paket wisata berhasil diperbarui!', status: 'success', duration: 3000, isClosable: true });
       navigate('/guide/tours');
@@ -176,12 +187,19 @@ const EditTour: React.FC = () => {
                     <FormLabel>Nama Paket</FormLabel>
                     <Input value={name} onChange={e => setName(e.target.value)} bg={inputBg} />
                   </FormControl>
-                  <FormControl isRequired>
+                  <FormControl isRequired isInvalid={!isPrivate && !isOpenTrip}>
                     <FormLabel>Tipe Tour</FormLabel>
-                    <Select value={type} onChange={e => setType(e.target.value)} bg={inputBg}>
-                      <option value="regular">Reguler (Private)</option>
-                      <option value="open_trip">Open Trip</option>
-                    </Select>
+                    <VStack align="start" spacing={2} bg={inputBg} p={3} borderRadius="md" border="1px solid" borderColor={!isPrivate && !isOpenTrip ? 'red.400' : 'transparent'}>
+                      <Checkbox isChecked={isPrivate} onChange={e => setIsPrivate(e.target.checked)} colorScheme="blue">
+                        Reguler (Private)
+                      </Checkbox>
+                      <Checkbox isChecked={isOpenTrip} onChange={e => setIsOpenTrip(e.target.checked)} colorScheme="blue">
+                        Open Trip (Smart Group)
+                      </Checkbox>
+                    </VStack>
+                    {!isPrivate && !isOpenTrip && (
+                      <Text color="red.500" fontSize="sm" mt={1}>Pilih minimal satu tipe tour</Text>
+                    )}
                   </FormControl>
                 </SimpleGrid>
                 <FormControl isRequired>
