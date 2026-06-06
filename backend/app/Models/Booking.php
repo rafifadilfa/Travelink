@@ -9,18 +9,20 @@ class Booking extends Model
     protected $table = 'bookings';
 
     // ── Nilai status booking ──────────────────────────────────────────────────
-    const STATUS_MENUNGGU_KONFIRMASI_PEMANDU  = 'menunggu_konfirmasi_pemandu';
-    const STATUS_MENUNGGU_PEMBAYARAN          = 'menunggu_pembayaran';
+    const STATUS_MENUNGGU_KONFIRMASI_PEMANDU    = 'menunggu_konfirmasi_pemandu';
+    const STATUS_MENUNGGU_PEMBAYARAN            = 'menunggu_pembayaran';
     const STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN = 'menunggu_verifikasi_pembayaran';
-    const STATUS_SELESAI                      = 'selesai';
-    const STATUS_DITOLAK                      = 'ditolak';
-    const STATUS_DIBATALKAN                   = 'dibatalkan';
+    const STATUS_TERKONFIRMASI                  = 'terkonfirmasi'; // pembayaran verified, trip belum selesai
+    const STATUS_SELESAI                        = 'selesai';
+    const STATUS_DITOLAK                        = 'ditolak';
+    const STATUS_DIBATALKAN                     = 'dibatalkan';
 
     // Status yang masih "aktif" (belum terminal)
     const ACTIVE_STATUSES = [
         self::STATUS_MENUNGGU_KONFIRMASI_PEMANDU,
         self::STATUS_MENUNGGU_PEMBAYARAN,
         self::STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN,
+        self::STATUS_TERKONFIRMASI,
     ];
 
     // Status terminal (riwayat)

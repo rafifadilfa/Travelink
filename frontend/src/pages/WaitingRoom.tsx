@@ -35,7 +35,7 @@ import {
   StatHelpText,
   Icon,
 } from '@chakra-ui/react';
-import { CheckCircleIcon, TimeIcon, InfoIcon } from '@chakra-ui/icons';
+import { CheckCircleIcon, TimeIcon, InfoIcon, StarIcon } from '@chakra-ui/icons';
 import { FiCheckCircle, FiClock } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -67,11 +67,12 @@ declare global {
 
 interface StatusResponse {
   participant_id: number;
-  status: 'waiting' | 'matched';
+  status: 'waiting' | 'matched' | 'cancelled_by_guide';
   group_id: number | null;
   matching_score: number | null;
   expires_at?: string;
   seconds_remaining?: number;
+  message?: string;
 }
 
 interface CriteriaMatch {
@@ -118,8 +119,16 @@ interface GroupDetail {
   member_count: number;
 }
 
+interface GuideInfo {
+  id: number;
+  name: string;
+  profile_picture: string | null;
+  rating: number | null;
+}
+
 interface GroupResponse {
   group: GroupDetail;
+  guide: GuideInfo | null;
   group_profile: {
     avg_age: number;
     avg_budget_level: number;
@@ -233,7 +242,7 @@ const WaitingRoom: React.FC = () => {
   const remainingAfterCancel  = Math.max(0, 3 - regCount);
 
   // ── State ──────────────────────────────────────────────────
-  const [stage, setStage]         = useState<'loading' | 'stage1' | 'stage2'>('loading');
+  const [stage, setStage]         = useState<'loading' | 'stage1' | 'stage2' | 'cancelled_by_guide'>('loading');
   const [groupData, setGroupData] = useState<GroupResponse | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
   const [myUserId, setMyUserId]   = useState<number | null>(null);
@@ -424,7 +433,10 @@ const WaitingRoom: React.FC = () => {
         params: { tour_id: tourId, trip_date: tripDate },
       });
 
-      if (res.data.status === 'matched' && res.data.group_id) {
+      if (res.data.status === 'cancelled_by_guide') {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setStage('cancelled_by_guide');
+      } else if (res.data.status === 'matched' && res.data.group_id) {
         if (pollRef.current) clearInterval(pollRef.current);
         await loadGroupDetail(res.data.group_id);
       } else {
@@ -616,10 +628,68 @@ const WaitingRoom: React.FC = () => {
   }
 
   // ─────────────────────────────────────────────────────────
+  // Render: Grup dibatalkan oleh pemandu
+  // ─────────────────────────────────────────────────────────
+  if (stage === 'cancelled_by_guide') {
+    return (
+      <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={4}>
+        <Box
+          bg="white"
+          borderRadius="2xl"
+          boxShadow="lg"
+          p={10}
+          maxW="520px"
+          w="full"
+          textAlign="center"
+          animation={`${fadeIn} 0.4s ease`}
+        >
+          <Box
+            w={20} h={20}
+            borderRadius="full"
+            bg="red.50"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            mx="auto"
+            mb={6}
+          >
+            <Text fontSize="3xl">🚫</Text>
+          </Box>
+
+          <Badge colorScheme="red" mb={3} px={3} py={1} borderRadius="full" fontSize="xs">
+            Grup Dibatalkan
+          </Badge>
+
+          <Heading size="md" color="gray.800" mb={3}>
+            Grup Anda dibatalkan oleh pemandu wisata
+          </Heading>
+
+          <Text color="gray.500" fontSize="sm" mb={6}>
+            Pemandu wisata telah membatalkan grup Smart Open Trip ini sebelum ada pembayaran.
+            Anda dapat mendaftar ulang dengan memilih tour atau tanggal yang berbeda.
+          </Text>
+
+          <Alert status="info" borderRadius="xl" mb={6} fontSize="sm" textAlign="left">
+            <AlertIcon />
+            <Box>
+              <Text fontWeight="semibold" mb={1}>Langkah selanjutnya:</Text>
+              <Text>Kembali ke halaman tour dan pilih jadwal atau pemandu yang berbeda untuk bergabung ke Smart Open Trip baru.</Text>
+            </Box>
+          </Alert>
+
+          <Button colorScheme="blue" onClick={() => navigate('/dashboard')} w="full">
+            Kembali ke Dashboard
+          </Button>
+        </Box>
+      </Flex>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
   // Render: Tahap 2 — grup terbentuk
   // ─────────────────────────────────────────────────────────
   if (stage === 'stage2' && groupData) {
-    const { group, members } = groupData;
+    const { group, guide, members } = groupData;
     const myMember = members.find((m) => m.user_id === myUserId);
 
     const totalSeconds = Math.max(
@@ -701,6 +771,55 @@ const WaitingRoom: React.FC = () => {
               </Flex>
             </Box>
           </Box>
+
+          {/* ── Pemandu Wisata ── */}
+          {guide && (
+            <Box
+              bg="white"
+              borderRadius="2xl"
+              boxShadow="sm"
+              p={6}
+              mb={6}
+              animation={`${fadeIn} 0.43s ease`}
+            >
+              <Text fontWeight="semibold" color="gray.700" fontSize="sm" mb={4}>
+                🧭 Pemandu Wisata
+              </Text>
+              <Flex align="center" gap={4}>
+                <Avatar
+                  size="lg"
+                  name={guide.name}
+                  src={guide.profile_picture ?? undefined}
+                  bg="teal.400"
+                  color="white"
+                />
+                <VStack align="flex-start" spacing={1}>
+                  <Text fontWeight="semibold" color="gray.800" fontSize="md">
+                    {guide.name}
+                  </Text>
+                  {guide.rating !== null ? (
+                    <HStack spacing={1}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <StarIcon
+                          key={star}
+                          boxSize={3}
+                          color={star <= Math.round(guide.rating!) ? 'yellow.400' : 'gray.200'}
+                        />
+                      ))}
+                      <Text fontSize="xs" color="gray.500" ml={1}>
+                        {guide.rating.toFixed(1)}
+                      </Text>
+                    </HStack>
+                  ) : (
+                    <Text fontSize="xs" color="gray.400">Belum ada rating</Text>
+                  )}
+                  <Text fontSize="xs" color="teal.600" fontWeight="medium">
+                    Dana tour dikirim ke pemandu ini
+                  </Text>
+                </VStack>
+              </Flex>
+            </Box>
+          )}
 
           {/* ── Ringkasan pembayaran grup ── */}
           <Box

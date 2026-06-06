@@ -95,6 +95,11 @@ class Tour extends Model
         return $this->hasMany(Transaction::class, 'tour_id'); // every tour can have many transactions
     }
 
+    public function openTripGroups()
+    {
+        return $this->hasMany(OpenTripGroup::class, 'tour_id');
+    }
+
     protected $appends = ['slug'];
 
     public function getSlugAttribute(): string

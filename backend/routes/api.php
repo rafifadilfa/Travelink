@@ -108,6 +108,9 @@ Route::prefix('guide')->group(function () {
             Route::post('bookings/{id}/accept',       [GuideBookingApiController::class, 'accept']);
             Route::post('bookings/{id}/reject',       [GuideBookingApiController::class, 'reject']);
 
+            // Smart Open Trip — tolak grup (hanya jika 0 anggota bayar)
+            Route::post('open-trip-groups/{groupId}/reject', [GuideBookingApiController::class, 'rejectOpenTripGroup']);
+
             // Ulasan & rating
             Route::get('reviews',                     [GuideReviewApiController::class, 'index']);
 

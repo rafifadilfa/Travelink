@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\Guide;
+use App\Models\OpenTripParticipant;
 use App\Models\WalletTransaction;
 use App\Models\Withdrawal;
 use Illuminate\Support\Facades\DB;
@@ -62,6 +63,38 @@ class WalletService
                 'booking_id'  => $booking->id,
                 'description' => "Pendapatan trip diselesaikan: {$txCode}",
             ]);
+        });
+    }
+
+    /**
+     * Pindahkan saldo pending → available untuk peserta Smart Open Trip saat trip selesai.
+     * Sekaligus membuat catatan wallet_transaction (income/credit) dan menandai
+     * income_settled_at pada participant agar tidak di-settle ulang.
+     * Dipanggil oleh command opentrip:settle.
+     *
+     * @param Guide                $guide
+     * @param float                $amount      Nominal per orang yang dipindah
+     * @param OpenTripParticipant  $participant Peserta (untuk deskripsi & flag settled)
+     */
+    public static function settleOpenTrip(Guide $guide, float $amount, OpenTripParticipant $participant): void
+    {
+        $participant->loadMissing(['group.tour']);
+        $tourName = $participant->group?->tour?->name ?? "Grup #{$participant->group_id}";
+        $tripDate = $participant->trip_date?->format('d/m/Y') ?? '-';
+
+        DB::transaction(function () use ($guide, $amount, $participant, $tourName, $tripDate) {
+            $guide->decrement('pending_balance', $amount);
+            $guide->increment('available_balance', $amount);
+
+            WalletTransaction::create([
+                'guide_id'    => $guide->id,
+                'type'        => WalletTransaction::TYPE_INCOME,
+                'direction'   => WalletTransaction::DIRECTION_CREDIT,
+                'amount'      => $amount,
+                'description' => "Pendapatan Smart Open Trip: {$tourName} ({$tripDate})",
+            ]);
+
+            $participant->update(['income_settled_at' => now()]);
         });
     }
 

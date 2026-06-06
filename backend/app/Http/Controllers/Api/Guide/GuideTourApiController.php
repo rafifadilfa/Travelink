@@ -24,7 +24,7 @@ class GuideTourApiController extends Controller
             'id'       => $tour->id,
             'title'    => $tour->name,
             'status'   => $tour->tour_status ?? 'draft',
-            'bookings' => $tour->transactions()->count(),
+            'bookings' => $tour->openTripGroups()->whereNull('rejected_at')->count(),
             'rating'   => $tour->tour_rating ?? null,
             'price'    => (int) ($tour->tour_price ?? 0),
         ];
