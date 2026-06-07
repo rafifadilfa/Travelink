@@ -20,7 +20,8 @@ class Transaction extends Model
         'payment_method_id',
         'payment_status',
         'total_amount',
-        'transaction_code', // Add transaction_code here
+        'transaction_code',
+        'midtrans_order_id',
     ];
 
     protected static function booted(): void

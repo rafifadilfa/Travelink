@@ -69,6 +69,7 @@ const TourDetail: React.FC = () => {
     const [activeImage, setActiveImage] = useState(0);
     const [activeTab,   setActiveTab]   = useState(0);
     const [participants, setParticipants] = useState(1);
+    const [tourDate,    setTourDate]    = useState('');
 
     // ── Fetch data tour ──────────────────────────────────────────
     useEffect(() => {
@@ -93,6 +94,7 @@ const TourDetail: React.FC = () => {
     const subtleBorderColor   = useColorModeValue('gray.200', 'gray.700');
     const accentSuccess       = useColorModeValue('green.500', 'green.400');
     const accentError         = useColorModeValue('red.500', 'red.400');
+    const subtleInputBg       = useColorModeValue('gray.100', 'gray.700');
     const accentGradient      = `linear(to-br, ${useColorModeValue('purple.400','purple.300')}, ${useColorModeValue('blue.500','blue.400')})`;
 
     const ctaButtonStyle = {
@@ -139,6 +141,10 @@ const TourDetail: React.FC = () => {
     };
 
     const handleBookNow = () => {
+        if (!tourDate) {
+            alert('Pilih tanggal tour terlebih dahulu.');
+            return;
+        }
         navigate('/payment/new', {
             state: {
                 bookingDetails: {
@@ -148,11 +154,17 @@ const TourDetail: React.FC = () => {
                     participants,
                     pricePerPerson: tour.price,
                     totalPrice,
+                    tourDate,
                     guideName:      tour.guide?.name ?? '-',
                 },
             },
         });
     };
+
+    // Tanggal minimum yang bisa dipilih (besok)
+    const minDate = new Date();
+    minDate.setDate(minDate.getDate() + 1);
+    const minDateStr = minDate.toISOString().split('T')[0];
 
     return (
         <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
@@ -261,6 +273,21 @@ const TourDetail: React.FC = () => {
                     <Box flex="1" bg={cardBg} p={{ base: 5, md: 7 }} borderRadius="xl" boxShadow="xl" height="fit-content" borderTop="4px solid" borderColor={primaryColor} animation={`${slideInUp} 0.7s ease-out 0.3s both`}>
                         <Heading size="lg" mb={6} color={primaryTextColor} fontWeight="bold" pb={3} borderBottom="2px solid" borderColor={subtleBorderColor}>Pesan Tour Ini</Heading>
                         <VStack spacing={5} align="stretch">
+                            {/* ── Pilih Tanggal Tour ── */}
+                            <Box>
+                                <Text fontWeight="bold" fontSize="md" color={primaryTextColor} mb={3}>Tanggal Tour</Text>
+                                <Input
+                                    type="date"
+                                    value={tourDate}
+                                    min={minDateStr}
+                                    onChange={e => setTourDate(e.target.value)}
+                                    focusBorderColor={primaryColor}
+                                    bg={subtleInputBg}
+                                    borderRadius="lg"
+                                    h="42px"
+                                />
+                            </Box>
+
                             <Box>
                                 <HStack justify="space-between" mb={3}>
                                     <Text fontWeight="bold" fontSize="md" color={primaryTextColor}>Jumlah Peserta</Text>

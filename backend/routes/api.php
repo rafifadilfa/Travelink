@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\Guide\GuideTourApiController;
 use App\Http\Controllers\Api\Guide\GuideWalletApiController;
 use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
 use App\Http\Controllers\Api\Tourist\OpenTripController;
+use App\Http\Controllers\Api\Tourist\PrivateBookingController;
 use App\Http\Controllers\Api\Tourist\TourListApiController;
 use App\Http\Middleware\EnsureGuideIsVerified;
 use App\Http\Middleware\EnsureIsAdmin;
@@ -34,6 +35,17 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthApiController::class, 'logout']);
     Route::get('auth/user',    [AuthApiController::class, 'getUser']);
+});
+
+// ============================================================
+// PRIVATE BOOKING ROUTES (Tourist)
+// ============================================================
+Route::prefix('bookings')->middleware('auth:sanctum')->group(function () {
+    Route::post('/',                         [PrivateBookingController::class, 'store']);
+    Route::get('/',                          [PrivateBookingController::class, 'index']);
+    Route::get('/{id}',                      [PrivateBookingController::class, 'show']);
+    Route::post('/{id}/payment',             [PrivateBookingController::class, 'createPayment']);
+    Route::get('/{id}/payment',              [PrivateBookingController::class, 'checkPayment']);
 });
 
 // ============================================================

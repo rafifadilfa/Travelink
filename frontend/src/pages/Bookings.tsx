@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Avatar,
   Badge,
@@ -102,6 +102,47 @@ interface GroupDetailResponse {
   group: GroupDetail;
   members: Member[];
 }
+
+// ─── Types (Private Booking) ────────────────────────────────────────────────
+
+interface PrivateBookingTour {
+  id: number;
+  name: string;
+  location: string;
+  image_url: string | null;
+  guide: { id: number; name: string } | null;
+}
+
+interface PrivateBookingTransaction {
+  id: number;
+  transaction_code: string;
+  tour_date: string;
+  participant_count: number;
+  price_per_participant: number;
+  total_amount: number;
+  payment_status: string;
+  tour: PrivateBookingTour | null;
+}
+
+interface PrivateBooking {
+  id: number;
+  booking_status: string;
+  paid_at: string | null;
+  created_at: string;
+  transaction: PrivateBookingTransaction | null;
+}
+
+const PRIVATE_STATUS_CONFIG: Record<string, { label: string; colorScheme: string }> = {
+  menunggu_pembayaran:            { label: 'Menunggu Pembayaran',  colorScheme: 'orange' },
+  menunggu_konfirmasi_pemandu:    { label: 'Menunggu Konfirmasi',  colorScheme: 'blue'   },
+  menunggu_verifikasi_pembayaran: { label: 'Dalam Verifikasi',     colorScheme: 'purple' },
+  terkonfirmasi:                  { label: 'Terkonfirmasi',        colorScheme: 'green'  },
+  selesai:                        { label: 'Selesai',              colorScheme: 'gray'   },
+  ditolak:                        { label: 'Ditolak',              colorScheme: 'red'    },
+  dibatalkan:                     { label: 'Dibatalkan',           colorScheme: 'red'    },
+};
+
+const PRIVATE_TERMINAL = ['selesai', 'ditolak', 'dibatalkan'];
 
 // ─── Konstanta ──────────────────────────────────────────────────────────────
 
@@ -468,6 +509,190 @@ const TripCard: React.FC<TripCardProps> = ({ item, isUpcoming, index, onViewDeta
   );
 };
 
+// ─── Midtrans Snap loader (sama persis pola WaitingRoom) ────────────────────
+
+declare global {
+  interface Window {
+    snap?: {
+      pay: (token: string, options: {
+        onSuccess: (r: unknown) => void;
+        onPending: (r: unknown) => void;
+        onError:   (r: unknown) => void;
+        onClose:   () => void;
+      }) => void;
+    };
+  }
+}
+
+const loadSnapScript = (): Promise<void> =>
+  new Promise(resolve => {
+    if (window.snap) { resolve(); return; }
+    const existing = document.getElementById('midtrans-snap');
+    if (existing) { existing.addEventListener('load', () => resolve()); return; }
+    const script = document.createElement('script');
+    script.id  = 'midtrans-snap';
+    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY ?? '');
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+
+// ─── Sub-komponen: Private Booking Card ──────────────────────────────────────
+
+interface PrivateBookingCardProps {
+  booking: PrivateBooking;
+  onPaymentComplete: () => void;
+}
+
+const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaymentComplete }) => {
+  const toast                       = useToast();
+  const [isPaying, setIsPaying]     = useState(false);
+  const [localStatus, setLocalStatus] = useState(booking.booking_status);
+  const pollRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const cardBg      = useColorModeValue('white',    'gray.800');
+  const borderCol   = useColorModeValue('gray.100', 'gray.700');
+  const hoverBorder = useColorModeValue('blue.200', 'blue.600');
+  const titleColor  = useColorModeValue('gray.800', 'white');
+  const subtleColor = useColorModeValue('gray.500', 'gray.400');
+
+  const tx      = booking.transaction;
+  const tour    = tx?.tour;
+  const cfg     = PRIVATE_STATUS_CONFIG[localStatus] ?? { label: localStatus, colorScheme: 'gray' };
+  const isPaid  = localStatus === 'terkonfirmasi' || localStatus === 'selesai';
+
+  const stripGradient =
+    cfg.colorScheme === 'green'  ? 'linear(to-r, green.300, teal.300)'    :
+    cfg.colorScheme === 'orange' ? 'linear(to-r, orange.300, yellow.300)' :
+    cfg.colorScheme === 'blue'   ? 'linear(to-r, blue.300, cyan.300)'     :
+    cfg.colorScheme === 'purple' ? 'linear(to-r, purple.300, pink.300)'   :
+    'linear(to-r, gray.300, gray.200)';
+
+  const pollPayment = useCallback((bId: number) => {
+    let tries = 0;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      tries++;
+      try {
+        const res = await apiClient.get<{ payment_status: string; booking_status: string }>(
+          `/bookings/${bId}/payment`
+        );
+        if (res.data.payment_status === 'paid') {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setLocalStatus(res.data.booking_status);
+          toast({ title: 'Pembayaran berhasil!', description: 'Booking terkonfirmasi.', status: 'success', duration: 5000, isClosable: true });
+          onPaymentComplete();
+        }
+      } catch { /* abaikan error polling sementara */ }
+      if (tries >= 20) { clearInterval(pollRef.current!); pollRef.current = null; }
+    }, 3000);
+  }, [toast, onPaymentComplete]);
+
+  const handlePay = useCallback(async () => {
+    setIsPaying(true);
+    try {
+      await loadSnapScript();
+      const res = await apiClient.post<{ snap_token: string }>(`/bookings/${booking.id}/payment`);
+      window.snap!.pay(res.data.snap_token, {
+        onSuccess: () => pollPayment(booking.id),
+        onPending: () => {
+          toast({ title: 'Pembayaran pending.', description: 'Status akan diperbarui otomatis.', status: 'info', duration: 5000, isClosable: true });
+          pollPayment(booking.id);
+        },
+        onError:  () => toast({ title: 'Pembayaran gagal.', description: 'Silakan coba lagi.', status: 'error', duration: 5000, isClosable: true }),
+        onClose:  () => pollPayment(booking.id),
+      });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast({ title: msg ?? 'Gagal memulai pembayaran.', status: 'error', duration: 4000, isClosable: true });
+    } finally {
+      setIsPaying(false);
+    }
+  }, [booking.id, pollPayment, toast]);
+
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  return (
+    <Box
+      bg={cardBg} borderRadius="xl" border="1px solid" borderColor={borderCol} boxShadow="sm"
+      transition="border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease"
+      _hover={{ borderColor: hoverBorder, boxShadow: 'md', transform: 'translateY(-1px)' }}
+      animation={`${fadeUp} 0.25s ease`} overflow="hidden"
+    >
+      {/* strip warna status */}
+      <Box h="3px" bgGradient={stripGradient} />
+
+      <Box p={5}>
+        {/* Baris atas: badge + kode transaksi */}
+        <Flex justify="space-between" align="center" mb={3} gap={2}>
+          <Badge colorScheme={cfg.colorScheme} variant="subtle" px={2.5} py={1} borderRadius="full" fontSize="xs" fontWeight="semibold">
+            {cfg.label}
+          </Badge>
+          <Text fontSize="xs" color={subtleColor} noOfLines={1}>{tx?.transaction_code ?? '-'}</Text>
+        </Flex>
+
+        {/* Nama tour */}
+        <Heading as="h3" size="sm" color={titleColor} mb={1} noOfLines={2} lineHeight="1.4">
+          {tour?.name ?? 'Tour'}
+        </Heading>
+
+        {/* Lokasi */}
+        {tour?.location && (
+          <HStack spacing={1} color={subtleColor} mb={3}>
+            <Text fontSize="xs">📍</Text>
+            <Text fontSize="sm">{tour.location}</Text>
+          </HStack>
+        )}
+
+        {/* Info: tanggal + peserta */}
+        <HStack spacing={4} mb={3} flexWrap="wrap">
+          <HStack spacing={1.5} fontSize="xs" color={subtleColor}>
+            <Icon as={CalendarIcon} boxSize={3} />
+            <Text>{tx?.tour_date ? formatDate(tx.tour_date) : '-'}</Text>
+          </HStack>
+          <HStack spacing={1.5} fontSize="xs" color={subtleColor}>
+            <Text>👥</Text>
+            <Text>{tx?.participant_count ?? 1} orang</Text>
+          </HStack>
+        </HStack>
+
+        {/* Pemandu */}
+        {tour?.guide && (
+          <HStack spacing={1.5} fontSize="xs" color={subtleColor} mb={3}>
+            <Text>🧭</Text>
+            <Text>{tour.guide.name}</Text>
+          </HStack>
+        )}
+
+        {/* Total */}
+        <Flex justify="space-between" align="center" mb={localStatus === 'menunggu_pembayaran' ? 4 : 0}>
+          <Text fontSize="sm" color={subtleColor}>Total Pembayaran</Text>
+          <Text fontWeight="bold" fontSize="md" color={titleColor}>
+            {tx ? formatRupiah(tx.total_amount) : '-'}
+          </Text>
+        </Flex>
+
+        {/* Tombol aksi */}
+        {localStatus === 'menunggu_pembayaran' && (
+          <Button size="sm" colorScheme="green" width="100%"
+            isLoading={isPaying} loadingText="Memuat pembayaran..."
+            onClick={handlePay}
+          >
+            Bayar Sekarang via Midtrans
+          </Button>
+        )}
+        {isPaid && (
+          <HStack justify="center" mt={1}>
+            <Icon as={CheckCircleIcon} color="green.400" boxSize={4} />
+            <Text fontSize="sm" color="green.500" fontWeight="medium">Pembayaran lunas</Text>
+          </HStack>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
 // ─── Sub-komponen: Modal detail grup (Past) ──────────────────────────────────
 
 interface GroupDetailModalProps {
@@ -743,6 +968,7 @@ const Bookings: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [trips, setTrips] = useState<OpenTripBooking[]>([]);
+  const [privateBookings, setPrivateBookings] = useState<PrivateBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [selectedItem, setSelectedItem] = useState<OpenTripBooking | null>(null);
@@ -752,9 +978,6 @@ const Bookings: React.FC = () => {
   const titleColor = useColorModeValue('gray.800', 'white');
   const subtleColor = useColorModeValue('gray.500', 'gray.400');
   const tabBarBg = useColorModeValue('gray.100', 'gray.800');
-  const placeholderBorderColor = useColorModeValue('gray.200', 'gray.600');
-  const placeholderBg = useColorModeValue('white', 'gray.800');
-  const placeholderTextColor = useColorModeValue('gray.400', 'gray.500');
 
   // Ambil user ID dari localStorage
   useEffect(() => {
@@ -764,12 +987,16 @@ const Bookings: React.FC = () => {
     }
   }, []);
 
-  // Fetch semua Smart Open Trip user ini
+  // Fetch Smart Open Trip + Private Booking secara paralel
   const fetchTrips = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get<{ data: OpenTripBooking[] }>('/open-trip/my-trips');
-      setTrips(res.data.data);
+      const [openRes, privateRes] = await Promise.allSettled([
+        apiClient.get<{ data: OpenTripBooking[] }>('/open-trip/my-trips'),
+        apiClient.get<{ data: PrivateBooking[] }>('/bookings'),
+      ]);
+      if (openRes.status === 'fulfilled') setTrips(openRes.value.data.data);
+      if (privateRes.status === 'fulfilled') setPrivateBookings(privateRes.value.data.data);
     } catch {
       toast({
         title: 'Gagal memuat data pesanan',
@@ -783,16 +1010,27 @@ const Bookings: React.FC = () => {
 
   useEffect(() => { fetchTrips(); }, [fetchTrips]);
 
-  // Pisahkan upcoming vs past
-  const upcomingTrips = trips.filter(t => {
-    return (t.status === 'waiting' || t.status === 'matched') && !isPast(t.trip_date);
-  });
-
-  const pastTrips = trips.filter(t => {
-    return t.status === 'cancelled' || (t.status === 'matched' && isPast(t.trip_date));
-  });
-
+  // Pisahkan upcoming vs past — Smart Open Trip
+  const upcomingTrips = trips.filter(t =>
+    (t.status === 'waiting' || t.status === 'matched') && !isPast(t.trip_date)
+  );
+  const pastTrips = trips.filter(t =>
+    t.status === 'cancelled' || (t.status === 'matched' && isPast(t.trip_date))
+  );
   const activeTrips = activeTab === 'upcoming' ? upcomingTrips : pastTrips;
+
+  // Pisahkan upcoming vs past — Private Booking
+  const upcomingPrivate = privateBookings.filter(b => {
+    const tourDate = b.transaction?.tour_date;
+    const isTerminal = PRIVATE_TERMINAL.includes(b.booking_status);
+    return !isTerminal && (!tourDate || !isPast(tourDate));
+  });
+  const pastPrivate = privateBookings.filter(b => {
+    const tourDate = b.transaction?.tour_date;
+    const isTerminal = PRIVATE_TERMINAL.includes(b.booking_status);
+    return isTerminal || (tourDate ? isPast(tourDate) : false);
+  });
+  const activePrivate = activeTab === 'upcoming' ? upcomingPrivate : pastPrivate;
 
   const handleViewDetail = (item: OpenTripBooking) => {
     setSelectedItem(item);
@@ -823,14 +1061,14 @@ const Bookings: React.FC = () => {
           <Flex gap={1}>
             <TabButton
               label="Upcoming"
-              count={loading ? 0 : upcomingTrips.length}
+              count={loading ? 0 : upcomingTrips.length + upcomingPrivate.length}
               isActive={activeTab === 'upcoming'}
               onClick={() => setActiveTab('upcoming')}
               icon={TimeIcon}
             />
             <TabButton
               label="Riwayat"
-              count={loading ? 0 : pastTrips.length}
+              count={loading ? 0 : pastTrips.length + pastPrivate.length}
               isActive={activeTab === 'past'}
               onClick={() => setActiveTab('past')}
               icon={CheckCircleIcon}
@@ -847,8 +1085,8 @@ const Bookings: React.FC = () => {
             </VStack>
           )}
 
-          {/* Daftar trip */}
-          {!loading && activeTrips.length > 0 && (
+          {/* Ada data — tampilkan Smart Open Trip + Private Booking */}
+          {!loading && (activeTrips.length > 0 || activePrivate.length > 0) && (
             <VStack spacing={4} align="stretch">
               {activeTrips.map((item, idx) => (
                 <TripCard
@@ -860,48 +1098,19 @@ const Bookings: React.FC = () => {
                   myUserId={myUserId}
                 />
               ))}
-
-              {/* Placeholder: Booking Private Trip */}
-              <Box
-                border="1px dashed"
-                borderColor={placeholderBorderColor}
-                borderRadius="xl"
-                p={5}
-                textAlign="center"
-                bg={placeholderBg}
-              >
-                <Text fontSize="sm" color={subtleColor} mb={1}>
-                  🏷️ Booking Private Trip
-                </Text>
-                <Text fontSize="xs" color={placeholderTextColor}>
-                  Booking private trip dan open trip partner akan ditampilkan di sini.
-                </Text>
-              </Box>
+              {activePrivate.map(b => (
+                <PrivateBookingCard
+                  key={b.id}
+                  booking={b}
+                  onPaymentComplete={fetchTrips}
+                />
+              ))}
             </VStack>
           )}
 
-          {/* Empty state */}
-          {!loading && activeTrips.length === 0 && (
-            <VStack spacing={4} align="stretch">
-              <EmptyState tab={activeTab} onExplore={() => navigate('/tours')} />
-
-              {/* Placeholder: Booking Private Trip (tetap tampil di empty state) */}
-              <Box
-                border="1px dashed"
-                borderColor={useColorModeValue('gray.200', 'gray.600')}
-                borderRadius="xl"
-                p={5}
-                textAlign="center"
-                bg={useColorModeValue('white', 'gray.800')}
-              >
-                <Text fontSize="sm" color={subtleColor} mb={1}>
-                  🏷️ Booking Private Trip
-                </Text>
-                <Text fontSize="xs" color={useColorModeValue('gray.400', 'gray.500')}>
-                  Booking private trip dan open trip partner akan ditampilkan di sini.
-                </Text>
-              </Box>
-            </VStack>
+          {/* Empty state — tidak ada trip maupun private booking */}
+          {!loading && activeTrips.length === 0 && activePrivate.length === 0 && (
+            <EmptyState tab={activeTab} onExplore={() => navigate('/tours')} />
           )}
         </Box>
       </Container>
