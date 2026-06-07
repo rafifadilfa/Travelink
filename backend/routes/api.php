@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\AdminKycApiController;
+use App\Http\Controllers\Api\Admin\AdminPaymentApiController;
+use App\Http\Controllers\Api\Admin\AdminWithdrawalApiController;
 use App\Http\Controllers\Api\Auth\AdminApiController;
 use App\Http\Controllers\Api\Auth\AuthApiController;
 use App\Http\Controllers\Api\Auth\GuideApiController;
@@ -122,6 +124,7 @@ Route::prefix('guide')->group(function () {
             Route::post('tours',                   [GuideTourApiController::class, 'store']);
             Route::get('tours/{id}',               [GuideTourApiController::class, 'show']);
             Route::put('tours/{id}',               [GuideTourApiController::class, 'update']);
+            Route::post('tours/{id}',              [GuideTourApiController::class, 'update']); // method override dari PUT via FormData
             Route::delete('tours/{id}',            [GuideTourApiController::class, 'destroy']);
             Route::post('tours/{id}/images',              [GuideTourApiController::class, 'uploadImages']);
             Route::delete('tours/{id}/images/{imageId}',  [GuideTourApiController::class, 'destroyImage']);
@@ -160,13 +163,26 @@ Route::prefix('admin')->group(function () {
         Route::post('auth/logout', [AdminApiController::class, 'logout']);
         Route::get('auth/admin',   [AdminApiController::class, 'getAdmin']);
 
-        // KYC management — hanya untuk admin (dicek oleh EnsureIsAdmin)
         Route::middleware(EnsureIsAdmin::class)->group(function () {
+
+            // UC-19: Verifikasi KYC
             Route::get('kyc',                   [AdminKycApiController::class, 'index']);
             Route::get('kyc/{id}',              [AdminKycApiController::class, 'show']);
             Route::post('kyc/{id}/approve',     [AdminKycApiController::class, 'approve']);
             Route::post('kyc/{id}/reject',      [AdminKycApiController::class, 'reject']);
             Route::get('guides',                [AdminKycApiController::class, 'allGuides']);
+
+            // UC-18: Verifikasi Pembayaran
+            Route::get('payments',                      [AdminPaymentApiController::class, 'index']);
+            Route::get('payments/{id}',                 [AdminPaymentApiController::class, 'show']);
+            Route::post('payments/{id}/verify',         [AdminPaymentApiController::class, 'verify']);
+            Route::post('payments/{id}/reject-payment', [AdminPaymentApiController::class, 'rejectPayment']);
+
+            // UC-20: Verifikasi Pencairan Dana
+            Route::get('withdrawals',                   [AdminWithdrawalApiController::class, 'index']);
+            Route::get('withdrawals/{id}',              [AdminWithdrawalApiController::class, 'show']);
+            Route::post('withdrawals/{id}/process',     [AdminWithdrawalApiController::class, 'process']);
+            Route::post('withdrawals/{id}/reject',      [AdminWithdrawalApiController::class, 'reject']);
         });
     });
 });

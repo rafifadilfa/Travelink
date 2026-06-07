@@ -102,6 +102,7 @@ const ViewAllTours: React.FC = () => {
     const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
     const subtleBorderColor  = useColorModeValue('gray.200', 'gray.700');
     const accentGradient     = `linear(to-br, ${useColorModeValue('purple.400', 'purple.300')}, ${useColorModeValue('blue.500', 'blue.400')})`;
+    const ratingBadgeBg      = useColorModeValue('whiteAlpha.800', 'blackAlpha.600');
 
     // Fetch tour dari API saat mount
     useEffect(() => {
@@ -385,7 +386,7 @@ const ViewAllTours: React.FC = () => {
                                     )}
 
                                     {/* Rating */}
-                                    <Flex position="absolute" bottom={3} right={3} bg={useColorModeValue('whiteAlpha.800', 'blackAlpha.600')} backdropFilter="blur(5px)" px={2.5} py={1} borderRadius="lg" alignItems="center" boxShadow="md">
+                                    <Flex position="absolute" bottom={3} right={3} bg={ratingBadgeBg} backdropFilter="blur(5px)" px={2.5} py={1} borderRadius="lg" alignItems="center" boxShadow="md">
                                         <Icon as={StarIcon} color="yellow.400" boxSize={4} mr={1.5} />
                                         <Text fontWeight="bold" color={primaryTextColor} fontSize="sm">{tour.rating > 0 ? tour.rating.toFixed(1) : 'Baru'}</Text>
                                         <Text fontSize="xs" color={secondaryTextColor} ml={1}>({tour.reviews_count})</Text>
