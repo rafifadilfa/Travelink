@@ -251,6 +251,8 @@ class OpenTripController extends Controller
                 'matching_score' => $p->matching_score,
                 'group_id'       => $p->group_id,
                 'group'          => $groupData,
+                'payment_status' => $p->payment_status ?? 'unpaid',
+                'guide_reviewed' => (bool) $p->guide_reviewed,
             ];
         });
 

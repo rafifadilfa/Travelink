@@ -21,6 +21,7 @@ class OpenTripParticipant extends Model
         'payment_status',
         'midtrans_order_id',
         'income_settled_at',
+        'guide_reviewed',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class OpenTripParticipant extends Model
         'budget_level'       => 'integer',
         'matching_score'     => 'float',
         'registration_count' => 'integer',
+        'guide_reviewed'     => 'boolean',
     ];
 
     // ── Relasi ──────────────────────────────────────────────────

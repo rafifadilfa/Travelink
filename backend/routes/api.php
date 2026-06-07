@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Guide\GuideWalletApiController;
 use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
 use App\Http\Controllers\Api\Tourist\OpenTripController;
 use App\Http\Controllers\Api\Tourist\PrivateBookingController;
+use App\Http\Controllers\Api\Tourist\ReviewApiController;
 use App\Http\Controllers\Api\Tourist\TourListApiController;
 use App\Http\Middleware\EnsureGuideIsVerified;
 use App\Http\Middleware\EnsureIsAdmin;
@@ -35,6 +36,14 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthApiController::class, 'logout']);
     Route::get('auth/user',    [AuthApiController::class, 'getUser']);
+});
+
+// ============================================================
+// REVIEW & RATING ROUTES (Tourist)
+// ============================================================
+Route::prefix('reviews')->middleware('auth:sanctum')->group(function () {
+    Route::post('guide',  [ReviewApiController::class, 'submitGuideReview']);
+    Route::get('status',  [ReviewApiController::class, 'reviewStatus']);
 });
 
 // ============================================================
