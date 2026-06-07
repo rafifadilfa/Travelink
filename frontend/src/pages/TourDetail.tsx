@@ -21,6 +21,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import { FiClock, FiMapPin, FiMessageCircle, FiStar } from 'react-icons/fi';
 import apiClient from '../services/api';
+import TouristNavbar from '../components/TouristNavbar';
 
 // ─── Animasi ───────────────────────────────────────────────────────────────
 const fadeIn = keyframes`
@@ -86,7 +87,6 @@ const TourDetail: React.FC = () => {
     // ── Warna ────────────────────────────────────────────────────
     const overallBg           = useColorModeValue('gray.50', 'gray.900');
     const cardBg              = useColorModeValue('white', 'gray.800');
-    const glassBg             = useColorModeValue('rgba(255,255,255,0.8)', 'rgba(26,32,44,0.8)');
     const primaryColor        = useColorModeValue('blue.500', 'blue.400');
     const primaryHoverColor   = useColorModeValue('blue.600', 'blue.500');
     const primaryTextColor    = useColorModeValue('gray.800', 'whiteAlpha.900');
@@ -169,24 +169,7 @@ const TourDetail: React.FC = () => {
     return (
         <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
             {/* ── Sticky Header ── */}
-            <Box bg={glassBg} backdropFilter="blur(15px)" boxShadow="sm" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={subtleBorderColor}>
-                <Container maxW="container.xl">
-                    <Flex h="68px" justify="space-between" align="center">
-                        <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-                            <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
-                            </Flex>
-                            <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold" display={{ base: 'none', sm: 'block' }}>
-                                Travelink
-                            </Heading>
-                        </Flex>
-                        <HStack spacing={3}>
-                            <Button size="sm" variant="outline" colorScheme="blue" onClick={() => navigate('/tours')}>Jelajahi</Button>
-                            <Button size="sm" colorScheme="blue" onClick={() => navigate('/bookings')}>Booking Saya</Button>
-                        </HStack>
-                    </Flex>
-                </Container>
-            </Box>
+            <TouristNavbar />
 
             <Container maxW="container.xl" py={{ base: 6, md: 10 }}>
                 {/* ── Breadcrumbs ── */}
