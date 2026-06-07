@@ -36,6 +36,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
+import TouristNavbar from '../components/TouristNavbar';
 
 // --- Keyframes ---
 const fadeIn = keyframes`
@@ -95,13 +96,11 @@ const ViewAllTours: React.FC = () => {
 
     const overallBg          = useColorModeValue('blue.50', 'gray.900');
     const cardBg             = useColorModeValue('white', 'gray.800');
-    const glassBg            = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.85)');
     const primaryColor       = useColorModeValue('blue.500', 'blue.400');
     const primaryHoverColor  = useColorModeValue('blue.600', 'blue.500');
     const primaryTextColor   = useColorModeValue('gray.700', 'whiteAlpha.900');
     const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
     const subtleBorderColor  = useColorModeValue('gray.200', 'gray.700');
-    const accentGradient     = `linear(to-br, ${useColorModeValue('purple.400', 'purple.300')}, ${useColorModeValue('blue.500', 'blue.400')})`;
     const ratingBadgeBg      = useColorModeValue('whiteAlpha.800', 'blackAlpha.600');
 
     // Fetch tour dari API saat mount
@@ -217,22 +216,7 @@ const ViewAllTours: React.FC = () => {
     return (
         <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
             {/* Navbar */}
-            <Box bg={glassBg} backdropFilter="blur(18px)" boxShadow="md" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={subtleBorderColor}>
-                <Container maxW="container.xl">
-                    <Flex h="68px" justify="space-between" align="center">
-                        <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-                            <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
-                            </Flex>
-                            <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">Travelink</Heading>
-                        </Flex>
-                        <HStack spacing={3}>
-                            <Button {...secondaryButtonStyle} size="sm" onClick={() => navigate('/tours')} leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}>Explore</Button>
-                            <Button {...primaryButtonStyle}   size="sm" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}>My Bookings</Button>
-                        </HStack>
-                    </Flex>
-                </Container>
-            </Box>
+            <TouristNavbar />
 
             <Container maxW="container.xl" py={{ base: 6, md: 10 }}>
                 <Breadcrumb spacing="8px" separator={<ChevronRightIcon color="gray.500" />} mb={6}>

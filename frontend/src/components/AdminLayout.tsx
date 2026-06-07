@@ -21,6 +21,7 @@ import { IconType } from 'react-icons';
 import {
   FiShield,
   FiUsers,
+  FiCreditCard,
   FiLogOut,
   FiMenu,
   FiBell,
@@ -43,8 +44,9 @@ interface AdminLayoutProps {
 }
 
 const LinkItems = [
-  { name: 'Verifikasi KYC', icon: FiShield, path: '/admin/kyc' },
-  { name: 'Semua Guide',    icon: FiUsers,  path: '/admin/guides' },
+  { name: 'Verifikasi KYC',     icon: FiShield,     path: '/admin/kyc' },
+  { name: 'Semua Guide',        icon: FiUsers,       path: '/admin/guides' },
+  { name: 'Verifikasi Cairkan', icon: FiCreditCard,  path: '/admin/withdrawals' },
 ];
 
 const NavItem = ({ icon, children, path, ...rest }: NavItemProps) => {
