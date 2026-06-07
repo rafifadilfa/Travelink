@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Box,
   Flex,
@@ -13,12 +13,15 @@ import {
   FormControl,
   FormLabel,
   Input,
+  InputGroup,
+  InputLeftAddon,
   Textarea,
   Select,
-  NumberInput,
-  NumberInputField,
+  Switch,
   SimpleGrid,
+  Image,
   useToast,
+  CloseButton,
 } from '@chakra-ui/react';
 import { FiPlus, FiTrash2, FiUploadCloud } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -32,23 +35,67 @@ interface ItineraryStep {
 
 const CreateTour: React.FC = () => {
     const navigate = useNavigate();
-    const toast = useToast();
+    const toast    = useToast();
 
     const [title, setTitle]           = useState('');
     const [description, setDescription] = useState('');
     const [location, setLocation]     = useState('');
-    const [price, setPrice]           = useState('0');
+    const [priceRaw, setPriceRaw]     = useState('');          // angka murni tanpa format
     const [duration, setDuration]     = useState('');
     const [category, setCategory]     = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isOpenTrip, setIsOpenTrip]     = useState(false);
 
     const [itinerary, setItinerary] = useState<ItineraryStep[]>([{ time: '', activity: '' }]);
     const [included, setIncluded]   = useState<string[]>(['']);
     const [excluded, setExcluded]   = useState<string[]>(['']);
 
+    // Foto tour
+    const [photoFiles, setPhotoFiles]       = useState<File[]>([]);
+    const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const cardBg  = useColorModeValue('white', 'gray.800');
     const inputBg = useColorModeValue('gray.50', 'gray.700');
 
+    // ── Format tampilan harga ────────────────────────────────────────
+    const formatPrice = (raw: string): string => {
+        if (!raw) return '';
+        return Number(raw).toLocaleString('id-ID');
+    };
+
+    const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Ambil hanya digit, strip leading zeros
+        const digits = e.target.value.replace(/[^0-9]/g, '');
+        setPriceRaw(digits ? String(Number(digits)) : '');
+    };
+
+    // ── Foto ─────────────────────────────────────────────────────────
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+
+        const remaining = 10 - photoFiles.length;
+        const accepted  = files.slice(0, remaining);
+
+        setPhotoFiles(prev => [...prev, ...accepted]);
+        accepted.forEach(f => {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                setPhotoPreviews(prev => [...prev, ev.target?.result as string]);
+            };
+            reader.readAsDataURL(f);
+        });
+        // Reset input agar file yang sama bisa dipilih ulang
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const removePhoto = (index: number) => {
+        setPhotoFiles(prev    => prev.filter((_, i) => i !== index));
+        setPhotoPreviews(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // ── Itinerary & list helpers ──────────────────────────────────────
     const handleItineraryChange = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
         setItinerary(prev => prev.map((item, i) =>
@@ -66,38 +113,53 @@ const CreateTour: React.FC = () => {
         setter(values);
     };
 
+    // ── Submit ────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         try {
-            await guideApiClient.post('/guide/tours', {
+            // 1. Buat tour (JSON)
+            const res = await guideApiClient.post('/guide/tours', {
                 title,
                 description,
                 location,
-                price: Number(price),
+                price:       Number(priceRaw) || 0,
                 duration,
                 category,
-                status: 'draft',
-                itinerary: itinerary.filter(s => s.activity.trim()),
-                included:  included.filter(s => s.trim()),
-                excluded:  excluded.filter(s => s.trim()),
+                status:      'draft',
+                is_open_trip: isOpenTrip,
+                itinerary:   itinerary.filter(s => s.activity.trim()),
+                included:    included.filter(s => s.trim()),
+                excluded:    excluded.filter(s => s.trim()),
             });
+
+            const tourId: number = res.data.tour.id;
+
+            // 2. Upload foto kalau ada
+            if (photoFiles.length > 0) {
+                const formData = new FormData();
+                photoFiles.forEach(f => formData.append('images[]', f));
+                await guideApiClient.post(`/guide/tours/${tourId}/images`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+            }
+
             toast({
-                title: 'Tour berhasil dibuat!',
+                title:       'Tour berhasil dibuat!',
                 description: 'Tour disimpan sebagai draft.',
-                status: 'success',
-                duration: 5000,
-                isClosable: true,
-                position: 'top',
+                status:      'success',
+                duration:    5000,
+                isClosable:  true,
+                position:    'top',
             });
             navigate('/guide/tours');
         } catch (err: any) {
             toast({
-                title: 'Gagal membuat tour',
+                title:       'Gagal membuat tour',
                 description: err.response?.data?.message ?? 'Coba lagi.',
-                status: 'error',
-                duration: 5000,
-                isClosable: true,
+                status:      'error',
+                duration:    5000,
+                isClosable:  true,
             });
         } finally {
             setIsSubmitting(false);
@@ -108,28 +170,28 @@ const CreateTour: React.FC = () => {
         <GuideLayout>
             <Box maxW="container.lg" mx="auto">
                 <Heading as="h1" size="xl" mb={8}>
-                    Create a New Tour
+                    Buat Tour Baru
                 </Heading>
 
                 <form onSubmit={handleSubmit}>
                     <VStack spacing={8} align="stretch">
-                        {/* Basic Information */}
+                        {/* ── Informasi Dasar ───────────────────────────── */}
                         <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md">
-                            <Heading size="lg" mb={6}>Basic Information</Heading>
+                            <Heading size="lg" mb={6}>Informasi Dasar</Heading>
                             <VStack spacing={4}>
                                 <FormControl isRequired>
-                                    <FormLabel>Tour Title</FormLabel>
+                                    <FormLabel>Judul Tour</FormLabel>
                                     <Input
-                                        placeholder="e.g., Jakarta Historical City Tour"
+                                        placeholder="cth. Jakarta Historical City Tour"
                                         value={title}
                                         onChange={e => setTitle(e.target.value)}
                                         bg={inputBg}
                                     />
                                 </FormControl>
                                 <FormControl isRequired>
-                                    <FormLabel>Description</FormLabel>
+                                    <FormLabel>Deskripsi</FormLabel>
                                     <Textarea
-                                        placeholder="Give a detailed and exciting description of your tour."
+                                        placeholder="Tulis deskripsi menarik tentang tour ini."
                                         value={description}
                                         onChange={e => setDescription(e.target.value)}
                                         bg={inputBg}
@@ -138,91 +200,155 @@ const CreateTour: React.FC = () => {
                                 </FormControl>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
                                     <FormControl isRequired>
-                                        <FormLabel>Location</FormLabel>
+                                        <FormLabel>Lokasi</FormLabel>
                                         <Input
-                                            placeholder="e.g., Bali, Indonesia"
+                                            placeholder="cth. Bali, Indonesia"
                                             value={location}
                                             onChange={e => setLocation(e.target.value)}
                                             bg={inputBg}
                                         />
                                     </FormControl>
                                     <FormControl isRequired>
-                                        <FormLabel>Category</FormLabel>
+                                        <FormLabel>Kategori</FormLabel>
                                         <Select
-                                            placeholder="Select a category"
+                                            placeholder="Pilih kategori"
                                             value={category}
                                             onChange={e => setCategory(e.target.value)}
                                             bg={inputBg}
                                         >
-                                            <option value="Beach">Beach</option>
-                                            <option value="Mountain">Mountain</option>
-                                            <option value="City">City</option>
-                                            <option value="Culture">Culture</option>
+                                            <option value="Beach">Pantai</option>
+                                            <option value="Mountain">Pegunungan</option>
+                                            <option value="City">Perkotaan</option>
+                                            <option value="Culture">Budaya</option>
                                             <option value="Diving">Diving</option>
-                                            <option value="Nature">Nature</option>
+                                            <option value="Nature">Alam</option>
                                         </Select>
                                     </FormControl>
                                 </SimpleGrid>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
                                     <FormControl isRequired>
-                                        <FormLabel>Price per Person (in IDR)</FormLabel>
-                                        <NumberInput
-                                            min={0}
-                                            value={`Rp ${Number(price).toLocaleString('id-ID')}`}
-                                            onChange={v => setPrice(v.replace(/[^0-9]/g, ''))}
-                                        >
-                                            <NumberInputField bg={inputBg} />
-                                        </NumberInput>
+                                        <FormLabel>Harga per Orang</FormLabel>
+                                        <InputGroup>
+                                            <InputLeftAddon>Rp</InputLeftAddon>
+                                            <Input
+                                                placeholder="cth. 500000"
+                                                value={formatPrice(priceRaw)}
+                                                onChange={handlePriceChange}
+                                                bg={inputBg}
+                                                borderLeftRadius={0}
+                                            />
+                                        </InputGroup>
                                     </FormControl>
                                     <FormControl isRequired>
-                                        <FormLabel>Tour Duration</FormLabel>
+                                        <FormLabel>Durasi Tour</FormLabel>
                                         <Input
-                                            placeholder="e.g., 8 hours or 3 days"
+                                            placeholder="cth. 8 jam atau 3 hari"
                                             value={duration}
                                             onChange={e => setDuration(e.target.value)}
                                             bg={inputBg}
                                         />
                                     </FormControl>
                                 </SimpleGrid>
+                                <FormControl display="flex" alignItems="center" gap={3}>
+                                    <Switch
+                                        id="is-open-trip"
+                                        colorScheme="purple"
+                                        isChecked={isOpenTrip}
+                                        onChange={e => setIsOpenTrip(e.target.checked)}
+                                    />
+                                    <FormLabel htmlFor="is-open-trip" mb={0} cursor="pointer">
+                                        Jadikan Smart Open Trip
+                                    </FormLabel>
+                                </FormControl>
                             </VStack>
                         </Box>
 
-                        {/* Tour Photos (placeholder) */}
+                        {/* ── Foto Tour ─────────────────────────────────── */}
                         <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md">
-                            <Heading size="lg" mb={6}>Tour Photos</Heading>
+                            <Heading size="lg" mb={2}>Foto Tour</Heading>
+                            <Text fontSize="sm" color="gray.500" mb={4}>
+                                Maksimal 10 foto (JPG/PNG/WebP, maks 5 MB per foto)
+                            </Text>
+
+                            {/* Area upload */}
                             <Flex
                                 border="2px dashed"
                                 borderColor={useColorModeValue('gray.300', 'gray.600')}
-                                borderRadius="lg" p={10}
+                                borderRadius="lg" p={8}
                                 align="center" justify="center" direction="column"
-                                cursor="pointer" _hover={{ borderColor: 'blue.400' }}
+                                cursor={photoFiles.length >= 10 ? 'not-allowed' : 'pointer'}
+                                _hover={photoFiles.length < 10 ? { borderColor: 'blue.400' } : {}}
+                                opacity={photoFiles.length >= 10 ? 0.5 : 1}
+                                onClick={() => photoFiles.length < 10 && fileInputRef.current?.click()}
                             >
-                                <Icon as={FiUploadCloud} w={12} h={12} color="gray.500" />
-                                <Text mt={4} color="gray.500">Click here to upload photos</Text>
-                                <Text fontSize="sm" color="gray.500">(This is a visual placeholder)</Text>
+                                <Icon as={FiUploadCloud} w={10} h={10} color="gray.500" />
+                                <Text mt={3} color="gray.500" fontWeight="medium">
+                                    Klik untuk pilih foto
+                                </Text>
+                                <Text fontSize="sm" color="gray.400">
+                                    {photoFiles.length}/10 foto dipilih
+                                </Text>
                             </Flex>
+
+                            {/* Input file tersembunyi */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={handleFileChange}
+                            />
+
+                            {/* Preview foto yang dipilih */}
+                            {photoPreviews.length > 0 && (
+                                <SimpleGrid columns={{ base: 2, sm: 3, md: 5 }} spacing={3} mt={4}>
+                                    {photoPreviews.map((src, i) => (
+                                        <Box key={i} position="relative">
+                                            <Image
+                                                src={src}
+                                                alt={`preview-${i}`}
+                                                borderRadius="md"
+                                                objectFit="cover"
+                                                w="full"
+                                                h="90px"
+                                            />
+                                            <CloseButton
+                                                size="sm"
+                                                position="absolute"
+                                                top={1} right={1}
+                                                bg="blackAlpha.600"
+                                                color="white"
+                                                borderRadius="full"
+                                                onClick={() => removePhoto(i)}
+                                                _hover={{ bg: 'red.500' }}
+                                            />
+                                        </Box>
+                                    ))}
+                                </SimpleGrid>
+                            )}
                         </Box>
 
-                        {/* Itinerary */}
+                        {/* ── Itinerary ─────────────────────────────────── */}
                         <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md">
                             <Heading size="lg" mb={6}>Itinerary</Heading>
                             <VStack spacing={4} align="stretch">
                                 {itinerary.map((step, index) => (
                                     <HStack key={index} spacing={4}>
                                         <Input
-                                            placeholder="Time (e.g., 09:00 AM)"
+                                            placeholder="Waktu (cth. 09:00)"
                                             name="time" value={step.time}
                                             onChange={e => handleItineraryChange(index, e)}
                                             bg={inputBg} w="150px"
                                         />
                                         <Input
-                                            placeholder="Activity description"
+                                            placeholder="Deskripsi aktivitas"
                                             name="activity" value={step.activity}
                                             onChange={e => handleItineraryChange(index, e)}
                                             bg={inputBg}
                                         />
                                         <IconButton
-                                            icon={<FiTrash2 />} aria-label="Remove step"
+                                            icon={<FiTrash2 />} aria-label="Hapus langkah"
                                             colorScheme="red" variant="ghost"
                                             onClick={() => {
                                                 if (itinerary.length > 1)
@@ -237,63 +363,63 @@ const CreateTour: React.FC = () => {
                                     onClick={() => setItinerary(prev => [...prev, { time: '', activity: '' }])}
                                     alignSelf="flex-start"
                                 >
-                                    Add Step
+                                    Tambah Langkah
                                 </Button>
                             </VStack>
                         </Box>
 
-                        {/* Inclusions / Exclusions */}
+                        {/* ── Termasuk & Tidak Termasuk ─────────────────── */}
                         <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md">
-                            <Heading size="lg" mb={6}>What's Included & Excluded</Heading>
+                            <Heading size="lg" mb={6}>Yang Termasuk & Tidak Termasuk</Heading>
                             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
                                 <VStack align="stretch" spacing={3}>
-                                    <Heading size="md" color="green.400">Included</Heading>
+                                    <Heading size="md" color="green.400">Termasuk</Heading>
                                     {included.map((item, index) => (
                                         <HStack key={index}>
                                             <Input
                                                 value={item}
                                                 onChange={e => handleListChange(setIncluded, included, index, e)}
-                                                placeholder="e.g., Hotel Pickup" bg={inputBg}
+                                                placeholder="cth. Antar-jemput hotel" bg={inputBg}
                                             />
                                             <IconButton
-                                                icon={<FiTrash2 />} aria-label="Remove"
+                                                icon={<FiTrash2 />} aria-label="Hapus"
                                                 onClick={() => { if (included.length > 1) setIncluded(prev => prev.filter((_, i) => i !== index)); }}
                                                 variant="ghost" isDisabled={included.length === 1}
                                             />
                                         </HStack>
                                     ))}
                                     <Button size="sm" onClick={() => setIncluded(prev => [...prev, ''])} leftIcon={<FiPlus />}>
-                                        Add Included Item
+                                        Tambah Item
                                     </Button>
                                 </VStack>
                                 <VStack align="stretch" spacing={3}>
-                                    <Heading size="md" color="red.400">Excluded</Heading>
+                                    <Heading size="md" color="red.400">Tidak Termasuk</Heading>
                                     {excluded.map((item, index) => (
                                         <HStack key={index}>
                                             <Input
                                                 value={item}
                                                 onChange={e => handleListChange(setExcluded, excluded, index, e)}
-                                                placeholder="e.g., Personal Expenses" bg={inputBg}
+                                                placeholder="cth. Pengeluaran pribadi" bg={inputBg}
                                             />
                                             <IconButton
-                                                icon={<FiTrash2 />} aria-label="Remove"
+                                                icon={<FiTrash2 />} aria-label="Hapus"
                                                 onClick={() => { if (excluded.length > 1) setExcluded(prev => prev.filter((_, i) => i !== index)); }}
                                                 variant="ghost" isDisabled={excluded.length === 1}
                                             />
                                         </HStack>
                                     ))}
                                     <Button size="sm" onClick={() => setExcluded(prev => [...prev, ''])} leftIcon={<FiPlus />}>
-                                        Add Excluded Item
+                                        Tambah Item
                                     </Button>
                                 </VStack>
                             </SimpleGrid>
                         </Box>
 
-                        {/* Actions */}
+                        {/* ── Aksi ──────────────────────────────────────── */}
                         <Flex justify="flex-end" gap={4} py={4}>
-                            <Button variant="ghost" onClick={() => navigate('/guide/tours')}>Cancel</Button>
+                            <Button variant="ghost" onClick={() => navigate('/guide/tours')}>Batal</Button>
                             <Button colorScheme="blue" type="submit" isLoading={isSubmitting} loadingText="Menyimpan...">
-                                Save Draft & Create Tour
+                                Simpan & Buat Tour
                             </Button>
                         </Flex>
                     </VStack>

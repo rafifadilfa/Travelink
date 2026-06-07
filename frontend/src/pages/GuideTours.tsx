@@ -36,6 +36,7 @@ interface TourRow {
     bookings: number;
     rating: number | null;
     price: number;
+    is_open_trip: boolean;
 }
 
 const GuideTours: React.FC = () => {
@@ -148,6 +149,13 @@ const GuideTours: React.FC = () => {
                                             colorScheme={tour.status === 'published' ? 'green' : 'yellow'}
                                         >
                                             {tour.status === 'published' ? 'Published' : 'Draft'}
+                                        </Tag>
+                                        <Tag
+                                            size="sm"
+                                            variant="subtle"
+                                            colorScheme={tour.is_open_trip ? 'purple' : 'gray'}
+                                        >
+                                            {tour.is_open_trip ? 'Smart Open Trip' : 'Regular Trip'}
                                         </Tag>
                                         <Text fontSize="sm" color={secondaryTextColor}>
                                             • {tour.bookings} bookings

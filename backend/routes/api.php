@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\Route;
 // ============================================================
 // PUBLIC TOUR ROUTES
 // ============================================================
-Route::get('tours', [TourListApiController::class, 'index']);
+Route::get('tours',      [TourListApiController::class, 'index']);
+Route::get('tours/{id}', [TourListApiController::class, 'show']);
 
 // ============================================================
 // TOURIST AUTH ROUTES
@@ -96,11 +97,13 @@ Route::prefix('guide')->group(function () {
         // Endpoint yang HANYA bisa diakses guide dengan status 'verified'
         Route::middleware(EnsureGuideIsVerified::class)->group(function () {
             // Tour management
-            Route::get('tours',           [GuideTourApiController::class, 'index']);
-            Route::post('tours',          [GuideTourApiController::class, 'store']);
-            Route::get('tours/{id}',      [GuideTourApiController::class, 'show']);
-            Route::put('tours/{id}',      [GuideTourApiController::class, 'update']);
-            Route::delete('tours/{id}',   [GuideTourApiController::class, 'destroy']);
+            Route::get('tours',                    [GuideTourApiController::class, 'index']);
+            Route::post('tours',                   [GuideTourApiController::class, 'store']);
+            Route::get('tours/{id}',               [GuideTourApiController::class, 'show']);
+            Route::put('tours/{id}',               [GuideTourApiController::class, 'update']);
+            Route::delete('tours/{id}',            [GuideTourApiController::class, 'destroy']);
+            Route::post('tours/{id}/images',              [GuideTourApiController::class, 'uploadImages']);
+            Route::delete('tours/{id}/images/{imageId}',  [GuideTourApiController::class, 'destroyImage']);
 
             // Booking management
             Route::get('bookings',                    [GuideBookingApiController::class, 'index']);

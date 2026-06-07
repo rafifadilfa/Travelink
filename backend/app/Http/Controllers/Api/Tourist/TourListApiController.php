@@ -58,4 +58,59 @@ class TourListApiController extends Controller
             'total' => $tours->count(),
         ]);
     }
+
+    /**
+     * GET /api/tours/{id}
+     * Detail satu tour — endpoint publik.
+     */
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $tour = Tour::with(['images', 'location', 'categories', 'guide', 'reviews', 'itineraries', 'items'])
+            ->findOrFail($id);
+
+        $host = $request->getSchemeAndHttpHost();
+
+        $images = $tour->images->map(fn($img) => [
+            'id'  => $img->id,
+            'url' => str_starts_with($img->image_path, 'http')
+                ? $img->image_path
+                : ($host . '/storage/' . $img->image_path),
+        ])->values();
+
+        $included = $tour->items->where('pivot.is_included', true)->pluck('name')->values();
+        $excluded = $tour->items->where('pivot.is_included', false)->pluck('name')->values();
+
+        $guide = $tour->guide ? [
+            'id'     => $tour->guide->id,
+            'name'   => $tour->guide->name,
+            'rating' => (float) $tour->guide->rating,
+            'avatar' => $tour->guide->profile_picture
+                ? ($host . '/storage/' . $tour->guide->profile_picture)
+                : null,
+        ] : null;
+
+        return response()->json([
+            'tour' => [
+                'id'            => $tour->id,
+                'name'          => $tour->name,
+                'description'   => $tour->tour_description,
+                'price'         => (int) $tour->tour_price,
+                'duration'      => $tour->tour_duration,
+                'rating'        => (float) ($tour->tour_rating ?? 0),
+                'reviews_count' => $tour->reviews->count(),
+                'is_open_trip'  => (bool) $tour->is_open_trip,
+                'status'        => $tour->tour_status,
+                'location'      => $tour->location?->name ?? '-',
+                'categories'    => $tour->categories->pluck('name')->values(),
+                'images'        => $images,
+                'itinerary'     => $tour->itineraries->map(fn($it) => [
+                    'time'     => $it->start_time ?? '',
+                    'activity' => $it->activity ?? '',
+                ])->values(),
+                'included'      => $included->values(),
+                'excluded'      => $excluded->values(),
+                'guide'         => $guide,
+            ],
+        ]);
+    }
 }
