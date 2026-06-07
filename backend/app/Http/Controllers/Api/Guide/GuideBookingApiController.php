@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Guide;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\OpenTripGroup;
+use App\Models\OpenTripParticipant;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -80,14 +82,48 @@ class GuideBookingApiController extends Controller
 
         $bookings = $query->paginate(15);
 
+        // ── Smart Open Trip groups milik guide ini ──────────────────────────────
+        $today = now()->toDateString();
+
+        $groupQuery = OpenTripGroup::whereHas('tour', fn($q) => $q->where('tour_guide_id', $guide->id))
+            ->with([
+                'tour:id,name',
+                'participants' => fn($q) => $q->where('status', 'matched'),
+            ])
+            ->whereNull('rejected_at'); // grup yang ditolak tidak ditampilkan di mana pun
+
+        if ($tab === 'history') {
+            $groupQuery->whereDate('trip_date', '<', $today);
+        } else {
+            $groupQuery->whereDate('trip_date', '>=', $today);
+        }
+
+        $openTripGroups = $groupQuery->orderBy('trip_date', 'asc')->get()
+            ->map(function (OpenTripGroup $g): array {
+                $members   = $g->participants;
+                $paidCount = $members->where('payment_status', 'paid')->count();
+                return [
+                    'id'           => $g->id,
+                    'tour_id'      => $g->tour_id,
+                    'tour_name'    => $g->tour?->name,
+                    'trip_date'    => $g->trip_date?->format('Y-m-d'),
+                    'member_count' => $members->count(),
+                    'paid_count'   => $paidCount,
+                    'matched_at'   => $g->matched_at?->toIso8601String(),
+                    'expires_at'   => $g->expires_at?->toIso8601String(),
+                    'is_active'    => $g->isActive(),
+                ];
+            });
+
         return response()->json([
-            'tab'      => $tab,
-            'data'     => collect($bookings->items())->map(fn($b) => $this->formatBooking($b)),
-            'meta'     => [
+            'tab'              => $tab,
+            'data'             => collect($bookings->items())->map(fn($b) => $this->formatBooking($b)),
+            'meta'             => [
                 'current_page' => $bookings->currentPage(),
                 'last_page'    => $bookings->lastPage(),
                 'total'        => $bookings->total(),
             ],
+            'open_trip_groups' => $openTripGroups,
         ], 200);
     }
 
@@ -160,6 +196,63 @@ class GuideBookingApiController extends Controller
         return response()->json([
             'message' => 'Pesanan ditolak.',
             'booking' => $this->formatBooking($booking),
+        ], 200);
+    }
+
+    // ================================================================
+    // POST /api/guide/open-trip-groups/{groupId}/reject
+    // Guide menolak grup Smart Open Trip — hanya boleh jika 0 anggota bayar.
+    // Saat ditolak: grup.rejected_at diisi, semua peserta matched → cancelled.
+    // group_id peserta TIDAK dikosongkan agar endpoint status tourist
+    // bisa mendeteksi "cancelled_by_guide".
+    // ================================================================
+    public function rejectOpenTripGroup(Request $request, int $groupId): JsonResponse
+    {
+        $guide = $request->user();
+
+        // Pastikan grup ada dan tournya milik guide ini
+        $group = OpenTripGroup::whereHas('tour', fn($q) => $q->where('tour_guide_id', $guide->id))
+            ->with(['participants' => fn($q) => $q->where('status', 'matched')])
+            ->find($groupId);
+
+        if (! $group) {
+            return response()->json([
+                'message' => 'Grup tidak ditemukan atau bukan milik Anda.',
+            ], 403);
+        }
+
+        if ($group->isRejected()) {
+            return response()->json([
+                'message' => 'Grup ini sudah pernah ditolak sebelumnya.',
+            ], 422);
+        }
+
+        // Hitung berapa anggota yang sudah membayar
+        $paidCount = $group->participants->where('payment_status', 'paid')->count();
+
+        if ($paidCount > 0) {
+            return response()->json([
+                'message' => "Tidak dapat menolak grup: {$paidCount} anggota sudah melakukan pembayaran.",
+            ], 422);
+        }
+
+        // Tandai grup sebagai ditolak
+        $group->update(['rejected_at' => now()]);
+
+        // Keluarkan semua peserta dari grup: status → cancelled, payment_status → null
+        // group_id SENGAJA tidak dikosongkan agar endpoint /open-trip/status
+        // dapat mendeteksi bahwa pembatalan ini dilakukan oleh pemandu.
+        OpenTripParticipant::where('group_id', $group->id)
+            ->where('status', 'matched')
+            ->update([
+                'status'         => 'cancelled',
+                'payment_status' => null,
+            ]);
+
+        return response()->json([
+            'message'    => 'Grup Smart Open Trip berhasil ditolak. Semua peserta telah dikeluarkan dari grup.',
+            'group_id'   => $group->id,
+            'rejected_at' => $group->rejected_at->toIso8601String(),
         ], 200);
     }
 }

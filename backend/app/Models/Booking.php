@@ -8,32 +8,16 @@ class Booking extends Model
 {
     protected $table = 'bookings';
 
-    // ---------------------------------------------------------------
-    // Konstanta status pesanan — satu-satunya sumber kebenaran.
-    // Gunakan konstanta ini di seluruh codebase; jangan pakai string literal.
-    //
-    // Alur transisi:
-    // menunggu_konfirmasi_pemandu
-    //   → (pemandu terima) menunggu_pembayaran
-    //   → (wisatawan upload bukti) menunggu_verifikasi_pembayaran
-    //   → (admin verifikasi) terkonfirmasi
-    //   → (A1: trip lewat) selesai
-    //
-    // Cabang:
-    //   → (pemandu tolak) ditolak
-    //   → (cancel manual) dibatalkan
-    //   → (A3: timeout 24 jam) dibatalkan_otomatis
-    // ---------------------------------------------------------------
+    // ── Nilai status booking ──────────────────────────────────────────────────
     const STATUS_MENUNGGU_KONFIRMASI_PEMANDU    = 'menunggu_konfirmasi_pemandu';
     const STATUS_MENUNGGU_PEMBAYARAN            = 'menunggu_pembayaran';
     const STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN = 'menunggu_verifikasi_pembayaran';
-    const STATUS_TERKONFIRMASI                  = 'terkonfirmasi';
+    const STATUS_TERKONFIRMASI                  = 'terkonfirmasi'; // pembayaran verified, trip belum selesai
     const STATUS_SELESAI                        = 'selesai';
     const STATUS_DITOLAK                        = 'ditolak';
-    const STATUS_DIBATALKAN                     = 'dibatalkan';         // pembatalan manual
-    const STATUS_DIBATALKAN_OTOMATIS            = 'dibatalkan_otomatis'; // A3: timeout 24 jam
+    const STATUS_DIBATALKAN                     = 'dibatalkan';
 
-    // Status "aktif" — dipakai filter daftar pesanan aktif (UC-21)
+    // Status yang masih "aktif" (belum terminal)
     const ACTIVE_STATUSES = [
         self::STATUS_MENUNGGU_KONFIRMASI_PEMANDU,
         self::STATUS_MENUNGGU_PEMBAYARAN,
@@ -41,12 +25,11 @@ class Booking extends Model
         self::STATUS_TERKONFIRMASI,
     ];
 
-    // Status "terminal" — pesanan sudah tidak bisa berubah
+    // Status terminal (riwayat)
     const TERMINAL_STATUSES = [
         self::STATUS_SELESAI,
         self::STATUS_DITOLAK,
         self::STATUS_DIBATALKAN,
-        self::STATUS_DIBATALKAN_OTOMATIS,
     ];
 
     protected $fillable = [
@@ -77,15 +60,5 @@ class Booking extends Model
     public function transaction()
     {
         return $this->belongsTo(Transaction::class, 'transaction_id');
-    }
-
-    public function verifiedByAdmin()
-    {
-        return $this->belongsTo(Admin::class, 'payment_verified_by');
-    }
-
-    public function walletTransactions()
-    {
-        return $this->hasMany(WalletTransaction::class, 'booking_id');
     }
 }

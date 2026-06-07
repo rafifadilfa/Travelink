@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\Guide\GuideTourApiController;
 use App\Http\Controllers\Api\Guide\GuideWalletApiController;
 use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
 use App\Http\Controllers\Api\Tourist\OpenTripController;
+use App\Http\Controllers\Api\Tourist\PrivateBookingController;
+use App\Http\Controllers\Api\Tourist\ReviewApiController;
 use App\Http\Controllers\Api\Tourist\TourListApiController;
 use App\Http\Middleware\EnsureGuideIsVerified;
 use App\Http\Middleware\EnsureIsAdmin;
@@ -21,7 +23,8 @@ use Illuminate\Support\Facades\Route;
 // ============================================================
 // PUBLIC TOUR ROUTES
 // ============================================================
-Route::get('tours', [TourListApiController::class, 'index']);
+Route::get('tours',      [TourListApiController::class, 'index']);
+Route::get('tours/{id}', [TourListApiController::class, 'show']);
 
 // ============================================================
 // TOURIST AUTH ROUTES
@@ -35,6 +38,25 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthApiController::class, 'logout']);
     Route::get('auth/user',    [AuthApiController::class, 'getUser']);
+});
+
+// ============================================================
+// REVIEW & RATING ROUTES (Tourist)
+// ============================================================
+Route::prefix('reviews')->middleware('auth:sanctum')->group(function () {
+    Route::post('guide',  [ReviewApiController::class, 'submitGuideReview']);
+    Route::get('status',  [ReviewApiController::class, 'reviewStatus']);
+});
+
+// ============================================================
+// PRIVATE BOOKING ROUTES (Tourist)
+// ============================================================
+Route::prefix('bookings')->middleware('auth:sanctum')->group(function () {
+    Route::post('/',                         [PrivateBookingController::class, 'store']);
+    Route::get('/',                          [PrivateBookingController::class, 'index']);
+    Route::get('/{id}',                      [PrivateBookingController::class, 'show']);
+    Route::post('/{id}/payment',             [PrivateBookingController::class, 'createPayment']);
+    Route::get('/{id}/payment',              [PrivateBookingController::class, 'checkPayment']);
 });
 
 // ============================================================
@@ -75,54 +97,55 @@ Route::prefix('open-trip')->group(function () {
 // ============================================================
 Route::prefix('guide')->group(function () {
 
-    // -- Publik (belum login) --
+    // Endpoint publik (belum login)
     Route::middleware('guest')->group(function () {
         Route::post('auth/register', [GuideApiController::class, 'register']);
         Route::post('auth/login',    [GuideApiController::class, 'login']);
     });
 
-    // -- Guide sudah login (token valid, belum tentu verified) --
+    // Endpoint untuk guide yang sudah login (token valid)
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/logout', [GuideApiController::class, 'logout']);
         Route::get('auth/guide',   [GuideApiController::class, 'getGuide']);
 
-        // UC-12 & UC-13: Profil & KYC — bisa diakses sebelum verified
-        Route::get('profile',                  [GuideProfileApiController::class, 'getProfile']);
-        Route::post('profile',                 [GuideProfileApiController::class, 'updateProfile']);
-        Route::post('profile/ktp',             [GuideProfileApiController::class, 'uploadKtp']);
-        Route::post('profile/selfie-ktp',      [GuideProfileApiController::class, 'uploadSelfieKtp']);
-        Route::post('profile/certificate',     [GuideProfileApiController::class, 'uploadCertificate']);
-        Route::post('profile/portfolio',       [GuideProfileApiController::class, 'uploadPortfolio']);
-        // UC-12: tombol "Kirim untuk Diverifikasi"
-        Route::post('profile/submit',          [GuideProfileApiController::class, 'submitForVerification']);
+        // Profil guide — bisa diakses meski masih pending (untuk isi data KYC)
+        Route::get('profile',                    [GuideProfileApiController::class, 'getProfile']);
+        Route::post('profile',                   [GuideProfileApiController::class, 'updateProfile']);
+        Route::post('profile/ktp',               [GuideProfileApiController::class, 'uploadKtp']);
+        Route::post('profile/selfie-ktp',        [GuideProfileApiController::class, 'uploadSelfieKtp']);
+        Route::post('profile/certificate',       [GuideProfileApiController::class, 'uploadCertificate']);
+        Route::post('profile/portfolio',         [GuideProfileApiController::class, 'uploadPortfolio']);
+        Route::post('profile/submit',            [GuideProfileApiController::class, 'submitKyc']);
 
-        // -- Hanya guide dengan status 'verified' --
+        // Endpoint yang HANYA bisa diakses guide dengan status 'verified'
         Route::middleware(EnsureGuideIsVerified::class)->group(function () {
+            // Tour management
+            Route::get('tours',                    [GuideTourApiController::class, 'index']);
+            Route::post('tours',                   [GuideTourApiController::class, 'store']);
+            Route::get('tours/{id}',               [GuideTourApiController::class, 'show']);
+            Route::put('tours/{id}',               [GuideTourApiController::class, 'update']);
+            Route::post('tours/{id}',              [GuideTourApiController::class, 'update']); // method override dari PUT via FormData
+            Route::delete('tours/{id}',            [GuideTourApiController::class, 'destroy']);
+            Route::post('tours/{id}/images',              [GuideTourApiController::class, 'uploadImages']);
+            Route::delete('tours/{id}/images/{imageId}',  [GuideTourApiController::class, 'destroyImage']);
 
-            // UC-14: Manajemen Paket Wisata
-            // GET /api/guide/tours/reference sebelum /tours/{id} agar tidak tertangkap sebagai {id}
-            Route::get('tours/reference',   [GuideTourApiController::class, 'reference']);
-            Route::get('tours',             [GuideTourApiController::class, 'index']);
-            Route::post('tours',            [GuideTourApiController::class, 'store']);
-            Route::get('tours/{id}',        [GuideTourApiController::class, 'show']);
-            Route::put('tours/{id}',        [GuideTourApiController::class, 'update']);
-            Route::post('tours/{id}',       [GuideTourApiController::class, 'update']); // method override dari PUT via FormData
-            Route::delete('tours/{id}',     [GuideTourApiController::class, 'destroy']);
+            // Booking management
+            Route::get('bookings',                    [GuideBookingApiController::class, 'index']);
+            Route::get('bookings/{id}',               [GuideBookingApiController::class, 'show']);
+            Route::post('bookings/{id}/accept',       [GuideBookingApiController::class, 'accept']);
+            Route::post('bookings/{id}/reject',       [GuideBookingApiController::class, 'reject']);
 
-            // UC-21 & UC-15: Manajemen Pesanan Masuk
-            Route::get('bookings',              [GuideBookingApiController::class, 'index']);
-            Route::get('bookings/{id}',         [GuideBookingApiController::class, 'show']);
-            Route::post('bookings/{id}/accept', [GuideBookingApiController::class, 'accept']);
-            Route::post('bookings/{id}/reject', [GuideBookingApiController::class, 'reject']);
+            // Smart Open Trip — tolak grup (hanya jika 0 anggota bayar)
+            Route::post('open-trip-groups/{groupId}/reject', [GuideBookingApiController::class, 'rejectOpenTripGroup']);
 
-            // UC-16: Ulasan & Rating
-            Route::get('reviews', [GuideReviewApiController::class, 'index']);
+            // Ulasan & rating
+            Route::get('reviews',                     [GuideReviewApiController::class, 'index']);
 
-            // UC-22: Dashboard Keuangan
-            Route::get('wallet', [GuideWalletApiController::class, 'index']);
+            // Dashboard keuangan
+            Route::get('wallet',                      [GuideWalletApiController::class, 'index']);
 
-            // UC-17: Pencairan Dana
-            Route::post('withdrawals', [GuideWithdrawalApiController::class, 'store']);
+            // Pencairan dana
+            Route::post('withdrawals',                [GuideWithdrawalApiController::class, 'store']);
         });
     });
 });
@@ -132,10 +155,10 @@ Route::prefix('guide')->group(function () {
 // ============================================================
 Route::prefix('admin')->group(function () {
 
-    // -- Login admin --
+    // Login admin — endpoint publik
     Route::post('auth/login', [AdminApiController::class, 'login']);
 
-    // -- Admin sudah login --
+    // Semua endpoint di bawah butuh token Sanctum yang valid
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/logout', [AdminApiController::class, 'logout']);
         Route::get('auth/admin',   [AdminApiController::class, 'getAdmin']);

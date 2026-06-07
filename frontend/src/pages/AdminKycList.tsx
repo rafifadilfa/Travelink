@@ -37,7 +37,6 @@ const AdminKycList: React.FC = () => {
   const borderColor  = useColorModeValue('gray.200', 'gray.700');
   const secondaryTxt = useColorModeValue('gray.500', 'gray.400');
   const tableHover   = useColorModeValue('purple.50', 'gray.700');
-  const theadBg      = useColorModeValue('gray.50', 'gray.750');
 
   const [guides, setGuides]   = useState<PendingGuide[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,7 +116,7 @@ const AdminKycList: React.FC = () => {
           overflow="hidden"
         >
           <Table variant="simple">
-            <Thead bg={theadBg}>
+            <Thead bg={useColorModeValue('gray.50', 'gray.750')}>
               <Tr>
                 <Th>Nama Guide</Th>
                 <Th>Email</Th>

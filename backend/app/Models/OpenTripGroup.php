@@ -13,12 +13,14 @@ class OpenTripGroup extends Model
         'trip_date',
         'matched_at',
         'expires_at',
+        'rejected_at',
     ];
 
     protected $casts = [
-        'trip_date'  => 'date',
-        'matched_at' => 'datetime',
-        'expires_at' => 'datetime',
+        'trip_date'   => 'date',
+        'matched_at'  => 'datetime',
+        'expires_at'  => 'datetime',
+        'rejected_at' => 'datetime',
     ];
 
     // ── Relasi ──────────────────────────────────────────────────────────────
@@ -36,6 +38,12 @@ class OpenTripGroup extends Model
     }
 
     // ── Helper ──────────────────────────────────────────────────────────────
+
+    /** Apakah grup telah ditolak pemandu */
+    public function isRejected(): bool
+    {
+        return $this->rejected_at !== null;
+    }
 
     /** Apakah countdown masih berjalan */
     public function isActive(): bool

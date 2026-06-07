@@ -10,7 +10,7 @@ class Location extends Model
     protected $table = 'locations'; // specify the table name if it doesn't follow Laravel's naming convention
 
     protected $fillable = [
-        'location_name',
+        'name',
         'country_id',
     ]; // specify the fillable attributes for mass assignment
 

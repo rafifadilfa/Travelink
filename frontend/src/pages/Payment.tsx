@@ -1,139 +1,244 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Box, Flex, Text, Button, Heading, Container, Grid,
-  useColorModeValue, Icon, VStack, HStack, Divider, useToast
+  Box, Flex, Text, Button, Heading, Container,
+  useColorModeValue, Icon, VStack, HStack, Divider,
+  useToast, Spinner, Badge,
 } from '@chakra-ui/react';
-import {
-  ArrowBackIcon, CheckCircleIcon, CalendarIcon, TimeIcon, InfoOutlineIcon
-} from '@chakra-ui/icons';
+import { ArrowBackIcon, CheckCircleIcon, CalendarIcon, InfoOutlineIcon } from '@chakra-ui/icons';
+import { FiMapPin, FiUsers } from 'react-icons/fi';
+import apiClient from '../services/api';
 
-const tourData = {
-  name: 'Bali Beach Hopping Adventure',
-  date: 'August 15, 2025',
-  time: '08:30 AM',
-  pricePerPerson: 1200000,
-  persons: 2,
-};
+// Tambahkan tipe snap ke window global agar TypeScript tidak complain
+declare global {
+  interface Window {
+    snap?: {
+      pay: (token: string, options: {
+        onSuccess: (result: unknown) => void;
+        onPending: (result: unknown) => void;
+        onError:   (result: unknown) => void;
+        onClose:   () => void;
+      }) => void;
+    };
+  }
+}
+
+interface BookingDetails {
+  tourId:         number;
+  tourName:       string;
+  tourLocation:   string;
+  participants:   number;
+  pricePerPerson: number;
+  totalPrice:     number;
+  tourDate:       string;
+  guideName:      string;
+}
+
+// Load Snap.js dari CDN Midtrans Sandbox (sama persis pola WaitingRoom)
+const loadSnapScript = (): Promise<void> =>
+  new Promise(resolve => {
+    if (window.snap) { resolve(); return; }
+    const existing = document.getElementById('midtrans-snap');
+    if (existing) { existing.addEventListener('load', () => resolve()); return; }
+
+    const script = document.createElement('script');
+    script.id  = 'midtrans-snap';
+    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    script.setAttribute('data-client-key', import.meta.env.VITE_MIDTRANS_CLIENT_KEY ?? '');
+    script.onload = () => resolve();
+    document.head.appendChild(script);
+  });
+
+const POLL_MAX   = 20;
+const POLL_MS    = 3000;
 
 const Payment: React.FC = () => {
-  const navigate = useNavigate();
-  const toast = useToast();
-  const [selectedMethod, setSelectedMethod] = useState('mastercard');
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const toast     = useToast();
 
-  const overallBg = useColorModeValue('blue.50', 'gray.900');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const glassBg = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.85)');
-  const primaryColor = useColorModeValue('blue.500', 'blue.400');
+  const details: BookingDetails | undefined = (location.state as { bookingDetails?: BookingDetails })?.bookingDetails;
+
+  const [snapLoaded,  setSnapLoaded]  = useState(false);
+  const [isPaying,    setIsPaying]    = useState(false);
+  const [paid,        setPaid]        = useState(false);
+  const [bookingId,   setBookingId]   = useState<number | null>(null);
+  const [txCode,      setTxCode]      = useState('');
+  const [creatingBooking, setCreatingBooking] = useState(false);
+
+  const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTries  = useRef(0);
+
+  // ── Warna (semua dideklarasikan sebelum return/kondisional) ──────────
+  const overallBg         = useColorModeValue('blue.50',  'gray.900');
+  const cardBg            = useColorModeValue('white',    'gray.800');
+  const glassBg           = useColorModeValue('rgba(255,255,255,0.9)', 'rgba(26,32,44,0.85)');
+  const primaryColor      = useColorModeValue('blue.500', 'blue.400');
   const primaryHoverColor = useColorModeValue('blue.600', 'blue.500');
-  const successColor = useColorModeValue('green.500', 'green.400');
-  const successHoverColor = useColorModeValue('green.600', 'green.500');
-  const primaryTextColor = useColorModeValue('gray.700', 'whiteAlpha.900');
-  const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
-  const subtleBorderColor = useColorModeValue('gray.200', 'gray.700');
-  const accentGradient = `linear(to-br, ${useColorModeValue('purple.400', 'purple.300')}, ${primaryColor})`;
+  const primaryTextColor  = useColorModeValue('gray.700', 'whiteAlpha.900');
+  const secondaryText     = useColorModeValue('gray.500', 'gray.400');
+  const borderColor       = useColorModeValue('gray.200', 'gray.700');
+  const summaryBg         = useColorModeValue('gray.50',  'gray.750');
+  const totalBg           = useColorModeValue('blue.100', 'blue.900');
+  const totalBorderColor  = useColorModeValue('blue.200', 'blue.700');
+  const accentGradient    = `linear(to-br, ${useColorModeValue('purple.400','purple.300')}, ${primaryColor})`;
+  const successGradient   = `linear(to-r, green.400, green.500)`;
+  const successHoverGrad  = `linear(to-r, green.500, green.600)`;
+  const focusShadow       = useColorModeValue('blue.200', 'blue.700');
 
-  const baseButtonStyle = {
-    borderRadius: "lg", fontWeight: "semibold", h: "44px",
-    px: 5, fontSize: "sm",
-    transition: "all 0.25s cubic-bezier(.08,.52,.52,1)",
+  const baseBtn = {
+    borderRadius: 'lg', fontWeight: 'semibold', h: '44px', px: 5, fontSize: 'sm',
+    transition: 'all 0.25s cubic-bezier(.08,.52,.52,1)',
     _active: { transform: 'translateY(1px) scale(0.97)', boxShadow: 'sm' },
-    _focus: { boxShadow: `0 0 0 3px ${useColorModeValue('blue.200', 'blue.700')}` }
+    _focus: { boxShadow: `0 0 0 3px ${focusShadow}` },
+  };
+  const outlineBtn = {
+    ...baseBtn, bg: 'transparent', color: primaryColor,
+    border: '2px solid', borderColor: primaryColor,
+    _hover: { bg: useColorModeValue('blue.50','rgba(49,130,206,0.1)'), borderColor: primaryHoverColor, color: primaryHoverColor, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'md' },
+  };
+  const payBtn = {
+    ...baseBtn,
+    bgGradient: successGradient, color: 'white', boxShadow: 'md',
+    fontSize: { base: 'md', md: 'lg' }, h: { base: '48px', md: '52px' }, px: 6,
+    _hover: { bgGradient: successHoverGrad, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg' },
   };
 
-  const primaryGradientButtonStyle = {
-    ...baseButtonStyle,
-    bgGradient: `linear(to-r, ${successColor}, ${useColorModeValue('green.400', 'green.300')})`,
-    color: 'white',
-    boxShadow: "md",
-    fontSize: { base: "md", md: "lg"},
-    h: {base: "48px", md: "52px"},
-    px: 6,
-    _hover: {
-      bgGradient: `linear(to-r, ${successHoverColor}, ${useColorModeValue('green.500', 'green.400')})`,
-      transform: 'translateY(-2px) scale(1.02)', boxShadow: 'lg'
-    },
-  };
-  
-  const secondaryButtonStyle = {
-    ...baseButtonStyle, bg: 'transparent', color: primaryColor,
-    border: "2px solid", borderColor: primaryColor,
-    _hover: {
-      bg: useColorModeValue('blue.50', 'rgba(49,130,206,0.1)'), borderColor: primaryHoverColor,
-      color: primaryHoverColor, transform: 'translateY(-2px) scale(1.02)', boxShadow: 'md'
-    },
-  };
+  const formatPrice = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const totalPrice = tourData.pricePerPerson * tourData.persons;
-
-  const handlePaymentSubmit = () => {
-    toast({
-      title: 'Payment Successful!',
-      description: 'Your booking has been confirmed.',
-      status: 'success',
-      duration: 5000,
-      isClosable: true,
-      position: 'top',
-      icon: <Icon as={CheckCircleIcon} w={5} h={5} color="green.500" />
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('id-ID', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     });
-    navigate('/bookings');
   };
 
-  const paymentMethods = [
-    { id: 'mastercard', name: 'Mastercard', icon: '💳' },
-    { id: 'qris', name: 'QRIS', icon: '🔲' },
-    { id: 'visa', name: 'VISA', icon: '💳' },
-    { id: 'gopay', name: 'GoPay', icon: '📱' },
-    { id: 'paypal', name: 'PayPal', icon: '💸' },
-    { id: 'ovo', name: 'OVO', icon: '📱' },
-  ];
+  // ── Load Snap.js saat mount ─────────────────────────────────
+  useEffect(() => {
+    loadSnapScript().then(() => setSnapLoaded(true));
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  // ── Polling status pembayaran ────────────────────────────────
+  const startPolling = useCallback((bId: number) => {
+    pollTries.current = 0;
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    pollRef.current = setInterval(async () => {
+      pollTries.current += 1;
+      try {
+        const res = await apiClient.get<{ payment_status: string; booking_status: string }>(
+          `/bookings/${bId}/payment`
+        );
+        if (res.data.payment_status === 'paid') {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setPaid(true);
+          toast({
+            title: 'Pembayaran berhasil!',
+            description: 'Booking kamu sudah terkonfirmasi.',
+            status: 'success', duration: 6000, isClosable: true,
+          });
+        }
+      } catch { /* abaikan error sementara */ }
+
+      if (pollTries.current >= POLL_MAX) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+      }
+    }, POLL_MS);
+  }, [toast]);
+
+  // ── Alur utama: buat booking → buat snap token → bayar ──────
+  const handlePay = useCallback(async () => {
+    if (!details) return;
+    if (!snapLoaded) {
+      toast({ title: 'Sistem pembayaran sedang dimuat, coba lagi.', status: 'warning', duration: 3000 });
+      return;
+    }
+    setIsPaying(true);
+
+    try {
+      // Step 1: buat booking di backend jika belum ada
+      let bId = bookingId;
+      let code = txCode;
+
+      if (!bId) {
+        setCreatingBooking(true);
+        const bookRes = await apiClient.post<{
+          booking_id: number;
+          transaction_code: string;
+          total_amount: number;
+        }>('/bookings', {
+          tour_id:      details.tourId,
+          participants: details.participants,
+          tour_date:    details.tourDate,
+        });
+        bId  = bookRes.data.booking_id;
+        code = bookRes.data.transaction_code;
+        setBookingId(bId);
+        setTxCode(code);
+        setCreatingBooking(false);
+      }
+
+      // Step 2: minta snap token dari backend
+      const payRes = await apiClient.post<{ snap_token: string; total_amount: number }>(
+        `/bookings/${bId}/payment`
+      );
+
+      // Step 3: tampilkan popup Midtrans Snap
+      window.snap!.pay(payRes.data.snap_token, {
+        onSuccess: () => {
+          startPolling(bId!);
+        },
+        onPending: () => {
+          toast({ title: 'Pembayaran menunggu konfirmasi.', description: 'Status akan diperbarui otomatis.', status: 'info', duration: 5000, isClosable: true });
+          startPolling(bId!);
+        },
+        onError: () => {
+          toast({ title: 'Pembayaran gagal.', description: 'Silakan coba lagi.', status: 'error', duration: 5000, isClosable: true });
+        },
+        onClose: () => {
+          // User tutup popup — polling satu putaran untuk cek apakah sempat bayar
+          startPolling(bId!);
+        },
+      });
+    } catch (err: unknown) {
+      setCreatingBooking(false);
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast({ title: msg ?? 'Gagal memulai pembayaran.', status: 'error', duration: 4000, isClosable: true });
+    } finally {
+      setIsPaying(false);
+    }
+  }, [details, snapLoaded, bookingId, txCode, startPolling, toast]);
+
+  // ── Redirect jika tidak ada data booking ────────────────────
+  if (!details) {
+    return (
+      <Box minH="100vh" bg={overallBg} display="flex" alignItems="center" justifyContent="center" flexDirection="column" gap={4}>
+        <Text fontSize="xl" color={secondaryText}>Data booking tidak ditemukan.</Text>
+        <Button colorScheme="blue" onClick={() => navigate('/tours')}>Pilih Tour</Button>
+      </Box>
+    );
+  }
 
   return (
     <Box minH="100vh" bg={overallBg}>
-      <Box 
-        bg={glassBg} 
-        backdropFilter="blur(18px)" 
-        boxShadow="md" 
-        position="sticky" 
-        top={0} 
-        zIndex={1000} 
-        borderBottom="1px solid" 
-        borderColor={subtleBorderColor}
-      >
+      {/* ── Header ── */}
+      <Box bg={glassBg} backdropFilter="blur(18px)" boxShadow="md" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={borderColor}>
         <Container maxW="container.xl">
           <Flex h="68px" justify="space-between" align="center">
             <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-              <Flex 
-                alignItems="center" 
-                justifyContent="center" 
-                boxSize="40px" 
-                borderRadius="lg" 
-                bgGradient={accentGradient} 
-                boxShadow="lg" 
-                transition="all 0.3s ease" 
-                _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}
-              >
+              <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
                 <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
               </Flex>
-              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">
-                Travelink
-              </Heading>
+              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">Travelink</Heading>
             </Flex>
-            <Button 
-              {...secondaryButtonStyle} 
-              size="sm" 
-              onClick={() => navigate(-1)} 
-              leftIcon={<ArrowBackIcon />}
-            >
-              Back
+            <Button {...outlineBtn} size="sm" onClick={() => navigate(-1)} leftIcon={<ArrowBackIcon />}>
+              Kembali
             </Button>
           </Flex>
         </Container>
@@ -141,222 +246,126 @@ const Payment: React.FC = () => {
 
       <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
         <VStack spacing={{ base: 6, md: 8 }} align="stretch">
-          <Heading 
-            as="h1" 
-            size={{ base: "lg", md: "xl" }}
-            fontWeight="bold" 
-            color={primaryTextColor}
-            borderBottom="2px solid"
-            borderColor={subtleBorderColor}
-            pb={3}
-            textAlign="center"
-          >
-            Complete Your Payment
+          <Heading as="h1" size={{ base: 'lg', md: 'xl' }} fontWeight="bold" color={primaryTextColor}
+            borderBottom="2px solid" borderColor={borderColor} pb={3} textAlign="center">
+            {paid ? 'Pembayaran Berhasil' : 'Ringkasan Pesanan'}
           </Heading>
 
-          <Box 
-            bg={cardBg} 
-            p={{ base: 5, md: 8 }} 
-            borderRadius="xl" 
-            boxShadow="xl"
-            border="1px solid"
-            borderColor={subtleBorderColor}
-          >
-            <Heading 
-              as="h2" 
-              size={{ base: "md", md: "lg"}} 
-              fontWeight="bold" 
-              mb={6}
-              color={primaryColor}
-              display="flex"
-              alignItems="center"
-              gap={2}
-            >
-              <Text as="span" fontSize="2xl">💳</Text>
-              Select Payment Method
-            </Heading>
-            
-            <Grid 
-              templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} 
-              gap={5}
-            >
-              {paymentMethods.map((method) => (
-                <Flex
-                  key={method.id}
-                  border="2px solid"
-                  borderColor={method.id === selectedMethod ? primaryColor : subtleBorderColor}
-                  borderRadius="lg"
-                  p={5}
-                  cursor="pointer"
-                  bg={method.id === selectedMethod ? useColorModeValue('blue.50', 'blue.800') : cardBg}
-                  alignItems="center"
-                  gap={4}
-                  transition="all 0.2s ease"
-                  boxShadow={method.id === selectedMethod ? "lg" : "md"}
-                  _hover={{ 
-                    boxShadow: "xl", 
-                    transform: "translateY(-3px)",
-                    borderColor: primaryColor
-                  }}
-                  onClick={() => setSelectedMethod(method.id)}
-                >
-                  <Box 
-                    w="24px" h="24px" borderRadius="full" 
-                    border="2px solid" 
-                    borderColor={method.id === selectedMethod ? primaryColor : secondaryTextColor}
-                    display="flex" alignItems="center" justifyContent="center"
-                    flexShrink={0}
-                  >
-                    {method.id === selectedMethod && (
-                      <Box w="12px" h="12px" borderRadius="full" bg={primaryColor}></Box>
-                    )}
-                  </Box>
-                  <Text fontSize={{ base: "2xl", md: "3xl"}}>{method.icon}</Text>
-                  <Text 
-                    fontWeight={method.id === selectedMethod ? "bold" : "medium"}
-                    color={method.id === selectedMethod ? primaryColor : primaryTextColor}
-                    fontSize={{ base: "sm", md: "md"}}
-                  >
-                    {method.name}
-                  </Text>
-                </Flex>
-              ))}
-            </Grid>
-          </Box>
-
-          <Box 
-            bg={cardBg} 
-            p={{ base: 5, md: 8 }} 
-            borderRadius="xl" 
-            boxShadow="xl"
-            border="1px solid"
-            borderColor={subtleBorderColor}
-          >
-            <Heading 
-              as="h2" 
-              size={{ base: "md", md: "lg"}}
-              fontWeight="bold" 
-              mb={6}
-              color={primaryColor}
-              display="flex"
-              alignItems="center"
-              gap={2}
-            >
-              <Text as="span" fontSize="2xl">🧾</Text>
-              Order Summary
-            </Heading>
-            
-            <Box
-              bg={useColorModeValue('gray.50', 'gray.750')}
-              p={{ base: 4, md: 6 }}
-              borderRadius="lg"
-              border="1px solid"
-              borderColor={subtleBorderColor}
-              mb={6}
-              boxShadow="sm"
-            >
-              <VStack spacing={4} align="stretch">
-                <Heading 
-                  size="md" 
-                  color={primaryTextColor} 
-                  pb={3}
-                  mb={2}
-                  borderBottom="1px dashed"
-                  borderColor={subtleBorderColor}
-                >
-                  {tourData.name}
-                </Heading>
-
-                <HStack justifyContent="space-between" alignItems="center">
-                  <HStack spacing={3} color={secondaryTextColor}>
-                    <Icon as={CalendarIcon} boxSize={5} />
-                    <Text fontSize="md" fontWeight="medium">Date:</Text>
-                  </HStack>
-                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{tourData.date}</Text>
-                </HStack>
-
-                <HStack justifyContent="space-between" alignItems="center">
-                  <HStack spacing={3} color={secondaryTextColor}>
-                    <Icon as={TimeIcon} boxSize={5} />
-                    <Text fontSize="md" fontWeight="medium">Time:</Text>
-                  </HStack>
-                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{tourData.time}</Text>
-                </HStack>
-
-                <HStack justifyContent="space-between" alignItems="center">
-                  <HStack spacing={3} color={secondaryTextColor}>
-                    <Icon as={InfoOutlineIcon} boxSize={5} /> 
-                    <Text fontSize="md" fontWeight="medium">Guests:</Text>
-                  </HStack>
-                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{tourData.persons} person(s)</Text>
-                </HStack>
-
-                <HStack justifyContent="space-between" alignItems="center">
-                  <HStack spacing={3} color={secondaryTextColor}>
-                    <Text fontSize="xl" lineHeight="1" color={primaryColor}>💲</Text>
-                    <Text fontSize="md" fontWeight="medium">Price per person:</Text>
-                  </HStack>
-                  <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{formatPrice(tourData.pricePerPerson)}</Text>
-                </HStack>
-              </VStack>
+          {/* ── Status sukses ── */}
+          {paid && (
+            <Box bg={cardBg} p={{ base: 5, md: 8 }} borderRadius="xl" boxShadow="xl" border="2px solid" borderColor="green.400" textAlign="center">
+              <Icon as={CheckCircleIcon} boxSize={16} color="green.400" mb={4} />
+              <Heading size="lg" color="green.500" mb={2}>Booking Terkonfirmasi!</Heading>
+              {txCode && <Text color={secondaryText} mb={1}>Kode: <strong>{txCode}</strong></Text>}
+              <Text color={secondaryText} mb={6}>Pembayaran kamu telah diterima. Selamat menikmati tour!</Text>
+              <HStack justify="center" spacing={4} flexWrap="wrap">
+                <Button colorScheme="blue" onClick={() => navigate('/bookings')}>Lihat Booking Saya</Button>
+                <Button variant="outline" colorScheme="blue" onClick={() => navigate('/tours')}>Jelajahi Tour Lain</Button>
+              </HStack>
             </Box>
-            
-            <Divider my={6} borderColor={subtleBorderColor}/>
-            
-            <Flex 
-              justifyContent="space-between" 
-              alignItems="center"
-              fontWeight="bold" 
-              mb={8}
-              p={{ base: 4, md: 5}}
-              bg={useColorModeValue('blue.100', 'blue.900')} 
-              borderRadius="lg"
-              border="1px solid"
-              borderColor={useColorModeValue('blue.200', 'blue.700')}
-            >
-              <Text color={primaryTextColor} fontSize={{ base: "md", md: "lg"}}>
-                Total Amount Due:
+          )}
+
+          {/* ── Order Summary ── */}
+          {!paid && (
+            <Box bg={cardBg} p={{ base: 5, md: 8 }} borderRadius="xl" boxShadow="xl" border="1px solid" borderColor={borderColor}>
+              <Heading as="h2" size={{ base: 'md', md: 'lg' }} fontWeight="bold" mb={6} color={primaryColor}
+                display="flex" alignItems="center" gap={2}>
+                <Text as="span" fontSize="2xl">🧾</Text> Ringkasan Pesanan
+              </Heading>
+
+              <Box bg={summaryBg} p={{ base: 4, md: 6 }} borderRadius="lg" border="1px solid" borderColor={borderColor} mb={6} boxShadow="sm">
+                <VStack spacing={4} align="stretch">
+                  <Heading size="md" color={primaryTextColor} pb={3} mb={2} borderBottom="1px dashed" borderColor={borderColor}>
+                    {details.tourName}
+                  </Heading>
+
+                  <HStack justifyContent="space-between" alignItems="center">
+                    <HStack spacing={3} color={secondaryText}>
+                      <Icon as={FiMapPin} boxSize={5} />
+                      <Text fontSize="md" fontWeight="medium">Lokasi</Text>
+                    </HStack>
+                    <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{details.tourLocation}</Text>
+                  </HStack>
+
+                  <HStack justifyContent="space-between" alignItems="center">
+                    <HStack spacing={3} color={secondaryText}>
+                      <Icon as={CalendarIcon} boxSize={5} />
+                      <Text fontSize="md" fontWeight="medium">Tanggal Tour</Text>
+                    </HStack>
+                    <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{formatDate(details.tourDate)}</Text>
+                  </HStack>
+
+                  <HStack justifyContent="space-between" alignItems="center">
+                    <HStack spacing={3} color={secondaryText}>
+                      <Icon as={FiUsers} boxSize={5} />
+                      <Text fontSize="md" fontWeight="medium">Jumlah Peserta</Text>
+                    </HStack>
+                    <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{details.participants} orang</Text>
+                  </HStack>
+
+                  <HStack justifyContent="space-between" alignItems="center">
+                    <HStack spacing={3} color={secondaryText}>
+                      <Icon as={InfoOutlineIcon} boxSize={5} />
+                      <Text fontSize="md" fontWeight="medium">Harga per orang</Text>
+                    </HStack>
+                    <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{formatPrice(details.pricePerPerson)}</Text>
+                  </HStack>
+
+                  <HStack justifyContent="space-between" alignItems="center">
+                    <HStack spacing={3} color={secondaryText}>
+                      <Text fontSize="lg" color={primaryColor}>👤</Text>
+                      <Text fontSize="md" fontWeight="medium">Pemandu</Text>
+                    </HStack>
+                    <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{details.guideName}</Text>
+                  </HStack>
+                </VStack>
+              </Box>
+
+              <Divider my={6} borderColor={borderColor} />
+
+              {/* Total */}
+              <Flex justifyContent="space-between" alignItems="center" fontWeight="bold" mb={8}
+                p={{ base: 4, md: 5 }} bg={totalBg} borderRadius="lg" border="1px solid" borderColor={totalBorderColor}>
+                <Text color={primaryTextColor} fontSize={{ base: 'md', md: 'lg' }}>Total Pembayaran</Text>
+                <Text color={primaryColor} fontSize={{ base: 'xl', md: '2xl' }} fontWeight="extrabold">
+                  {formatPrice(details.totalPrice)}
+                </Text>
+              </Flex>
+
+              {txCode && (
+                <Box mb={4} textAlign="center">
+                  <Badge colorScheme="blue" px={3} py={1} borderRadius="full" fontSize="sm">
+                    Kode: {txCode}
+                  </Badge>
+                </Box>
+              )}
+
+              {/* Tombol bayar */}
+              <Button
+                {...payBtn}
+                w="100%"
+                leftIcon={creatingBooking ? <Spinner size="sm" /> : <CheckCircleIcon boxSize={5} />}
+                onClick={handlePay}
+                isLoading={isPaying || creatingBooking}
+                loadingText={creatingBooking ? 'Membuat pesanan...' : 'Memuat pembayaran...'}
+                isDisabled={paid}
+              >
+                {bookingId ? 'Lanjutkan Pembayaran' : 'Bayar Sekarang via Midtrans'}
+              </Button>
+
+              <Text fontSize="xs" color={secondaryText} textAlign="center" mt={6}
+                bg={useColorModeValue('gray.100','gray.750')} p={3} borderRadius="md">
+                Dengan mengklik "Bayar Sekarang", kamu menyetujui Syarat & Ketentuan Travelink.
+                Pembayaran diproses aman melalui Midtrans.
               </Text>
-              <Text color={primaryColor} fontSize={{ base: "xl", md: "2xl"}} fontWeight="extrabold">
-                {formatPrice(totalPrice)}
-              </Text>
-            </Flex>
-            
-            <Button 
-              {...primaryGradientButtonStyle}
-              w="100%"
-              leftIcon={<CheckCircleIcon boxSize={5}/>}
-              onClick={handlePaymentSubmit}
-            >
-              Confirm & Book Now
-            </Button>
-            
-            <Text 
-              fontSize="xs" 
-              color={secondaryTextColor} 
-              textAlign="center" 
-              mt={6}
-              bg={useColorModeValue('gray.100', 'gray.750')}
-              p={3}
-              borderRadius="md"
-            >
-              By clicking "Confirm & Book Now", you agree to our Terms of Service and Privacy Policy.
-              Payment will be processed securely.
-            </Text>
-          </Box>
+            </Box>
+          )}
         </VStack>
       </Container>
-      
-      <Box 
-        bg={cardBg} 
-        py={6}
-        px={{ base: 4, md: 8}} 
-        borderTop="1px solid" 
-        borderColor={subtleBorderColor}
-        mt={10}
-      >
-        <Text textAlign="center" color={secondaryTextColor} fontSize="sm">
-          © {new Date().getFullYear()} Travelink. All rights reserved. Secure Payment Gateway.
+
+      <Box bg={cardBg} py={6} px={{ base: 4, md: 8 }} borderTop="1px solid" borderColor={borderColor} mt={10}>
+        <Text textAlign="center" color={secondaryText} fontSize="sm">
+          © {new Date().getFullYear()} Travelink. Semua hak dilindungi.
         </Text>
       </Box>
     </Box>

@@ -9,6 +9,7 @@ use App\Models\OpenTripParticipant;
 use App\Models\Tour;
 use App\Services\OpenTripMatchingService;
 use App\Services\ProfileMatchingService;
+use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -250,6 +251,8 @@ class OpenTripController extends Controller
                 'matching_score' => $p->matching_score,
                 'group_id'       => $p->group_id,
                 'group'          => $groupData,
+                'payment_status' => $p->payment_status ?? 'unpaid',
+                'guide_reviewed' => (bool) $p->guide_reviewed,
             ];
         });
 
@@ -405,6 +408,7 @@ class OpenTripController extends Controller
         MidtransConfig::$serverKey    = config('midtrans.server_key');
         MidtransConfig::$isProduction = config('midtrans.is_production');
 
+        $isPaid = false;
         try {
             $status = Transaction::status($participant->midtrans_order_id);
             $transactionStatus = $status->transaction_status ?? null;
@@ -413,12 +417,23 @@ class OpenTripController extends Controller
             // Midtrans: settlement = lunas, capture + not fraud = lunas
             $isPaid = $transactionStatus === 'settlement'
                 || ($transactionStatus === 'capture' && $fraudStatus === 'accept');
-
-            if ($isPaid) {
-                $participant->update(['payment_status' => 'paid']);
-            }
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             // Transaksi belum ada di Midtrans (belum pernah dibayar) — abaikan
+        }
+
+        if ($isPaid) {
+            $participant->update(['payment_status' => 'paid']);
+
+            // Kredit pending_balance guide pemilik tour (escrow — ditahan).
+            // Hanya dipanggil sekali karena setelah 'paid', endpoint ini early-return di atas.
+            $group = $participant->group()->with('tour.guide')->first();
+            if ($group && $group->tour && $group->tour->guide) {
+                $memberCount     = OpenTripParticipant::where('group_id', $group->id)
+                    ->where('status', 'matched')
+                    ->count();
+                $amountPerPerson = (int) ceil($group->tour->tour_price / max(1, $memberCount));
+                WalletService::creditPending($group->tour->guide, $amountPerPerson);
+            }
         }
 
         return $this->buildPaymentStatusResponse($participant->fresh());
@@ -556,6 +571,22 @@ class OpenTripController extends Controller
             ->first();
 
         if (! $participant) {
+            // Cek apakah peserta ini di-cancel oleh pemandu (grup punya rejected_at)
+            $cancelledByGuide = OpenTripParticipant::where('user_id', Auth::id())
+                ->where('tour_id', $request->integer('tour_id'))
+                ->where('trip_date', $request->input('trip_date'))
+                ->where('status', 'cancelled')
+                ->whereNotNull('group_id')
+                ->whereHas('group', fn($q) => $q->whereNotNull('rejected_at'))
+                ->first();
+
+            if ($cancelledByGuide) {
+                return response()->json([
+                    'status'  => 'cancelled_by_guide',
+                    'message' => 'Grup Anda sebelumnya dibatalkan oleh pemandu wisata. Silakan pilih ulang tour atau tanggal yang berbeda untuk bergabung kembali ke Smart Open Trip.',
+                ], 200);
+            }
+
             return response()->json(['message' => 'Kamu belum terdaftar di pool ini.'], 404);
         }
 
@@ -582,8 +613,9 @@ class OpenTripController extends Controller
     public function groupDetail(int $groupId): JsonResponse
     {
         $group = OpenTripGroup::with([
-            'tour:id,name,tour_price,tour_location_id',
+            'tour:id,name,tour_price,tour_location_id,tour_guide_id',
             'tour.location:id,name',
+            'tour.guide:id,name,profile_picture,rating',
             'participants' => fn($q) => $q->with([
                 'user:id,name,profile_photo_path',
                 'interests:id,name',
@@ -627,6 +659,8 @@ class OpenTripController extends Controller
             ];
         });
 
+        $guide = $group->tour->guide;
+
         return response()->json([
             'group' => [
                 'id'                => $group->id,
@@ -641,6 +675,12 @@ class OpenTripController extends Controller
                 'is_active'         => $group->isActive(),
                 'member_count'      => $group->participants->count(),
             ],
+            'guide' => $guide ? [
+                'id'              => $guide->id,
+                'name'            => $guide->name,
+                'profile_picture' => $guide->profile_picture,
+                'rating'          => $guide->rating,
+            ] : null,
             'group_profile' => [
                 'avg_age'          => round($groupProfile['age'], 1),
                 'avg_budget_level' => round($groupProfile['budget_level'], 1),

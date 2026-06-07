@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Guide;
 
 use App\Http\Controllers\Controller;
+use App\Models\Withdrawal;
 use App\Models\WalletTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,11 +23,14 @@ class GuideWalletApiController extends Controller
     {
         $guide = $request->user();
 
-        // Total penghasilan sejak bergabung (semua income/credit di wallet_transactions)
-        $totalIncome = WalletTransaction::where('guide_id', $guide->id)
-            ->where('type', WalletTransaction::TYPE_INCOME)
-            ->where('direction', WalletTransaction::DIRECTION_CREDIT)
+        // Total penghasilan sejak bergabung:
+        //   pending (escrow belum selesai) + available (siap dicairkan) + sudah dicairkan
+        // Ini satu-satunya formula yang konsisten: wallet_transactions hanya berisi income
+        // yang SUDAH settle, sehingga tidak bisa dipakai untuk menghitung total termasuk pending.
+        $totalWithdrawn = Withdrawal::where('guide_id', $guide->id)
+            ->where('status', Withdrawal::STATUS_SELESAI)
             ->sum('amount');
+        $totalIncome = $guide->pending_balance + $guide->available_balance + (float) $totalWithdrawn;
 
         // Riwayat transaksi (bisa difilter by type)
         $txQuery = WalletTransaction::where('guide_id', $guide->id)
