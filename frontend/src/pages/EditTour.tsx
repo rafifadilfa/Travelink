@@ -67,8 +67,9 @@ const EditTour: React.FC = () => {
     const [photoPreviews,   setPhotoPreviews]   = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const cardBg  = useColorModeValue('white', 'gray.800');
-    const inputBg = useColorModeValue('gray.50', 'gray.700');
+    const cardBg       = useColorModeValue('white', 'gray.800');
+    const inputBg      = useColorModeValue('gray.50', 'gray.700');
+    const dropzoneBorder = useColorModeValue('gray.300', 'gray.600');
 
     // ── Format tampilan harga ─────────────────────────────────────
     const formatPrice = (raw: string): string => {
@@ -363,7 +364,7 @@ const EditTour: React.FC = () => {
                             {/* Area upload foto baru */}
                             <Flex
                                 border="2px dashed"
-                                borderColor={useColorModeValue('gray.300', 'gray.600')}
+                                borderColor={dropzoneBorder}
                                 borderRadius="lg" p={8}
                                 align="center" justify="center" direction="column"
                                 cursor={totalPhotoCount >= 10 ? 'not-allowed' : 'pointer'}

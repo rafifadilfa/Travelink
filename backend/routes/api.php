@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\Tourist\OpenTripController;
 use App\Http\Controllers\Api\Tourist\PrivateBookingController;
 use App\Http\Controllers\Api\Tourist\ReviewApiController;
 use App\Http\Controllers\Api\Tourist\TourListApiController;
+use App\Http\Controllers\Api\Tourist\PublicGuideApiController;
+use App\Http\Controllers\Api\Tourist\UserProfileApiController;
 use App\Http\Middleware\EnsureGuideIsVerified;
 use App\Http\Middleware\EnsureIsAdmin;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +27,12 @@ use Illuminate\Support\Facades\Route;
 // ============================================================
 Route::get('tours',      [TourListApiController::class, 'index']);
 Route::get('tours/{id}', [TourListApiController::class, 'show']);
+
+// ============================================================
+// PUBLIC GUIDE ROUTES
+// ============================================================
+Route::get('guides',      [PublicGuideApiController::class, 'index']);
+Route::get('guides/{id}', [PublicGuideApiController::class, 'show']);
 
 // ============================================================
 // TOURIST AUTH ROUTES
@@ -38,6 +46,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthApiController::class, 'logout']);
     Route::get('auth/user',    [AuthApiController::class, 'getUser']);
+
+    // Profil wisatawan
+    Route::get('user/profile', [UserProfileApiController::class, 'show']);
+    Route::put('user/profile', [UserProfileApiController::class, 'update']);
 });
 
 // ============================================================

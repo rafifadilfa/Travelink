@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Tour;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class TourListApiController extends Controller
 {
@@ -17,19 +16,20 @@ class TourListApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $host = $request->getSchemeAndHttpHost();
+
         $tours = Tour::with(['images', 'location', 'categories', 'guide', 'reviews'])
             ->where('tour_status', 'published')
             ->get()
-            ->map(function (Tour $tour) {
+            ->map(function (Tour $tour) use ($host) {
                 // Ambil gambar pertama; fallback ke null
                 $firstImage = $tour->images->first();
                 $imageUrl   = null;
                 if ($firstImage) {
                     $path = $firstImage->image_path;
-                    // Kalau sudah berupa URL penuh (http/https), pakai langsung
                     $imageUrl = str_starts_with($path, 'http')
                         ? $path
-                        : Storage::url($path);
+                        : ($host . '/storage/' . $path);
                 }
 
                 return [

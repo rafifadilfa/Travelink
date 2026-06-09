@@ -26,7 +26,7 @@ interface GuideRow {
   id: number;
   name: string;
   email: string;
-  verification_status: 'pending' | 'verified' | 'rejected';
+  verification_status: string;
   created_at: string;
 }
 
@@ -54,6 +54,7 @@ const AdminGuideList: React.FC = () => {
   const borderColor  = useColorModeValue('gray.200', 'gray.700');
   const secondaryTxt = useColorModeValue('gray.500', 'gray.400');
   const tableHover   = useColorModeValue('purple.50', 'gray.700');
+  const theadBg      = useColorModeValue('gray.50', 'gray.750');
 
   const [guides, setGuides]   = useState<GuideRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,7 +146,7 @@ const AdminGuideList: React.FC = () => {
           overflow="hidden"
         >
           <Table variant="simple">
-            <Thead bg={useColorModeValue('gray.50', 'gray.750')}>
+            <Thead bg={theadBg}>
               <Tr>
                 <Th>Nama Guide</Th>
                 <Th>Email</Th>
@@ -156,7 +157,7 @@ const AdminGuideList: React.FC = () => {
             </Thead>
             <Tbody>
               {guides.map((g) => {
-                const cfg = statusConfig[g.verification_status];
+                const cfg = statusConfig[g.verification_status] ?? statusConfig['pending'];
                 return (
                   <Tr
                     key={g.id}
