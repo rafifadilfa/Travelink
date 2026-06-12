@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // ============================================================
 Route::prefix('reviews')->middleware('auth:sanctum')->group(function () {
     Route::post('guide',  [ReviewApiController::class, 'submitGuideReview']);
+    Route::post('tour',   [ReviewApiController::class, 'submitTourReview']);
     Route::get('status',  [ReviewApiController::class, 'reviewStatus']);
 });
 

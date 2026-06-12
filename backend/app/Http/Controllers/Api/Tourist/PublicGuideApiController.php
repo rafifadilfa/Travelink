@@ -4,31 +4,44 @@ namespace App\Http\Controllers\Api\Tourist;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guide;
+use App\Models\GuideReview;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class PublicGuideApiController extends Controller
 {
     // GET /api/guides?limit=6
+    // GET /api/guides?search=keyword  (mode pencarian — tanpa limit, semua guide terverifikasi)
     public function index(Request $request): JsonResponse
     {
-        $limit = min($request->integer('limit', 6), 20);
+        $search = trim($request->input('search', ''));
+        $host   = $request->getSchemeAndHttpHost();
 
-        $guides = Guide::with(['specialities'])
-            ->where('verification_status', 'verified')
-            ->where('rating', '>', 0)
-            ->orderByDesc('rating')
-            ->limit($limit)
-            ->get()
-            ->map(fn(Guide $g) => [
-                'id'          => $g->id,
-                'name'        => $g->name,
-                'avatar'      => $g->profile_picture,
-                'location'    => $g->country?->country_name ?? 'Indonesia',
-                'rating'      => (float) ($g->rating ?? 0),
-                'total_tours' => $g->tours()->count(),
-                'specialty'   => $g->specialities->first()?->name,
-            ]);
+        $query = Guide::with(['specialities', 'country'])
+            ->where('verification_status', 'verified');
+
+        if ($search !== '') {
+            // Mode pencarian: filter by nama / spesialisasi / negara/lokasi
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhereHas('specialities', fn($sp) => $sp->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('country', fn($c) => $c->where('country_name', 'like', "%{$search}%"));
+            });
+        } else {
+            // Mode default: top guide berdasarkan rating, dengan limit
+            $limit = min($request->integer('limit', 6), 20);
+            $query->where('rating', '>', 0)->limit($limit);
+        }
+
+        $guides = $query->orderByDesc('rating')->get()->map(fn(Guide $g) => [
+            'id'          => $g->id,
+            'name'        => $g->name,
+            'avatar'      => $this->resolveImageUrl($g->profile_picture, $host),
+            'location'    => $g->country?->country_name ?? 'Indonesia',
+            'rating'      => (float) ($g->rating ?? 0),
+            'total_tours' => $g->tours()->where('tour_status', 'published')->count(),
+            'specialty'   => $g->specialities->first()?->name,
+        ]);
 
         return response()->json(['data' => $guides]);
     }
@@ -60,6 +73,18 @@ class PublicGuideApiController extends Controller
             'categories'   => $tour->categories->pluck('name')->values(),
         ])->values();
 
+        $reviews = GuideReview::where('guide_id', $guide->id)
+            ->with('user:id,name')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(fn($r) => [
+                'reviewer_name' => $r->user?->name ?? 'Wisatawan',
+                'rating'        => $r->rating,
+                'comment'       => $r->comment,
+                'created_at'    => $r->created_at?->format('Y-m-d'),
+            ]);
+
         return response()->json([
             'guide' => [
                 'id'            => $guide->id,
@@ -68,6 +93,7 @@ class PublicGuideApiController extends Controller
                 'location'      => $guide->country?->country_name ?? 'Indonesia',
                 'rating'        => (float) ($guide->rating ?? 0),
                 'reviews_count' => $guide->reviews()->count(),
+                'reviews'       => $reviews,
                 'experience'    => ($guide->experience_years ?? 0) . '+ years',
                 'about'         => $guide->about ?? '',
                 'languages'     => $guide->languages->pluck('name')->values(),

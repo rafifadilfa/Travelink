@@ -132,6 +132,7 @@ interface PrivateBooking {
   id: number;
   booking_status: string;
   guide_reviewed: boolean;
+  tour_reviewed: boolean;
   paid_at: string | null;
   created_at: string;
   transaction: PrivateBookingTransaction | null;
@@ -356,29 +357,55 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   isOpen, onClose, transactionId, participantId, tourName, onSuccess,
 }) => {
   const toast = useToast();
-  const [rating, setRating]   = useState(0);
-  const [comment, setComment] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [rating, setRating]           = useState(0);
+  const [comment, setComment]         = useState('');
+  const [tourRating, setTourRating]   = useState(0);
+  const [tourComment, setTourComment] = useState('');
+  const [loading, setLoading]         = useState(false);
+
+  // Private booking = transactionId diberikan → tampilkan seksi rating paket
+  const showTourReview = !!transactionId;
 
   // Reset saat modal dibuka
   useEffect(() => {
-    if (isOpen) { setRating(0); setComment(''); }
+    if (isOpen) {
+      setRating(0); setComment('');
+      setTourRating(0); setTourComment('');
+    }
   }, [isOpen]);
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      toast({ title: 'Pilih bintang terlebih dahulu.', status: 'warning', duration: 3000, isClosable: true });
+      toast({ title: 'Pilih bintang untuk pemandu terlebih dahulu.', status: 'warning', duration: 3000, isClosable: true });
+      return;
+    }
+    if (showTourReview && tourRating === 0) {
+      toast({ title: 'Pilih bintang untuk paket wisata terlebih dahulu.', status: 'warning', duration: 3000, isClosable: true });
       return;
     }
 
     setLoading(true);
     try {
-      await apiClient.post('/reviews/guide', {
-        ...(transactionId ? { transaction_id: transactionId } : {}),
-        ...(participantId  ? { participant_id: participantId  } : {}),
-        rating,
-        comment: comment.trim() || null,
-      });
+      const requests: Promise<unknown>[] = [
+        apiClient.post('/reviews/guide', {
+          ...(transactionId ? { transaction_id: transactionId } : {}),
+          ...(participantId  ? { participant_id: participantId  } : {}),
+          rating,
+          comment: comment.trim() || null,
+        }),
+      ];
+
+      if (showTourReview) {
+        requests.push(
+          apiClient.post('/reviews/tour', {
+            transaction_id: transactionId,
+            rating: tourRating,
+            comment: tourComment.trim() || null,
+          })
+        );
+      }
+
+      await Promise.all(requests);
 
       toast({
         title: 'Ulasan berhasil dikirim!',
@@ -404,7 +431,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="md" isCentered>
+    <Modal isOpen={isOpen} onClose={onClose} size="md" isCentered scrollBehavior="inside">
       <ModalOverlay bg="blackAlpha.400" backdropFilter="blur(4px)" />
       <ModalContent borderRadius="2xl" mx={4}>
         <ModalHeader borderBottomWidth="1px" pb={4}>
@@ -417,9 +444,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
         <ModalBody py={6}>
           <VStack spacing={5} align="stretch">
-            {/* Star selector */}
+            {/* Rating Pemandu */}
             <Box textAlign="center">
-              <Text fontSize="sm" color="gray.500" mb={3}>Beri bintang untuk pemandu:</Text>
+              <Text fontSize="xs" fontWeight="semibold" color="gray.400" textTransform="uppercase" letterSpacing="wide" mb={2}>
+                Rating Pemandu
+              </Text>
               <StarSelector value={rating} onChange={setRating} />
               {rating > 0 && (
                 <Text fontSize="sm" color="yellow.500" fontWeight="semibold" mt={2}>
@@ -428,16 +457,16 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
               )}
             </Box>
 
-            {/* Komentar */}
+            {/* Komentar Pemandu */}
             <Box>
               <Text fontSize="sm" color="gray.600" mb={1.5}>
-                Komentar <Text as="span" color="gray.400">(opsional)</Text>
+                Komentar pemandu <Text as="span" color="gray.400">(opsional)</Text>
               </Text>
               <Textarea
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 placeholder="Ceritakan pengalamanmu bersama pemandu..."
-                rows={4}
+                rows={3}
                 resize="none"
                 borderRadius="lg"
                 maxLength={1000}
@@ -447,6 +476,42 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                 {comment.length}/1000
               </Text>
             </Box>
+
+            {/* Seksi Rating Paket — hanya untuk Private Booking */}
+            {showTourReview && (
+              <>
+                <Divider />
+                <Box textAlign="center">
+                  <Text fontSize="xs" fontWeight="semibold" color="gray.400" textTransform="uppercase" letterSpacing="wide" mb={2}>
+                    Rating Paket Wisata
+                  </Text>
+                  <StarSelector value={tourRating} onChange={setTourRating} />
+                  {tourRating > 0 && (
+                    <Text fontSize="sm" color="yellow.500" fontWeight="semibold" mt={2}>
+                      {STAR_LABELS[tourRating]}
+                    </Text>
+                  )}
+                </Box>
+                <Box>
+                  <Text fontSize="sm" color="gray.600" mb={1.5}>
+                    Komentar paket <Text as="span" color="gray.400">(opsional)</Text>
+                  </Text>
+                  <Textarea
+                    value={tourComment}
+                    onChange={e => setTourComment(e.target.value)}
+                    placeholder="Bagaimana pengalamanmu di paket wisata ini?"
+                    rows={3}
+                    resize="none"
+                    borderRadius="lg"
+                    maxLength={1000}
+                    fontSize="sm"
+                  />
+                  <Text fontSize="xs" color="gray.400" textAlign="right" mt={1}>
+                    {tourComment.length}/1000
+                  </Text>
+                </Box>
+              </>
+            )}
           </VStack>
         </ModalBody>
 
@@ -457,7 +522,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
             onClick={handleSubmit}
             isLoading={loading}
             loadingText="Mengirim..."
-            isDisabled={rating === 0}
+            isDisabled={rating === 0 || (showTourReview && tourRating === 0)}
             leftIcon={<Icon as={StarIcon} />}
           >
             Kirim Ulasan
@@ -1288,7 +1353,7 @@ const Bookings: React.FC = () => {
       setPrivateBookings(prev =>
         prev.map(b =>
           b.transaction?.id === reviewTarget.transactionId
-            ? { ...b, guide_reviewed: true }
+            ? { ...b, guide_reviewed: true, tour_reviewed: true }
             : b
         )
       );

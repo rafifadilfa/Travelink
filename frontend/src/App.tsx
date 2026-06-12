@@ -29,6 +29,7 @@ import AdminPaymentDetail from './pages/AdminPaymentDetail';
 import AdminWithdrawalList from './pages/AdminWithdrawalList';
 import SmartOpenTripForm from './pages/SmartOpenTripForm';
 import WaitingRoom from './pages/WaitingRoom';
+import SearchResults from './pages/SearchResults';
 
 interface ComingSoonProps { pageName: string; }
 interface ProtectedRouteProps {
@@ -107,6 +108,7 @@ const App: React.FC = () => {
       {/* --- User Section Routes --- */}
       <Route path="/open-trip/join/:tourId" element={<ProtectedRoute><SmartOpenTripForm /></ProtectedRoute>} />
       <Route path="/open-trip/waiting/:participantId" element={<ProtectedRoute><WaitingRoom /></ProtectedRoute>} />
+      <Route path="/search" element={<ProtectedRoute><SearchResults /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/tours" element={<ProtectedRoute><ViewAllTours /></ProtectedRoute>} />
       <Route path="/tours/:id" element={<ProtectedRoute><TourDetail /></ProtectedRoute>} />

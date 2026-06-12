@@ -9,11 +9,14 @@ class TourReview extends Model
     protected static function booted(): void
     {
         static::created(function (TourReview $tourreview) {
-            // Check if there is a user associated with this transaction
-            if ($tourreview->user && $tourreview->tour && $tourreview->transaction) {
-                $tourreview->tour->increment('tour_review_count');
-                $tourreview->user->increment('review_count_tour');
+            // Recalculate rata-rata rating tour setiap ada ulasan baru
+            $tour = $tourreview->tour;
+            if ($tour) {
+                $avg = TourReview::where('tour_id', $tour->id)->avg('rating');
+                $tour->update(['tour_rating' => round((float) $avg, 2)]);
             }
+            // Update review_count_tour pada user
+            $tourreview->user?->increment('review_count_tour');
         });
     }
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\GuideReview;
 use App\Models\OpenTripParticipant;
+use App\Models\TourReview;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -97,6 +98,77 @@ class ReviewApiController extends Controller
     }
 
     // ─── Private helpers ────────────────────────────────────────────────────
+
+    // ================================================================
+    // POST /api/reviews/tour
+    // Submit rating untuk paket wisata setelah trip selesai.
+    // Hanya untuk Private Booking. Auth: wisatawan (auth:sanctum).
+    // Body: { transaction_id: int, rating: 1-5, comment?: string }
+    // ================================================================
+    public function submitTourReview(Request $request): JsonResponse
+    {
+        $request->validate([
+            'transaction_id' => ['required', 'integer', 'exists:transactions,id'],
+            'rating'         => ['required', 'integer', 'min:1', 'max:5'],
+            'comment'        => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $userId = Auth::id();
+        $txId   = $request->integer('transaction_id');
+
+        $booking = Booking::where('user_id', $userId)
+            ->whereHas('transaction', fn($q) => $q->where('id', $txId))
+            ->with(['transaction.tour'])
+            ->first();
+
+        if (! $booking) {
+            return response()->json(['message' => 'Booking tidak ditemukan.'], 404);
+        }
+
+        $transaction = $booking->transaction;
+
+        if ($transaction->payment_status !== 'paid') {
+            return response()->json(['message' => 'Pembayaran belum selesai.'], 403);
+        }
+
+        $tourDate = $transaction->tour_date instanceof Carbon
+            ? $transaction->tour_date
+            : Carbon::parse($transaction->tour_date);
+
+        if (! $tourDate->isPast() || $tourDate->isToday()) {
+            return response()->json(['message' => 'Trip belum selesai. Ulasan hanya bisa dikirim setelah tanggal trip lewat.'], 403);
+        }
+
+        if ($booking->tour_reviewed) {
+            return response()->json(['message' => 'Kamu sudah memberikan ulasan untuk paket ini.'], 409);
+        }
+
+        $tourId = $transaction->tour_id;
+        if (! $tourId) {
+            return response()->json(['message' => 'Paket wisata tidak ditemukan untuk trip ini.'], 422);
+        }
+
+        $review = TourReview::create([
+            'transaction_id' => $transaction->id,
+            'tour_id'        => $tourId,
+            'user_id'        => $userId,
+            'rating'         => $request->integer('rating'),
+            'comment'        => $request->input('comment'),
+        ]);
+
+        $booking->update(['tour_reviewed' => true]);
+
+        return response()->json([
+            'message' => 'Ulasan paket wisata berhasil dikirim. Terima kasih!',
+            'review'  => [
+                'id'         => $review->id,
+                'tour_id'    => $review->tour_id,
+                'rating'     => $review->rating,
+                'comment'    => $review->comment,
+                'created_at' => $review->created_at?->toIso8601String(),
+            ],
+        ], 201);
+    }
 
     private function submitForPrivateBooking(Request $request, int $userId, int $txId): JsonResponse
     {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Box,
     Button,
@@ -6,13 +6,18 @@ import {
     Flex,
     Heading,
     HStack,
+    Input,
+    InputGroup,
+    InputLeftElement,
     Text,
     useColorModeValue,
 } from '@chakra-ui/react';
+import { SearchIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 
 const TouristNavbar: React.FC = () => {
     const navigate = useNavigate();
+    const [searchInput, setSearchInput] = useState('');
 
     const glassBg          = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.85)');
     const primaryColor     = useColorModeValue('blue.500', 'blue.400');
@@ -24,6 +29,14 @@ const TouristNavbar: React.FC = () => {
     const exploreHoverBg   = useColorModeValue('blue.50', 'rgba(49,130,206,0.1)');
     const btnEndColor      = useColorModeValue('blue.400', 'blue.300');
     const btnHoverEnd      = useColorModeValue('blue.500', 'blue.400');
+    const inputBg          = useColorModeValue('white', 'gray.800');
+
+    const handleSearch = () => {
+        const kw = searchInput.trim();
+        if (!kw) return;
+        navigate(`/search?q=${encodeURIComponent(kw)}`);
+        setSearchInput('');
+    };
 
     const baseStyle = {
         borderRadius: 'lg',
@@ -75,7 +88,8 @@ const TouristNavbar: React.FC = () => {
             borderColor={subtleBorder}
         >
             <Container maxW="container.xl">
-                <Flex h="68px" justify="space-between" align="center">
+                <Flex h="68px" justify="space-between" align="center" gap={4}>
+                    {/* Logo */}
                     <Flex
                         align="center"
                         gap={2.5}
@@ -83,6 +97,7 @@ const TouristNavbar: React.FC = () => {
                         cursor="pointer"
                         role="link"
                         tabIndex={0}
+                        flexShrink={0}
                         _focus={{ outline: '2px solid', outlineColor: 'blue.300', borderRadius: 'md' }}
                     >
                         <Flex
@@ -97,11 +112,33 @@ const TouristNavbar: React.FC = () => {
                         >
                             <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
                         </Flex>
-                        <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">
+                        <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold"
+                            display={{ base: 'none', sm: 'block' }}>
                             Travelink
                         </Heading>
                     </Flex>
-                    <HStack spacing={3}>
+
+                    {/* Search bar */}
+                    <InputGroup size="sm" maxW={{ base: '160px', md: '280px' }} flex="1">
+                        <InputLeftElement pointerEvents="none">
+                            <SearchIcon color="gray.400" boxSize={3.5} />
+                        </InputLeftElement>
+                        <Input
+                            placeholder="Cari pemandu..."
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                            bg={inputBg}
+                            border="1px solid"
+                            borderColor={subtleBorder}
+                            borderRadius="full"
+                            fontSize="sm"
+                            _focus={{ borderColor: 'blue.400', boxShadow: `0 0 0 1px ${focusShadow}` }}
+                        />
+                    </InputGroup>
+
+                    {/* Action buttons */}
+                    <HStack spacing={3} flexShrink={0}>
                         <Button
                             {...exploreBtnStyle}
                             size="sm"

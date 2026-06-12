@@ -258,6 +258,7 @@ class PrivateBookingController extends Controller
             'id'             => $booking->id,
             'booking_status' => $booking->booking_status,
             'guide_reviewed' => (bool) $booking->guide_reviewed,
+            'tour_reviewed'  => (bool) $booking->tour_reviewed,
             'paid_at'        => $booking->paid_at?->toIso8601String(),
             'created_at'     => $booking->created_at?->toIso8601String(),
             'transaction'    => $transaction ? [

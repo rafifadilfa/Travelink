@@ -21,6 +21,13 @@ const slideInUp = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
+interface ReviewItem {
+  reviewer_name: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
 interface GuideData {
   id: number;
   name: string;
@@ -28,6 +35,7 @@ interface GuideData {
   location: string;
   rating: number;
   reviews_count: number;
+  reviews: ReviewItem[];
   languages: string[];
   specialties: string[];
   experience: string;
@@ -111,7 +119,7 @@ const GuideProfile: React.FC = () => {
     const fetch = async () => {
       try {
         const res = await apiClient.get(`/guides/${id}`);
-        setGuide(res.data.guide);
+        setGuide({ ...res.data.guide, reviews: res.data.guide.reviews ?? [] });
         setTours(res.data.tours ?? []);
       } catch {
         setError('Profil pemandu tidak ditemukan.');
@@ -278,6 +286,46 @@ const GuideProfile: React.FC = () => {
             </VStack>
           )}
         </Box>
+
+        {/* Ulasan Wisatawan */}
+        {guide.reviews.length > 0 && (
+          <Box bg={cardBg} p={{ base: 5, md: 6 }} borderRadius="xl" boxShadow="xl" mb={8} animation={`${slideInUp} 0.7s ease-out 0.3s both`}>
+            <Heading size="lg" color={primaryColor} mb={6} pb={2} borderBottom="2px solid" borderColor={subtleBorderColor}>
+              Ulasan Wisatawan
+            </Heading>
+            <VStack spacing={4} align="stretch">
+              {guide.reviews.map((review, idx) => (
+                <Box
+                  key={idx}
+                  bg={infoBg} p={4} borderRadius="lg"
+                  border="1px solid" borderColor={subtleBorderColor}
+                >
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <Text fontWeight="semibold" fontSize="sm" color={primaryTextColor}>
+                      {review.reviewer_name}
+                    </Text>
+                    <Text fontSize="xs" color={secondaryTextColor}>{review.created_at}</Text>
+                  </Flex>
+                  <HStack spacing={0.5} mb={review.comment ? 2 : 0}>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <Icon
+                        key={star}
+                        as={StarIcon}
+                        boxSize={3}
+                        color={star <= review.rating ? 'yellow.400' : starEmptyColor}
+                      />
+                    ))}
+                  </HStack>
+                  {review.comment && (
+                    <Text fontSize="sm" color={primaryTextColor} lineHeight="1.6">
+                      {review.comment}
+                    </Text>
+                  )}
+                </Box>
+              ))}
+            </VStack>
+          </Box>
+        )}
       </Container>
     </Box>
   );
