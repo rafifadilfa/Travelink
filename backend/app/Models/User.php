@@ -28,6 +28,9 @@ class User extends Authenticatable
         'password',
         'review_count_guide',
         'review_count_tour',
+        'ot_age',
+        'ot_budget_level',
+        'ot_interests',
     ];
 
     /**

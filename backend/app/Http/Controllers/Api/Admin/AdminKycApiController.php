@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Guide;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -78,6 +79,18 @@ class AdminKycApiController extends Controller
     }
 
     /**
+     * GET /api/admin/users
+     * Daftar semua wisatawan (User) yang terdaftar di sistem.
+     */
+    public function usersList(): JsonResponse
+    {
+        $users = \App\Models\User::orderBy('created_at', 'desc')
+            ->get(['id', 'name', 'email', 'phone_number', 'created_at']);
+
+        return response()->json(['users' => $users], 200);
+    }
+
+    /**
      * POST /api/admin/kyc/{id}/reject
      * Tolak guide: ubah verification_status → 'rejected', simpan alasan penolakan.
      */
@@ -93,6 +106,16 @@ class AdminKycApiController extends Controller
             'verification_status' => 'rejected',
             'rejection_reason'    => $validated['rejection_reason'],
         ]);
+
+        // TC-017/048: notifikasi pemandu — KYC ditolak
+        NotificationService::send(
+            'kyc_rejected',
+            'guide',
+            $guide->id,
+            'Verifikasi Ditolak',
+            "Verifikasi akun Anda ditolak. Alasan: {$validated['rejection_reason']}",
+            ['guide_id' => $guide->id]
+        );
 
         return response()->json([
             'message' => "Verifikasi guide {$guide->name} ditolak.",

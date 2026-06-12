@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+    Badge,
     Box,
     Button,
     Container,
     Flex,
     Heading,
     HStack,
+    IconButton,
     Input,
     InputGroup,
     InputLeftElement,
@@ -13,11 +15,29 @@ import {
     useColorModeValue,
 } from '@chakra-ui/react';
 import { SearchIcon } from '@chakra-ui/icons';
+import { FiBell } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import apiClient from '../services/api';
 
 const TouristNavbar: React.FC = () => {
     const navigate = useNavigate();
-    const [searchInput, setSearchInput] = useState('');
+    const [searchInput,  setSearchInput]  = useState('');
+    const [unreadCount,  setUnreadCount]  = useState(0);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const fetchUnread = () => {
+        apiClient.get('/notifications')
+            .then(res => setUnreadCount(res.data.unread_count ?? 0))
+            .catch(() => {});
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        fetchUnread();
+        pollRef.current = setInterval(fetchUnread, 30_000);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, []);
 
     const glassBg          = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.85)');
     const primaryColor     = useColorModeValue('blue.500', 'blue.400');
@@ -155,6 +175,33 @@ const TouristNavbar: React.FC = () => {
                         >
                             My Bookings
                         </Button>
+                        {/* Bell icon — notifikasi */}
+                        <Box position="relative" display="inline-flex">
+                            <IconButton
+                                aria-label="Notifikasi"
+                                icon={<FiBell />}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => navigate('/notifications')}
+                            />
+                            {unreadCount > 0 && (
+                                <Badge
+                                    position="absolute"
+                                    top="-4px"
+                                    right="-4px"
+                                    colorScheme="red"
+                                    borderRadius="full"
+                                    fontSize="10px"
+                                    minW="18px"
+                                    h="18px"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                >
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </Badge>
+                            )}
+                        </Box>
                     </HStack>
                 </Flex>
             </Container>

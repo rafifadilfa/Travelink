@@ -3,6 +3,7 @@ import {
   Box, Flex, Heading, Text, useColorModeValue, Spinner,
   VStack, HStack, Button, Link, Alert, AlertIcon,
   Image, Divider, SimpleGrid, useToast,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { FiArrowLeft, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -80,6 +81,11 @@ const AdminPaymentDetail: React.FC = () => {
   return (
     <AdminLayout>
       <Box maxW="container.lg" mx="auto">
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondary}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/kyc')}>Admin</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/payments')} color="purple.400">Verifikasi Pembayaran</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="purple.500" fontWeight="medium">Detail</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Button leftIcon={<FiArrowLeft />} variant="ghost" mb={6} onClick={() => navigate('/admin/payments')}>
           Kembali ke Daftar
         </Button>

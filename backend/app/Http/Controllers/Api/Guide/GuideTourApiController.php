@@ -188,11 +188,25 @@ class GuideTourApiController extends Controller
 
     // ================================================================
     // DELETE /api/guide/tours/{id}  (soft delete)
+    // TC-023: Blokir hapus jika ada booking aktif.
     // ================================================================
     public function destroy(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
         $tour  = Tour::where('tour_guide_id', $guide->id)->findOrFail($id);
+
+        $hasActiveBookings = \App\Models\Transaction::where('tour_id', $tour->id)
+            ->whereHas('booking', fn($q) =>
+                $q->whereIn('booking_status', \App\Models\Booking::ACTIVE_STATUSES)
+            )
+            ->exists();
+
+        if ($hasActiveBookings) {
+            return response()->json([
+                'message' => 'Paket tidak dapat dihapus karena terdapat booking aktif.',
+            ], 422);
+        }
+
         $tour->delete();
 
         return response()->json(['message' => 'Tour berhasil dihapus.'], 200);

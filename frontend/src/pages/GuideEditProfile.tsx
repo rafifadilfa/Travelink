@@ -20,6 +20,7 @@ interface Completeness {
   step1: {
     profile_picture: boolean; about: boolean;
     languages: boolean; specialities: boolean; experience_years: boolean;
+    base_rate: boolean;
   };
   step1_complete: boolean;
   step2: {
@@ -209,8 +210,21 @@ const GuideEditProfile: React.FC = () => {
   const makeUploader = (
     endpoint: string, fieldName: string,
     setLoading: (v: boolean) => void, setFile: (v: File | null) => void,
+    maxSizeKB: number,
   ) => async (file: File | null) => {
     if (!file) return;
+
+    // Validasi ukuran file sebelum kirim ke server
+    if (file.size > maxSizeKB * 1024) {
+      const maxMB = Math.round(maxSizeKB / 1024);
+      toast({
+        title: 'Ukuran file terlalu besar',
+        description: `File yang Anda pilih melebihi batas maksimum ${maxMB}MB. Harap pilih file yang lebih kecil.`,
+        status: 'error', duration: 6000, isClosable: true,
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const fd = new FormData();
@@ -219,17 +233,27 @@ const GuideEditProfile: React.FC = () => {
       setFile(null);
       toast({ title: 'Dokumen berhasil diupload!', status: 'success', duration: 3000, isClosable: true });
       await loadProfile();
-    } catch {
-      toast({ title: 'Gagal upload dokumen', status: 'error', duration: 4000, isClosable: true });
+    } catch (err: any) {
+      // Ambil pesan error spesifik dari backend jika ada
+      const errors = err.response?.data?.errors as Record<string, string[]> | undefined;
+      const serverMsg = errors
+        ? Object.values(errors).flat()[0]
+        : err.response?.data?.message;
+      toast({
+        title: 'Gagal upload dokumen',
+        description: serverMsg ?? 'Terjadi kesalahan. Coba lagi.',
+        status: 'error', duration: 5000, isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKtpUpload      = () => makeUploader('/guide/profile/ktp', 'ktp_document', setUploadingKtp, setKtpFile)(ktpFile);
-  const handleSelfieUpload   = () => makeUploader('/guide/profile/selfie-ktp', 'selfie_ktp_document', setUploadingSelfie, setSelfieFile)(selfieFile);
-  const handleCertUpload     = () => makeUploader('/guide/profile/certificate', 'certificate_document', setUploadingCert, setCertFile)(certFile);
-  const handlePortfolioUpload= () => makeUploader('/guide/profile/portfolio', 'portfolio_document', setUploadingPortfolio, setPortfolioFile)(portfolioFile);
+  // KTP & sertifikat maks 2MB; selfie & portofolio maks 5MB (sesuai validasi backend)
+  const handleKtpUpload      = () => makeUploader('/guide/profile/ktp', 'ktp_document', setUploadingKtp, setKtpFile, 2048)(ktpFile);
+  const handleSelfieUpload   = () => makeUploader('/guide/profile/selfie-ktp', 'selfie_ktp_document', setUploadingSelfie, setSelfieFile, 5120)(selfieFile);
+  const handleCertUpload     = () => makeUploader('/guide/profile/certificate', 'certificate_document', setUploadingCert, setCertFile, 2048)(certFile);
+  const handlePortfolioUpload= () => makeUploader('/guide/profile/portfolio', 'portfolio_document', setUploadingPortfolio, setPortfolioFile, 5120)(portfolioFile);
 
   // ── Kirim untuk verifikasi ────────────────────────────────────────────────
   const handleSubmit = async () => {
@@ -261,7 +285,7 @@ const GuideEditProfile: React.FC = () => {
   const status = profile?.verification_status;
   const comp   = profile?.completeness;
   const step1Pct = comp ? (Object.values(comp.step1).filter(Boolean).length / Object.values(comp.step1).length) * 100 : 0;
-  const step2Pct = comp ? ([comp.step2.ktp_document, comp.step2.selfie_ktp_document].filter(Boolean).length / 2) * 100 : 0;
+  const step2Pct = comp ? ([comp.step2.ktp_document, comp.step2.selfie_ktp_document, comp.step2.portfolio_document].filter(Boolean).length / 3) * 100 : 0;
 
   const statusBanner = () => {
     if (status === 'menunggu_verifikasi') return <Alert status="info" borderRadius="lg" mb={6}><AlertIcon />Dokumen Anda sedang dalam peninjauan oleh admin. Mohon tunggu.</Alert>;
@@ -468,7 +492,7 @@ const GuideEditProfile: React.FC = () => {
                   <Icon as={FiShield} mr={3} color="blue.400" /> Dokumen Verifikasi
                 </Heading>
                 <Text fontSize="sm" color={secondary} mb={6}>
-                  KTP dan selfie bersama KTP <strong>wajib</strong> diunggah. Sertifikat dan portofolio opsional.
+                  KTP, selfie bersama KTP, dan portofolio trip <strong>wajib</strong> diunggah. Sertifikat opsional.
                   Format yang diterima: JPG, PNG, PDF. Ukuran maks 2–5MB.
                 </Text>
 
@@ -481,14 +505,14 @@ const GuideEditProfile: React.FC = () => {
                     uploaded={!!profile?.selfie_ktp_document} url={profile?.selfie_ktp_url ?? null}
                     file={selfieFile} inputRef={selfieRef}
                     onFileChange={setSelfieFile} onUpload={handleSelfieUpload} isUploading={uploadingSelfie} />
+                  <UploadCard title="Portofolio Trip" badge="Wajib"
+                    uploaded={!!profile?.portfolio_document} url={profile?.portfolio_url ?? null}
+                    file={portfolioFile} inputRef={portfolioRef}
+                    onFileChange={setPortfolioFile} onUpload={handlePortfolioUpload} isUploading={uploadingPortfolio} />
                   <UploadCard title="Sertifikat Profesi" badge="Opsional"
                     uploaded={!!profile?.certificate_document} url={profile?.certificate_url ?? null}
                     file={certFile} inputRef={certRef}
                     onFileChange={setCertFile} onUpload={handleCertUpload} isUploading={uploadingCert} optional />
-                  <UploadCard title="Portofolio Trip" badge="Opsional"
-                    uploaded={!!profile?.portfolio_document} url={profile?.portfolio_url ?? null}
-                    file={portfolioFile} inputRef={portfolioRef}
-                    onFileChange={setPortfolioFile} onUpload={handlePortfolioUpload} isUploading={uploadingPortfolio} optional />
                 </Stack>
               </Box>
 
@@ -499,11 +523,11 @@ const GuideEditProfile: React.FC = () => {
                   {!profile?.can_submit_kyc && (
                     <Alert status="warning" borderRadius="md" mb={4} fontSize="sm">
                       <AlertIcon />
-                      Upload KTP dan selfie bersama KTP terlebih dahulu sebelum mengirim.
+                      Upload KTP, selfie bersama KTP, dan portofolio trip terlebih dahulu sebelum mengirim.
                     </Alert>
                   )}
                   <Button
-                    colorScheme="green" leftIcon={<FiSend />} size="lg" w={{ base: 'full', md: 'auto' }}
+                    colorScheme="blue" leftIcon={<FiSend />} size="lg" w={{ base: 'full', md: 'auto' }}
                     isDisabled={!profile?.can_submit_kyc} isLoading={isSubmitting}
                     loadingText="Mengirim..." onClick={handleSubmit}
                   >

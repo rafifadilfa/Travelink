@@ -27,8 +27,11 @@ import {
   useToast,
   Spinner,
   Badge,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
 } from '@chakra-ui/react';
-import { FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUsers, FiDollarSign } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUsers, FiDollarSign, FiThumbsUp } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import GuideLayout from '../components/GuideLayout';
 import { guideApiClient } from '../services/api';
@@ -70,6 +73,7 @@ interface OpenTripGroupData {
   paid_count: number;
   matched_at: string | null;
   expires_at: string | null;
+  confirmed_at: string | null;
   is_active: boolean;
 }
 
@@ -206,9 +210,11 @@ const BookingCard = ({
 const OpenTripGroupCard = ({
   group,
   onReject,
+  onConfirm,
 }: {
   group: OpenTripGroupData;
   onReject?: (id: number) => void;
+  onConfirm?: (id: number) => void;
 }) => {
   const cardBg      = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('purple.200', 'purple.700');
@@ -219,8 +225,8 @@ const OpenTripGroupCard = ({
   const paymentColorScheme = allPaid ? 'green' : somePaid ? 'yellow' : 'gray';
   const paymentLabel       = allPaid ? 'Semua Lunas' : somePaid ? 'Sebagian Lunas' : 'Belum Dibayar';
 
-  // Tombol Tolak hanya muncul jika 0 anggota sudah bayar dan callback disediakan
-  const canReject = onReject !== undefined && group.paid_count === 0;
+  const canReject  = onReject !== undefined && group.paid_count === 0 && group.confirmed_at === null;
+  const canConfirm = onConfirm !== undefined && group.confirmed_at === null;
 
   return (
     <Box
@@ -242,6 +248,9 @@ const OpenTripGroupCard = ({
               <HStack spacing={2}>
                 <Text fontWeight="bold" fontSize="lg">{group.tour_name ?? '—'}</Text>
                 <Badge colorScheme="purple" fontSize="xs">Smart Open Trip</Badge>
+                {group.confirmed_at && (
+                  <Badge colorScheme="green" fontSize="xs">Dikonfirmasi</Badge>
+                )}
               </HStack>
               <Text fontSize="sm" color="gray.500">Grup #{group.id}</Text>
             </Box>
@@ -269,14 +278,24 @@ const OpenTripGroupCard = ({
             </HStack>
           </HStack>
 
-          {canReject && (
-            <Button
-              variant="outline" colorScheme="red" size="sm" leftIcon={<FiXCircle />}
-              onClick={() => onReject(group.id)}
-            >
-              Tolak Grup
-            </Button>
-          )}
+          <HStack>
+            {canConfirm && (
+              <Button
+                colorScheme="green" size="sm" leftIcon={<FiThumbsUp />}
+                onClick={() => onConfirm(group.id)}
+              >
+                Konfirmasi Grup
+              </Button>
+            )}
+            {canReject && (
+              <Button
+                variant="outline" colorScheme="red" size="sm" leftIcon={<FiXCircle />}
+                onClick={() => onReject(group.id)}
+              >
+                Tolak Grup
+              </Button>
+            )}
+          </HStack>
         </Flex>
       </VStack>
     </Box>
@@ -297,6 +316,14 @@ const GuideBookings: React.FC = () => {
   const navigate = useNavigate();
   const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
 
+  const guideRaw   = localStorage.getItem('guide');
+  const guide      = guideRaw ? JSON.parse(guideRaw) : null;
+  const isVerified = guide?.verification_status === 'verified';
+
+  useEffect(() => {
+    if (!isVerified) navigate('/guide/dashboard');
+  }, []);
+
   const [activeBookings,    setActiveBookings]    = useState<Booking[]>([]);
   const [historyBookings,   setHistoryBookings]   = useState<Booking[]>([]);
   const [activeOpenTrips,   setActiveOpenTrips]   = useState<OpenTripGroupData[]>([]);
@@ -309,6 +336,12 @@ const GuideBookings: React.FC = () => {
   const [isRejecting,     setIsRejecting]     = useState(false);
   const { isOpen: isRejectOpen, onOpen: onRejectOpen, onClose: onRejectClose } = useDisclosure();
   const rejectCancelRef = useRef<HTMLButtonElement>(null);
+
+  // ── State dialog konfirmasi grup ─────────────────────────────────────────────
+  const [confirmGroupId,  setConfirmGroupId]  = useState<number | null>(null);
+  const [isConfirming,    setIsConfirming]    = useState(false);
+  const { isOpen: isConfirmOpen, onOpen: onConfirmOpen, onClose: onConfirmClose } = useDisclosure();
+  const confirmCancelRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     guideApiClient.get('/guide/bookings?tab=active')
@@ -354,6 +387,43 @@ const GuideBookings: React.FC = () => {
     onRejectOpen();
   };
 
+  // Buka dialog konfirmasi grup
+  const openConfirmDialog = (groupId: number) => {
+    setConfirmGroupId(groupId);
+    onConfirmOpen();
+  };
+
+  // Eksekusi konfirmasi grup setelah guide konfirmasi di dialog
+  const doConfirmGroup = async () => {
+    if (confirmGroupId === null) return;
+    setIsConfirming(true);
+    try {
+      const res = await guideApiClient.post(`/guide/open-trip-groups/${confirmGroupId}/confirm`);
+      const confirmedAt: string = res.data.confirmed_at;
+      setActiveOpenTrips(prev =>
+        prev.map(g => g.id === confirmGroupId ? { ...g, confirmed_at: confirmedAt } : g)
+      );
+      toast({
+        title: 'Grup berhasil dikonfirmasi!',
+        description: 'Semua peserta telah dinotifikasi.',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
+      onConfirmClose();
+    } catch (err: any) {
+      toast({
+        title: 'Gagal mengkonfirmasi grup',
+        description: err.response?.data?.message ?? 'Terjadi kesalahan.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   // Eksekusi penolakan grup setelah guide konfirmasi di dialog
   const confirmRejectGroup = async () => {
     if (rejectGroupId === null) return;
@@ -385,9 +455,17 @@ const GuideBookings: React.FC = () => {
   const activeTotal  = activeBookings.length  + activeOpenTrips.length;
   const historyTotal = historyBookings.length + historyOpenTrips.length;
 
+  if (!isVerified) {
+    return <Flex justify="center" align="center" h="60vh"><Spinner size="xl" color="blue.400" /></Flex>;
+  }
+
   return (
     <GuideLayout>
       <Box maxW="container.lg" mx="auto">
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryTextColor}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/guide/dashboard')}>Dashboard</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Booking Klien</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Flex justifyContent="space-between" alignItems="center" mb={8}>
           <Box>
             <Heading as="h1" size="xl">Client Bookings</Heading>
@@ -413,7 +491,7 @@ const GuideBookings: React.FC = () => {
               ) : (
                 <VStack spacing={5} align="stretch">
                   {activeOpenTrips.map(g => (
-                    <OpenTripGroupCard key={`ot-${g.id}`} group={g} onReject={openRejectDialog} />
+                    <OpenTripGroupCard key={`ot-${g.id}`} group={g} onReject={openRejectDialog} onConfirm={openConfirmDialog} />
                   ))}
                   {activeBookings.map(b => (
                     <BookingCard key={`bk-${b.id}`} booking={b} onAccept={handleAccept} onReject={handleReject} />
@@ -442,6 +520,46 @@ const GuideBookings: React.FC = () => {
           </TabPanels>
         </Tabs>
       </Box>
+
+      {/* ── Dialog konfirmasi grup Smart Open Trip ──────────────── */}
+      <AlertDialog
+        isOpen={isConfirmOpen}
+        leastDestructiveRef={confirmCancelRef as React.RefObject<HTMLElement>}
+        onClose={onConfirmClose}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent borderRadius="xl" mx={4}>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold" color="gray.800">
+              Konfirmasi Grup Smart Open Trip?
+            </AlertDialogHeader>
+            <AlertDialogBody color="gray.600" fontSize="sm">
+              Anda akan mengkonfirmasi Grup #{confirmGroupId}. Semua peserta akan
+              mendapatkan notifikasi bahwa trip telah dikonfirmasi.
+            </AlertDialogBody>
+            <AlertDialogFooter gap={3}>
+              <Button
+                ref={confirmCancelRef}
+                onClick={onConfirmClose}
+                size="sm"
+                variant="ghost"
+                isDisabled={isConfirming}
+              >
+                Batal
+              </Button>
+              <Button
+                colorScheme="green"
+                size="sm"
+                onClick={doConfirmGroup}
+                isLoading={isConfirming}
+                loadingText="Mengkonfirmasi..."
+              >
+                Ya, Konfirmasi
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
 
       {/* ── Dialog konfirmasi tolak grup Smart Open Trip ────────── */}
       <AlertDialog

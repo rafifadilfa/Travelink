@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Flex, Heading, Text, useColorModeValue, Spinner,
   Table, Thead, Tbody, Tr, Th, Td, Button,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -39,6 +40,10 @@ const AdminPaymentList: React.FC = () => {
   return (
     <AdminLayout>
       <Box maxW="container.xl" mx="auto">
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondary}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/kyc')}>Admin</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="purple.500" fontWeight="medium">Verifikasi Pembayaran</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Heading as="h1" size="xl" mb={2}>Verifikasi Pembayaran</Heading>
         <Text color={secondary} mb={6}>
           Daftar pesanan dengan bukti pembayaran yang perlu diverifikasi.

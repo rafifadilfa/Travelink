@@ -5,8 +5,10 @@ import {
   Spinner, Modal, ModalOverlay, ModalContent, ModalHeader,
   ModalBody, ModalFooter, FormControl, FormLabel, Input,
   Alert, AlertIcon, useToast,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { FiArrowDownCircle, FiArrowUpCircle } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import GuideLayout from '../components/GuideLayout';
 import { guideApiClient } from '../services/api';
 
@@ -23,10 +25,19 @@ const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 const fmtDate = (d: string) => new Date(d).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
 
 const GuideWallet: React.FC = () => {
+  const navigate  = useNavigate();
   const toast     = useToast();
   const secondary = useColorModeValue('gray.500', 'gray.400');
   const cardBg    = useColorModeValue('white', 'gray.800');
   const border    = useColorModeValue('gray.200', 'gray.700');
+
+  const guideRaw   = localStorage.getItem('guide');
+  const guide      = guideRaw ? JSON.parse(guideRaw) : null;
+  const isVerified = guide?.verification_status === 'verified';
+
+  useEffect(() => {
+    if (!isVerified) navigate('/guide/dashboard');
+  }, []);
 
   const [wallet,  setWallet]   = useState<WalletInfo | null>(null);
   const [txList,  setTxList]   = useState<WalletTx[]>([]);
@@ -72,9 +83,17 @@ const GuideWallet: React.FC = () => {
     }
   };
 
+  if (!isVerified) {
+    return <Flex justify="center" align="center" h="60vh"><Spinner size="xl" color="blue.400" /></Flex>;
+  }
+
   return (
     <GuideLayout>
       <Box maxW="container.lg" mx="auto">
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondary}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/guide/dashboard')}>Dashboard</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Dompet</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Heading as="h1" size="xl" mb={2}>Dashboard Keuangan</Heading>
         <Text color={secondary} mb={6}>Pantau saldo dan riwayat transaksi Anda.</Text>
 

@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  Badge,
   Box,
   Flex,
   Text,
@@ -10,6 +11,7 @@ import {
   Avatar,
   IconButton,
   useDisclosure,
+  useToast,
   Drawer,
   DrawerContent,
   DrawerOverlay,
@@ -32,16 +34,22 @@ import {
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logoutGuide } from '../utils/logout';
+import { guideApiClient } from '../services/api';
+
+// Route yang membutuhkan akun terverifikasi
+const RESTRICTED_PATHS = ['/guide/tours', '/guide/bookings', '/guide/reviews', '/guide/wallet'];
 
 // --- TYPE DEFINITIONS ---
 interface NavItemProps extends FlexProps {
     icon: IconType;
     children: React.ReactNode;
     path: string;
+    onNavigate?: (path: string) => void;
 }
 
 interface SidebarProps extends BoxProps {
   onClose: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 interface GuideLayoutProps {
@@ -58,14 +66,14 @@ const LinkItems = [
 ];
 
 // --- CHILD COMPONENTS ---
-const NavItem = ({ icon, children, path, ...rest }: NavItemProps) => {
+const NavItem = ({ icon, children, path, onNavigate, ...rest }: NavItemProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isActive = location.pathname === path;
 
   return (
     <Flex
-        onClick={() => navigate(path)}
+        onClick={() => onNavigate ? onNavigate(path) : navigate(path)}
         align="center"
         p="3"
         mx="4"
@@ -86,7 +94,7 @@ const NavItem = ({ icon, children, path, ...rest }: NavItemProps) => {
   );
 };
 
-const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
+const SidebarContent = ({ onClose, onNavigate, ...rest }: SidebarProps) => {
   const logoutItemColor = useColorModeValue('gray.600', 'gray.200');
 
   const handleLogout = () => void logoutGuide();
@@ -108,7 +116,7 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
             <CloseButton display={{ base: 'flex', md: 'none' }} onClick={onClose} />
         </Flex>
         {LinkItems.map((link) => (
-          <NavItem key={link.name} icon={link.icon} path={link.path}>
+          <NavItem key={link.name} icon={link.icon} path={link.path} onNavigate={onNavigate}>
             {link.name}
           </NavItem>
         ))}
@@ -147,13 +155,49 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
 // --- MAIN LAYOUT COMPONENT ---
 const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const navigate = useNavigate();
+    const toast    = useToast();
+
+    const [unreadCount, setUnreadCount] = useState(0);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const fetchUnread = () => {
+        guideApiClient.get('/notifications')
+            .then(res => setUnreadCount(res.data.unread_count ?? 0))
+            .catch(() => {});
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem('guide_token');
+        if (!token) return;
+        fetchUnread();
+        pollRef.current = setInterval(fetchUnread, 30_000);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, []);
 
     const pageBg = useColorModeValue('gray.100', 'gray.900');
     const cardBg = useColorModeValue('white', 'gray.800');
 
     // Baca data guide dari localStorage — disimpan saat login di GuideAuth.tsx
-    const guideRaw = localStorage.getItem('guide');
-    const guide = guideRaw ? JSON.parse(guideRaw) : null;
+    const guideRaw   = localStorage.getItem('guide');
+    const guide      = guideRaw ? JSON.parse(guideRaw) : null;
+    const isVerified = guide?.verification_status === 'verified';
+
+    const handleNavigation = (path: string) => {
+        if (!isVerified && RESTRICTED_PATHS.includes(path)) {
+            toast({
+                title: 'Akses Terbatas',
+                description: 'Lengkapi profil dan dokumen KYC Anda terlebih dahulu, lalu tunggu persetujuan admin untuk mengakses fitur ini.',
+                status: 'warning',
+                duration: 5000,
+                isClosable: true,
+                position: 'top',
+            });
+            navigate('/guide/dashboard');
+            return;
+        }
+        navigate(path);
+    };
 
     // Konversi path storage Laravel ke URL penuh untuk foto profil
     // Contoh: "public/guides/photos/file.jpg" → "http://localhost:8000/storage/guides/photos/file.jpg"
@@ -164,7 +208,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
 
     return (
         <Box minH="100vh" bg={pageBg}>
-            <SidebarContent onClose={onClose} display={{ base: 'none', md: 'block' }} />
+            <SidebarContent onClose={onClose} onNavigate={handleNavigation} display={{ base: 'none', md: 'block' }} />
              <Drawer
                 autoFocus={false}
                 isOpen={isOpen}
@@ -176,7 +220,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
             >
                 <DrawerOverlay />
                 <DrawerContent>
-                    <SidebarContent onClose={onClose} />
+                    <SidebarContent onClose={onClose} onNavigate={handleNavigation} />
                 </DrawerContent>
             </Drawer>
 
@@ -207,12 +251,32 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
                     </Text>
 
                     <HStack spacing={{ base: '2', md: '6' }}>
-                        <IconButton
-                            size="lg"
-                            variant="ghost"
-                            aria-label="open menu"
-                            icon={<FiBell />}
-                        />
+                        <Box position="relative" display="inline-flex">
+                            <IconButton
+                                size="lg"
+                                variant="ghost"
+                                aria-label="Notifikasi"
+                                icon={<FiBell />}
+                                onClick={() => navigate('/notifications')}
+                            />
+                            {unreadCount > 0 && (
+                                <Badge
+                                    position="absolute"
+                                    top="2px"
+                                    right="2px"
+                                    colorScheme="red"
+                                    borderRadius="full"
+                                    fontSize="10px"
+                                    minW="18px"
+                                    h="18px"
+                                    display="flex"
+                                    alignItems="center"
+                                    justifyContent="center"
+                                >
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </Badge>
+                            )}
+                        </Box>
                         <Flex alignItems={'center'}>
                             <HStack>
                                 <Avatar size={'sm'} src={avatarSrc} name={guide?.name ?? 'Guide'} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Box,
     Button,
@@ -88,10 +88,24 @@ const ViewAllTours: React.FC = () => {
     const [filteredTours, setFilteredTours] = useState<Tour[]>([]);
     const [loading, setLoading]             = useState(true);
     const [fetchError, setFetchError]       = useState<string | null>(null);
-    const [searchQuery, setSearchQuery]     = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [sortOrder, setSortOrder]         = useState<'price-low' | 'price-high' | 'rating'>('rating');
+    const [searchQuery, setSearchQuery]     = useState(() => {
+        try { return (JSON.parse(sessionStorage.getItem('tours_filter') ?? '{}')).searchQuery ?? ''; } catch { return ''; }
+    });
+    const [selectedCategory, setSelectedCategory] = useState(() => {
+        try { return (JSON.parse(sessionStorage.getItem('tours_filter') ?? '{}')).selectedCategory ?? ''; } catch { return ''; }
+    });
+    const [sortOrder, setSortOrder]         = useState<'price-low' | 'price-high' | 'rating'>(() => {
+        try { return (JSON.parse(sessionStorage.getItem('tours_filter') ?? '{}')).sortOrder ?? 'rating'; } catch { return 'rating'; }
+    });
+    const [minPrice, setMinPrice]           = useState(() => {
+        try { return (JSON.parse(sessionStorage.getItem('tours_filter') ?? '{}')).minPrice ?? ''; } catch { return ''; }
+    });
+    const [maxPrice, setMaxPrice]           = useState(() => {
+        try { return (JSON.parse(sessionStorage.getItem('tours_filter') ?? '{}')).maxPrice ?? ''; } catch { return ''; }
+    });
     const [currentPage, setCurrentPage]     = useState(1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const searchBoxRef = useRef<HTMLDivElement>(null);
     const toursPerPage = 6;
 
     const overallBg          = useColorModeValue('blue.50', 'gray.900');
@@ -102,6 +116,8 @@ const ViewAllTours: React.FC = () => {
     const secondaryTextColor = useColorModeValue('gray.500', 'gray.400');
     const subtleBorderColor  = useColorModeValue('gray.200', 'gray.700');
     const ratingBadgeBg      = useColorModeValue('whiteAlpha.800', 'blackAlpha.600');
+    const suggestionBg       = useColorModeValue('white', 'gray.800');
+    const suggestionHoverBg  = useColorModeValue('blue.50', 'gray.700');
 
     // Fetch tour dari API saat mount
     useEffect(() => {
@@ -120,7 +136,7 @@ const ViewAllTours: React.FC = () => {
         fetchTours();
     }, []);
 
-    // Filter & sort client-side setiap kali allTours, searchQuery, selectedCategory, atau sortOrder berubah
+    // Filter & sort client-side setiap kali filter/sort berubah
     const filterTours = useCallback(() => {
         setCurrentPage(1);
         let results = [...allTours];
@@ -141,6 +157,11 @@ const ViewAllTours: React.FC = () => {
             );
         }
 
+        const min = minPrice !== '' ? Number(minPrice) : null;
+        const max = maxPrice !== '' ? Number(maxPrice) : null;
+        if (min !== null && !isNaN(min)) results = results.filter(t => t.price >= min);
+        if (max !== null && !isNaN(max)) results = results.filter(t => t.price <= max);
+
         switch (sortOrder) {
             case 'price-low':  results.sort((a, b) => a.price - b.price); break;
             case 'price-high': results.sort((a, b) => b.price - a.price); break;
@@ -149,11 +170,15 @@ const ViewAllTours: React.FC = () => {
         }
 
         setFilteredTours(results);
-    }, [allTours, searchQuery, selectedCategory, sortOrder]);
+    }, [allTours, searchQuery, selectedCategory, sortOrder, minPrice, maxPrice]);
 
     useEffect(() => {
         filterTours();
     }, [filterTours]);
+
+    useEffect(() => {
+        sessionStorage.setItem('tours_filter', JSON.stringify({ searchQuery, selectedCategory, sortOrder, minPrice, maxPrice }));
+    }, [searchQuery, selectedCategory, sortOrder, minPrice, maxPrice]);
 
     const totalPages      = Math.ceil(filteredTours.length / toursPerPage);
     const indexOfLast     = currentPage * toursPerPage;
@@ -168,10 +193,29 @@ const ViewAllTours: React.FC = () => {
     const formatPrice = (price: number) =>
         new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
+    const suggestions = searchQuery.length >= 1
+        ? allTours
+            .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.location.toLowerCase().includes(searchQuery.toLowerCase()))
+            .slice(0, 6)
+        : [];
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     const resetFilters = () => {
         setSearchQuery('');
         setSelectedCategory('');
         setSortOrder('rating');
+        setMinPrice('');
+        setMaxPrice('');
+        sessionStorage.removeItem('tours_filter');
     };
 
     const baseButtonStyle = {
@@ -238,19 +282,43 @@ const ViewAllTours: React.FC = () => {
                 {/* Filter bar */}
                 <Box bg={cardBg} p={{ base: 5, md: 8 }} borderRadius="xl" boxShadow="xl" mb={10} animation={`${slideInUp} 0.5s ease-out 0.2s both`} borderTop="4px solid" borderColor={primaryColor}>
                     <Grid templateColumns={{ base: '1fr', md: '1fr 1fr', lg: '2fr 1fr 1fr auto' }} gap={6} alignItems="flex-end">
-                        <Box>
+                        <Box ref={searchBoxRef} position="relative">
                             <Text as="label" htmlFor="search-input" display="block" mb={1.5} fontWeight="medium" fontSize="sm" color={secondaryTextColor}>Cari Tour</Text>
                             <InputGroup>
                                 <InputLeftElement pointerEvents="none" h="44px" children={<SearchIcon color={secondaryTextColor} />} />
                                 <Input
                                     id="search-input" type="text" placeholder="contoh: Bali, Menyelam, Candi"
-                                    value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                                    value={searchQuery}
+                                    onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true); }}
+                                    onFocus={() => setShowSuggestions(true)}
                                     h="44px" borderRadius="lg" bg={useColorModeValue('gray.100', 'gray.700')}
                                     borderColor={subtleBorderColor} variant="filled"
                                     _hover={{ bg: useColorModeValue('gray.200', 'gray.600') }}
                                     _focus={{ borderColor: primaryColor, boxShadow: `0 0 0 2px ${useColorModeValue('blue.300', 'blue.600')}`, bg: useColorModeValue('white', 'gray.700') }}
+                                    autoComplete="off"
                                 />
                             </InputGroup>
+                            {showSuggestions && suggestions.length > 0 && (
+                                <Box
+                                    position="absolute" top="100%" left={0} right={0} zIndex={20}
+                                    bg={suggestionBg} borderRadius="lg" boxShadow="lg"
+                                    border="1px solid" borderColor={subtleBorderColor} mt={1} overflow="hidden"
+                                >
+                                    {suggestions.map(t => (
+                                        <Flex
+                                            key={t.id} px={4} py={2.5} cursor="pointer" align="center" gap={2}
+                                            _hover={{ bg: suggestionHoverBg }}
+                                            onMouseDown={() => { setSearchQuery(t.name); setShowSuggestions(false); }}
+                                        >
+                                            <SearchIcon boxSize={3} color={secondaryTextColor} />
+                                            <Box>
+                                                <Text fontSize="sm" fontWeight="medium" color={primaryTextColor}>{t.name}</Text>
+                                                <Text fontSize="xs" color={secondaryTextColor}>{t.location}</Text>
+                                            </Box>
+                                        </Flex>
+                                    ))}
+                                </Box>
+                            )}
                         </Box>
                         <Box>
                             <Text as="label" htmlFor="category-select" display="block" mb={1.5} fontWeight="medium" fontSize="sm" color={secondaryTextColor}>Kategori</Text>
@@ -286,6 +354,47 @@ const ViewAllTours: React.FC = () => {
                         </Box>
                         <Button {...secondaryButtonStyle} onClick={resetFilters} leftIcon={<RepeatIcon />}>Reset</Button>
                     </Grid>
+
+                    {/* Baris kedua: filter harga */}
+                    <Box mt={4} pt={4} borderTop="1px solid" borderColor={subtleBorderColor}>
+                        <Text display="block" mb={2} fontWeight="medium" fontSize="sm" color={secondaryTextColor}>Rentang Harga (Rp)</Text>
+                        <HStack spacing={3}>
+                            <Input
+                                type="number"
+                                placeholder="Min"
+                                value={minPrice}
+                                onChange={e => setMinPrice(e.target.value)}
+                                h="40px"
+                                borderRadius="lg"
+                                bg={useColorModeValue('gray.100', 'gray.700')}
+                                borderColor={subtleBorderColor}
+                                variant="filled"
+                                maxW="160px"
+                                fontSize="sm"
+                                _focus={{ borderColor: primaryColor, bg: useColorModeValue('white', 'gray.700') }}
+                            />
+                            <Text color={secondaryTextColor} flexShrink={0}>—</Text>
+                            <Input
+                                type="number"
+                                placeholder="Max"
+                                value={maxPrice}
+                                onChange={e => setMaxPrice(e.target.value)}
+                                h="40px"
+                                borderRadius="lg"
+                                bg={useColorModeValue('gray.100', 'gray.700')}
+                                borderColor={subtleBorderColor}
+                                variant="filled"
+                                maxW="160px"
+                                fontSize="sm"
+                                _focus={{ borderColor: primaryColor, bg: useColorModeValue('white', 'gray.700') }}
+                            />
+                            {(minPrice || maxPrice) && (
+                                <Text fontSize="xs" color={primaryColor}>
+                                    Filter aktif: {minPrice ? `≥ ${formatPrice(Number(minPrice))}` : ''}{minPrice && maxPrice ? ' & ' : ''}{maxPrice ? `≤ ${formatPrice(Number(maxPrice))}` : ''}
+                                </Text>
+                            )}
+                        </HStack>
+                    </Box>
                 </Box>
 
                 <Flex justify="space-between" align="center" mb={6}>

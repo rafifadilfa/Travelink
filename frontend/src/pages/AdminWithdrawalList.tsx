@@ -6,7 +6,9 @@ import {
   ModalFooter, FormControl, FormLabel, Textarea, useToast,
   AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
   AlertDialogContent, AlertDialogOverlay,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
 import { adminApiClient } from '../services/api';
 
@@ -21,6 +23,7 @@ const fmt = (n: number) => 'Rp ' + n.toLocaleString('id-ID');
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('id-ID', { dateStyle: 'medium' });
 
 const AdminWithdrawalList: React.FC = () => {
+  const navigate   = useNavigate();
   const toast      = useToast();
   const secondary  = useColorModeValue('gray.500', 'gray.400');
   const cardBg     = useColorModeValue('white', 'gray.800');
@@ -77,6 +80,10 @@ const AdminWithdrawalList: React.FC = () => {
   return (
     <AdminLayout>
       <Box maxW="container.xl" mx="auto">
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondary}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/kyc')}>Admin</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="purple.500" fontWeight="medium">Pencairan Dana</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Heading as="h1" size="xl" mb={2}>Verifikasi Pencairan Dana</Heading>
         <Text color={secondary} mb={6}>Daftar permintaan pencairan yang perlu diproses.</Text>
 

@@ -25,6 +25,9 @@ import {
   useDisclosure,
   useColorModeValue,
   useToast,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
 } from '@chakra-ui/react';
 import {
   FiArrowLeft,
@@ -231,6 +234,11 @@ const AdminKycDetail: React.FC = () => {
 
   return (
     <AdminLayout>
+      <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryTxt}>
+        <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/kyc')}>Admin</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/kyc')} color="purple.400">Verifikasi KYC</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage><BreadcrumbLink color="purple.500" fontWeight="medium">Detail</BreadcrumbLink></BreadcrumbItem>
+      </Breadcrumb>
       {/* Tombol kembali */}
       <Button
         leftIcon={<FiArrowLeft />}

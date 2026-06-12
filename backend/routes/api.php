@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Guide\GuideReviewApiController;
 use App\Http\Controllers\Api\Guide\GuideTourApiController;
 use App\Http\Controllers\Api\Guide\GuideWalletApiController;
 use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
+use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Api\Tourist\OpenTripController;
 use App\Http\Controllers\Api\Tourist\PrivateBookingController;
 use App\Http\Controllers\Api\Tourist\ReviewApiController;
@@ -48,8 +49,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('auth/user',    [AuthApiController::class, 'getUser']);
 
     // Profil wisatawan
-    Route::get('user/profile', [UserProfileApiController::class, 'show']);
-    Route::put('user/profile', [UserProfileApiController::class, 'update']);
+    Route::get('user/profile',        [UserProfileApiController::class, 'show']);
+    Route::put('user/profile',        [UserProfileApiController::class, 'update']);
+    Route::post('user/profile/photo', [UserProfileApiController::class, 'uploadPhoto']);
+});
+
+// ============================================================
+// NOTIFICATION ROUTES (semua role — user, guide, admin)
+// ============================================================
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('notifications',              [NotificationApiController::class, 'index']);
+    Route::patch('notifications/read-all',   [NotificationApiController::class, 'markAllRead']);
+    Route::patch('notifications/{id}/read',  [NotificationApiController::class, 'markRead']);
 });
 
 // ============================================================
@@ -68,6 +79,7 @@ Route::prefix('bookings')->middleware('auth:sanctum')->group(function () {
     Route::post('/',                         [PrivateBookingController::class, 'store']);
     Route::get('/',                          [PrivateBookingController::class, 'index']);
     Route::get('/{id}',                      [PrivateBookingController::class, 'show']);
+    Route::post('/{id}/cancel',              [PrivateBookingController::class, 'cancel']);
     Route::post('/{id}/payment',             [PrivateBookingController::class, 'createPayment']);
     Route::get('/{id}/payment',              [PrivateBookingController::class, 'checkPayment']);
 });
@@ -148,8 +160,9 @@ Route::prefix('guide')->group(function () {
             Route::post('bookings/{id}/accept',       [GuideBookingApiController::class, 'accept']);
             Route::post('bookings/{id}/reject',       [GuideBookingApiController::class, 'reject']);
 
-            // Smart Open Trip — tolak grup (hanya jika 0 anggota bayar)
-            Route::post('open-trip-groups/{groupId}/reject', [GuideBookingApiController::class, 'rejectOpenTripGroup']);
+            // Smart Open Trip — tolak / konfirmasi grup
+            Route::post('open-trip-groups/{groupId}/reject',  [GuideBookingApiController::class, 'rejectOpenTripGroup']);
+            Route::post('open-trip-groups/{groupId}/confirm', [GuideBookingApiController::class, 'confirmOpenTripGroup']);
 
             // Ulasan & rating
             Route::get('reviews',                     [GuideReviewApiController::class, 'index']);
@@ -184,6 +197,7 @@ Route::prefix('admin')->group(function () {
             Route::post('kyc/{id}/approve',     [AdminKycApiController::class, 'approve']);
             Route::post('kyc/{id}/reject',      [AdminKycApiController::class, 'reject']);
             Route::get('guides',                [AdminKycApiController::class, 'allGuides']);
+            Route::get('users',                 [AdminKycApiController::class, 'usersList']);
 
             // UC-18: Verifikasi Pembayaran
             Route::get('payments',                      [AdminPaymentApiController::class, 'index']);

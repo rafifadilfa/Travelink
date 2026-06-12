@@ -66,7 +66,7 @@ class PrivateBookingController extends Controller
         $booking = Booking::create([
             'user_id'        => Auth::id(),
             'transaction_id' => $transaction->id,
-            'booking_status' => Booking::STATUS_MENUNGGU_PEMBAYARAN,
+            'booking_status' => Booking::STATUS_MENUNGGU_KONFIRMASI_PEMANDU,
         ]);
 
         return response()->json([
@@ -242,6 +242,31 @@ class PrivateBookingController extends Controller
             'payment_status' => $transaction->payment_status,
             'booking_status' => $booking->fresh()->booking_status,
         ]);
+    }
+
+    // ================================================================
+    // POST /api/bookings/{id}/cancel
+    // TC-031: Wisatawan membatalkan booking yang masih menunggu konfirmasi pemandu.
+    // ================================================================
+    public function cancel(Request $request, int $id): JsonResponse
+    {
+        $booking = Booking::where('user_id', Auth::id())
+            ->where('booking_status', Booking::STATUS_MENUNGGU_KONFIRMASI_PEMANDU)
+            ->findOrFail($id);
+
+        $booking->update([
+            'booking_status'    => Booking::STATUS_DIBATALKAN,
+            'cancelation_reason' => 'Dibatalkan oleh wisatawan.',
+        ]);
+
+        return response()->json([
+            'message' => 'Booking berhasil dibatalkan.',
+            'booking' => $this->formatBooking($booking->fresh()->load([
+                'transaction.tour.images',
+                'transaction.tour.location',
+                'transaction.tour.guide',
+            ])),
+        ], 200);
     }
 
     // ----------------------------------------------------------------

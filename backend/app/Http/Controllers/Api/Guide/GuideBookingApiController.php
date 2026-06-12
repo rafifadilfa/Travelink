@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\OpenTripGroup;
 use App\Models\OpenTripParticipant;
 use App\Models\Transaction;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -111,6 +112,7 @@ class GuideBookingApiController extends Controller
                     'paid_count'   => $paidCount,
                     'matched_at'   => $g->matched_at?->toIso8601String(),
                     'expires_at'   => $g->expires_at?->toIso8601String(),
+                    'confirmed_at' => $g->confirmed_at?->toIso8601String(),
                     'is_active'    => $g->isActive(),
                 ];
             });
@@ -157,9 +159,21 @@ class GuideBookingApiController extends Controller
 
         $booking->update(['booking_status' => Booking::STATUS_MENUNGGU_PEMBAYARAN]);
 
-        // TODO: notifikasi wisatawan (out of scope)
-
         $booking->load(['transaction.tour', 'transaction.user']);
+
+        // TC-029: notifikasi wisatawan — booking diterima
+        $userId   = $booking->transaction?->user?->id;
+        $tourName = $booking->transaction?->tour?->name ?? 'paket wisata';
+        if ($userId) {
+            NotificationService::send(
+                'booking_accepted',
+                'user',
+                $userId,
+                'Booking Diterima',
+                "Pemandu telah menerima booking Anda untuk {$tourName}. Silakan lakukan pembayaran.",
+                ['booking_id' => $booking->id]
+            );
+        }
 
         return response()->json([
             'message' => 'Pesanan berhasil diterima. Wisatawan akan diminta melakukan pembayaran.',
@@ -189,9 +203,21 @@ class GuideBookingApiController extends Controller
             'cancelation_reason' => $validated['rejection_reason'],
         ]);
 
-        // TODO: notifikasi wisatawan (out of scope)
-
         $booking->load(['transaction.tour', 'transaction.user']);
+
+        // TC-030: notifikasi wisatawan — booking ditolak
+        $userId   = $booking->transaction?->user?->id;
+        $tourName = $booking->transaction?->tour?->name ?? 'paket wisata';
+        if ($userId) {
+            NotificationService::send(
+                'booking_rejected',
+                'user',
+                $userId,
+                'Booking Ditolak',
+                "Pemandu menolak booking Anda untuk {$tourName}. Alasan: {$validated['rejection_reason']}",
+                ['booking_id' => $booking->id]
+            );
+        }
 
         return response()->json([
             'message' => 'Pesanan ditolak.',
@@ -253,6 +279,45 @@ class GuideBookingApiController extends Controller
             'message'    => 'Grup Smart Open Trip berhasil ditolak. Semua peserta telah dikeluarkan dari grup.',
             'group_id'   => $group->id,
             'rejected_at' => $group->rejected_at->toIso8601String(),
+        ], 200);
+    }
+
+    // ================================================================
+    // POST /api/guide/open-trip-groups/{groupId}/confirm
+    // TC-037: Pemandu mengkonfirmasi grup — notifikasi semua peserta.
+    // ================================================================
+    public function confirmOpenTripGroup(Request $request, int $groupId): JsonResponse
+    {
+        $guide = $request->user();
+
+        $group = OpenTripGroup::whereHas('tour', fn($q) => $q->where('tour_guide_id', $guide->id))
+            ->with(['participants' => fn($q) => $q->where('status', 'matched'), 'tour'])
+            ->whereNull('rejected_at')
+            ->whereNull('confirmed_at')
+            ->find($groupId);
+
+        if (! $group) {
+            return response()->json(['message' => 'Grup tidak ditemukan atau sudah dikonfirmasi/ditolak.'], 404);
+        }
+
+        $group->update(['confirmed_at' => now()]);
+
+        // TC-037: notifikasi ke semua peserta yang matched
+        $tourName = $group->tour?->name ?? 'paket wisata';
+        foreach ($group->participants as $participant) {
+            NotificationService::send(
+                'group_confirmed',
+                'user',
+                $participant->user_id,
+                'Grup Dikonfirmasi',
+                "Pemandu telah mengkonfirmasi grup Open Trip {$tourName}. Silakan lakukan pembayaran.",
+                ['group_id' => $group->id, 'tour_id' => $group->tour_id]
+            );
+        }
+
+        return response()->json([
+            'message'      => 'Grup berhasil dikonfirmasi. Peserta telah dinotifikasi.',
+            'confirmed_at' => $group->fresh()->confirmed_at?->toIso8601String(),
         ], 200);
     }
 }

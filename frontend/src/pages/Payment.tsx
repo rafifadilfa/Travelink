@@ -4,6 +4,7 @@ import {
   Box, Flex, Text, Button, Heading, Container,
   useColorModeValue, Icon, VStack, HStack, Divider,
   useToast, Spinner, Badge,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, CheckCircleIcon, CalendarIcon, InfoOutlineIcon } from '@chakra-ui/icons';
 import { FiMapPin, FiUsers } from 'react-icons/fi';
@@ -245,6 +246,11 @@ const Payment: React.FC = () => {
       </Box>
 
       <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryText}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/dashboard')}>Beranda</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/bookings')} color={secondaryText}>Pesanan Saya</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Pembayaran</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <VStack spacing={{ base: 6, md: 8 }} align="stretch">
           <Heading as="h1" size={{ base: 'lg', md: 'xl' }} fontWeight="bold" color={primaryTextColor}
             borderBottom="2px solid" borderColor={borderColor} pb={3} textAlign="center">

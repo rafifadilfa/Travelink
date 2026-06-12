@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Avatar,
   Badge,
   Box,
@@ -23,6 +29,13 @@ import {
   StatHelpText,
   StatLabel,
   StatNumber,
+  Table,
+  TableContainer,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
   Tag,
   TagLabel,
   Text,
@@ -34,6 +47,9 @@ import {
   useColorModeValue,
   useDisclosure,
   useToast,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
 } from '@chakra-ui/react';
 import {
   CalendarIcon,
@@ -41,6 +57,7 @@ import {
   InfoOutlineIcon,
   StarIcon,
   TimeIcon,
+  WarningIcon,
 } from '@chakra-ui/icons';
 import { keyframes } from '@emotion/react';
 import { useNavigate } from 'react-router-dom';
@@ -766,14 +783,19 @@ interface PrivateBookingCardProps {
   booking: PrivateBooking;
   onPaymentComplete: () => void;
   onWriteReview: (transactionId: number, tourName: string) => void;
+  onCancelled: (id: number) => void;
 }
 
-const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaymentComplete, onWriteReview }) => {
+const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaymentComplete, onWriteReview, onCancelled }) => {
   const toast                       = useToast();
+  const navigate                    = useNavigate();
   const [isPaying, setIsPaying]     = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [localStatus, setLocalStatus] = useState(booking.booking_status);
   const [localReviewed, setLocalReviewed] = useState(booking.guide_reviewed);
   const pollRef                     = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cancelDialogRef             = useRef<HTMLButtonElement>(null);
+  const { isOpen: isCancelOpen, onOpen: onCancelOpen, onClose: onCancelClose } = useDisclosure();
 
   const cardBg      = useColorModeValue('white',    'gray.800');
   const borderCol   = useColorModeValue('gray.100', 'gray.700');
@@ -842,6 +864,22 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
 
   const handleReviewSuccess = () => setLocalReviewed(true);
 
+  const handleConfirmCancel = async () => {
+    setIsCancelling(true);
+    try {
+      await apiClient.post(`/bookings/${booking.id}/cancel`);
+      setLocalStatus('dibatalkan');
+      onCancelled(booking.id);
+      toast({ title: 'Booking berhasil dibatalkan.', status: 'info', duration: 4000, isClosable: true });
+      onCancelClose();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast({ title: msg ?? 'Gagal membatalkan booking.', status: 'error', duration: 4000, isClosable: true });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   return (
@@ -907,6 +945,16 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
           </Text>
         </Flex>
 
+        {/* Tombol Batalkan — hanya saat menunggu konfirmasi pemandu */}
+        {localStatus === 'menunggu_konfirmasi_pemandu' && (
+          <Button size="sm" colorScheme="red" variant="outline" width="100%"
+            leftIcon={<Icon as={WarningIcon} boxSize={3} />}
+            onClick={onCancelOpen}
+          >
+            Batalkan Booking
+          </Button>
+        )}
+
         {/* Tombol Bayar */}
         {localStatus === 'menunggu_pembayaran' && (
           <Button size="sm" colorScheme="green" width="100%"
@@ -925,7 +973,7 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
           </HStack>
         )}
 
-        {/* Trip selesai: aksi ulasan */}
+        {/* Trip selesai: aksi ulasan + pesan lagi */}
         {tripDone && (
           <Box mt={1}>
             {canReview ? (
@@ -947,7 +995,45 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
             ) : null}
           </Box>
         )}
+
+        {/* Pesan Lagi — semua status terminal (selesai/ditolak/dibatalkan) */}
+        {PRIVATE_TERMINAL.includes(localStatus) && tour?.id && (
+          <Button
+            size="sm" variant="outline" colorScheme="blue" width="100%" mt={2}
+            onClick={() => navigate(`/tours/${tour.id}`)}
+          >
+            Pesan Lagi
+          </Button>
+        )}
       </Box>
+
+      {/* Dialog konfirmasi batalkan */}
+      <AlertDialog
+        isOpen={isCancelOpen}
+        leastDestructiveRef={cancelDialogRef as React.RefObject<HTMLElement>}
+        onClose={onCancelClose}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent borderRadius="xl" mx={4}>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Batalkan Booking?
+            </AlertDialogHeader>
+            <AlertDialogBody fontSize="sm" color="gray.600">
+              Booking untuk <strong>{tour?.name ?? 'tour ini'}</strong> akan dibatalkan.
+              Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogBody>
+            <AlertDialogFooter gap={3}>
+              <Button ref={cancelDialogRef} variant="ghost" size="sm" onClick={onCancelClose} isDisabled={isCancelling}>
+                Tidak
+              </Button>
+              <Button colorScheme="red" size="sm" onClick={handleConfirmCancel} isLoading={isCancelling} loadingText="Membatalkan...">
+                Ya, Batalkan
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };
@@ -1252,7 +1338,7 @@ const Bookings: React.FC = () => {
   const [trips, setTrips] = useState<OpenTripBooking[]>([]);
   const [privateBookings, setPrivateBookings] = useState<PrivateBooking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past' | 'transactions'>('upcoming');
   const [selectedItem, setSelectedItem] = useState<OpenTripBooking | null>(null);
   const [myUserId, setMyUserId] = useState<number | null>(null);
 
@@ -1338,6 +1424,12 @@ const Bookings: React.FC = () => {
     onReviewOpen();
   };
 
+  const handleBookingCancelled = useCallback((id: number) => {
+    setPrivateBookings(prev =>
+      prev.map(b => b.id === id ? { ...b, booking_status: 'dibatalkan' } : b)
+    );
+  }, []);
+
   // Setelah review sukses: update flag lokal di data trip/booking + tutup modal
   const handleReviewSuccess = useCallback(() => {
     if (reviewTarget?.participantId) {
@@ -1367,6 +1459,10 @@ const Bookings: React.FC = () => {
       <TouristNavbar />
 
       <Container maxW="container.md" py={{ base: 6, md: 10 }}>
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={subtleColor}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/dashboard')}>Beranda</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Pesanan Saya</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         {/* Header halaman */}
         <Box mb={8} animation={`${fadeUp} 0.2s ease`}>
           <Heading size="lg" color={titleColor} fontWeight="bold">
@@ -1397,6 +1493,15 @@ const Bookings: React.FC = () => {
               onClick={() => setActiveTab('past')}
               icon={CheckCircleIcon}
             />
+            {/* HIDDEN: Tab Transaksi — sembunyikan sementara, jangan hapus
+            <TabButton
+              label="Transaksi"
+              count={loading ? 0 : privateBookings.length}
+              isActive={activeTab === 'transactions'}
+              onClick={() => setActiveTab('transactions')}
+              icon={CalendarIcon}
+            />
+            */}
           </Flex>
         </Box>
 
@@ -1429,15 +1534,71 @@ const Bookings: React.FC = () => {
                   booking={b}
                   onPaymentComplete={fetchTrips}
                   onWriteReview={handleWriteReviewPrivate}
+                  onCancelled={handleBookingCancelled}
                 />
               ))}
             </VStack>
           )}
 
           {/* Empty state */}
-          {!loading && activeTrips.length === 0 && activePrivate.length === 0 && (
+          {!loading && activeTab !== 'transactions' && activeTrips.length === 0 && activePrivate.length === 0 && (
             <EmptyState tab={activeTab} onExplore={() => navigate('/tours')} />
           )}
+
+          {/* HIDDEN: Tab Transaksi — sembunyikan sementara, jangan hapus
+          {activeTab === 'transactions' && !loading && (
+            privateBookings.length === 0 ? (
+              <Box textAlign="center" py={16} bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
+                <Text fontSize="3xl" mb={3}>🧾</Text>
+                <Text fontSize="md" fontWeight="medium" color={subtleColor}>Belum ada riwayat transaksi.</Text>
+              </Box>
+            ) : (
+              <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm" overflow="hidden">
+                <TableContainer>
+                  <Table size="sm" variant="simple">
+                    <Thead bg="gray.50">
+                      <Tr>
+                        <Th>Paket</Th>
+                        <Th>Kode Transaksi</Th>
+                        <Th isNumeric>Total</Th>
+                        <Th>Tgl Trip</Th>
+                        <Th>Status</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {privateBookings.map(b => {
+                        const tx = b.transaction;
+                        const cfg = PRIVATE_STATUS_CONFIG[b.booking_status] ?? { label: b.booking_status, colorScheme: 'gray' };
+                        return (
+                          <Tr key={b.id} _hover={{ bg: 'gray.50' }}>
+                            <Td maxW="180px">
+                              <Text fontSize="sm" fontWeight="medium" noOfLines={1}>{tx?.tour?.name ?? '—'}</Text>
+                              <Text fontSize="xs" color={subtleColor}>{tx?.tour?.guide?.name ?? ''}</Text>
+                            </Td>
+                            <Td>
+                              <Text fontSize="xs" fontFamily="mono" color={subtleColor}>{tx?.transaction_code ?? '—'}</Text>
+                            </Td>
+                            <Td isNumeric>
+                              <Text fontSize="sm" fontWeight="semibold">{tx ? formatRupiah(tx.total_amount) : '—'}</Text>
+                            </Td>
+                            <Td>
+                              <Text fontSize="xs">{tx?.tour_date ? formatDate(tx.tour_date) : '—'}</Text>
+                            </Td>
+                            <Td>
+                              <Badge colorScheme={cfg.colorScheme} variant="subtle" fontSize="xs" px={2} py={0.5} borderRadius="full">
+                                {cfg.label}
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
+                    </Tbody>
+                  </Table>
+                </TableContainer>
+              </Box>
+            )
+          )}
+          */}
         </Box>
       </Container>
 

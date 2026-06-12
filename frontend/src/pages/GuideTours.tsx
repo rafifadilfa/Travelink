@@ -18,6 +18,9 @@ import {
   AlertDialogOverlay,
   useToast,
   Spinner,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
 } from '@chakra-ui/react';
 import {
     FiPlus,
@@ -42,6 +45,14 @@ interface TourRow {
 const GuideTours: React.FC = () => {
     const navigate = useNavigate();
     const toast = useToast();
+
+    const guideRaw   = localStorage.getItem('guide');
+    const guide      = guideRaw ? JSON.parse(guideRaw) : null;
+    const isVerified = guide?.verification_status === 'verified';
+
+    useEffect(() => {
+        if (!isVerified) navigate('/guide/dashboard');
+    }, []);
 
     const [tours, setTours] = useState<TourRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -80,8 +91,14 @@ const GuideTours: React.FC = () => {
             await guideApiClient.delete(`/guide/tours/${tourToDelete}`);
             setTours(prev => prev.filter(t => t.id !== tourToDelete));
             toast({ title: 'Tour berhasil dihapus', status: 'success', duration: 3000, isClosable: true });
-        } catch {
-            toast({ title: 'Gagal menghapus tour', status: 'error', duration: 3000, isClosable: true });
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            toast({
+                title: msg ?? 'Gagal menghapus tour',
+                status: msg ? 'warning' : 'error',
+                duration: 5000,
+                isClosable: true,
+            });
         } finally {
             setIsDeleting(false);
             setIsDeleteDialogOpen(false);
@@ -89,9 +106,17 @@ const GuideTours: React.FC = () => {
         }
     };
 
+    if (!isVerified) {
+        return <Flex justify="center" align="center" h="60vh"><Spinner size="xl" color="blue.400" /></Flex>;
+    }
+
     return (
         <GuideLayout>
             <Box maxW="container.lg" mx="auto">
+                <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryTextColor}>
+                  <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/guide/dashboard')}>Dashboard</BreadcrumbLink></BreadcrumbItem>
+                  <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Paket Tour</BreadcrumbLink></BreadcrumbItem>
+                </Breadcrumb>
                 <Flex
                     justifyContent="space-between"
                     alignItems="center"

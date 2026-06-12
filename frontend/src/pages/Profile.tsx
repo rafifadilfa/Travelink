@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
   As,
-  Box, Button, Flex, Text, Heading, Container, Grid, Input,
+  Box, Button, Flex, Text, Heading, Container, Grid, Input, Select,
   useColorModeValue, Icon, Badge, VStack, HStack, Tabs,
   TabList, TabPanels, Tab, TabPanel, Avatar, Divider, Switch, useToast,
-  Tooltip, Spinner
+  Tooltip, Spinner, Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import {
   ChevronRightIcon, EditIcon, CheckIcon, CloseIcon, SettingsIcon, CalendarIcon,
@@ -43,6 +43,9 @@ interface UserProfile {
   joined_date: string;
   bookings_count: number;
   reviews_count: number;
+  ot_age: number | null;
+  ot_budget_level: number | null;
+  ot_interests: number[];
 }
 
 interface InfoCardProps {
@@ -85,8 +88,13 @@ const Profile: React.FC = () => {
   const [isEditing, setIsEditing]     = useState(false);
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [userData, setUserData]       = useState<UserProfile | null>(null);
-  const [formData, setFormData]       = useState({ name: '', email: '', phone_number: '' });
+  const [formData, setFormData]       = useState({
+    name: '', email: '', phone_number: '',
+    ot_age: '', ot_budget_level: '',
+  });
+  const photoInputRef = React.useRef<HTMLInputElement>(null);
 
   // Semua hook di level atas
   const overallBg          = useColorModeValue('blue.50', 'gray.900');
@@ -168,7 +176,11 @@ const Profile: React.FC = () => {
         const res = await apiClient.get('/user/profile');
         const user: UserProfile = res.data.user;
         setUserData(user);
-        setFormData({ name: user.name, email: user.email, phone_number: user.phone_number ?? '' });
+        setFormData({
+          name: user.name, email: user.email, phone_number: user.phone_number ?? '',
+          ot_age: user.ot_age?.toString() ?? '',
+          ot_budget_level: user.ot_budget_level?.toString() ?? '',
+        });
       } catch {
         toast({ title: 'Gagal memuat profil', status: 'error', duration: 3000, position: 'top' });
       } finally {
@@ -187,7 +199,14 @@ const Profile: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await apiClient.put('/user/profile', formData);
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone_number: formData.phone_number || null,
+        ot_age: formData.ot_age ? Number(formData.ot_age) : null,
+        ot_budget_level: formData.ot_budget_level ? Number(formData.ot_budget_level) : null,
+      };
+      const res = await apiClient.put('/user/profile', payload);
       const updated: UserProfile = res.data.user;
       setUserData(updated);
       setIsEditing(false);
@@ -201,10 +220,34 @@ const Profile: React.FC = () => {
 
   const handleCancelEdit = () => {
     if (userData) {
-      setFormData({ name: userData.name, email: userData.email, phone_number: userData.phone_number ?? '' });
+      setFormData({
+        name: userData.name, email: userData.email, phone_number: userData.phone_number ?? '',
+        ot_age: userData.ot_age?.toString() ?? '',
+        ot_budget_level: userData.ot_budget_level?.toString() ?? '',
+      });
     }
     setIsEditing(false);
     toast({ title: 'Edit dibatalkan', status: 'info', duration: 2000, position: 'top-right' });
+  };
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const form = new FormData();
+      form.append('photo', file);
+      const res = await apiClient.post('/user/profile/photo', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setUserData(prev => prev ? { ...prev, profile_picture: res.data.photo_url } : prev);
+      toast({ title: 'Foto profil diperbarui!', status: 'success', duration: 3000, position: 'top' });
+    } catch {
+      toast({ title: 'Gagal mengupload foto', status: 'error', duration: 3000, position: 'top' });
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
   };
 
   const infoCardProps = { primaryColor, secondaryTextColor, primaryTextColor };
@@ -257,10 +300,22 @@ const Profile: React.FC = () => {
       </Box>
 
       <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryTextColor}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/dashboard')}>Beranda</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Profil Saya</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Box bg={cardBg} p={{ base: 5, md: 8 }} borderRadius="xl" boxShadow="xl" mb={10} borderTop="4px solid" borderColor={primaryColor} animation={`${slideInUp} 0.6s ease-out`}>
           <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'center', md: 'flex-start' }} gap={{ base: 5, md: 8 }}>
             <VStack spacing={2.5} align={{ base: "center", md: "flex-start" }}>
               <Avatar size="xl" name={userData.name} src={userData.profile_picture ?? undefined} border="4px solid" borderColor={avatarBorderColor} boxShadow={`0 0 12px ${primaryColor}`} />
+              <input type="file" accept="image/*" ref={photoInputRef} style={{ display: 'none' }} onChange={handlePhotoChange} />
+              <Button
+                size="xs" variant="ghost" colorScheme="blue"
+                isLoading={uploadingPhoto}
+                onClick={() => photoInputRef.current?.click()}
+              >
+                Ganti Foto
+              </Button>
             </VStack>
             <Box flex={1} textAlign={{ base: 'center', md: 'left' }}>
               <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5} animation={`${slideInUp} 0.7s ease-out 0.1s both`}>
@@ -332,6 +387,41 @@ const Profile: React.FC = () => {
                           />
                         </Box>
                       ))}
+                      {/* HIDDEN: Preferensi Smart Open Trip (form edit) — sembunyikan sementara, jangan hapus
+                      <Box pt={2} borderTop="1px dashed" borderColor={subtleBorderColor}>
+                        <Text fontSize="sm" fontWeight="semibold" color={primaryColor} mb={3}>Preferensi Smart Open Trip</Text>
+                        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                          <Box>
+                            <Text fontSize="sm" fontWeight="medium" color={secondaryTextColor} mb={1.5}>Usia Anda</Text>
+                            <Input
+                              type="number" min={1} max={120} placeholder="contoh: 25"
+                              value={formData.ot_age}
+                              onChange={e => setFormData(p => ({ ...p, ot_age: e.target.value }))}
+                              variant="filled" bg={inputBg} h="46px" borderRadius="md" fontSize="sm"
+                              _hover={{ bg: inputHoverBg }}
+                              _focus={{ borderColor: primaryColor, boxShadow: `0 0 0 2px ${inputFocusShadow}`, bg: inputFocusBg }}
+                            />
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" fontWeight="medium" color={secondaryTextColor} mb={1.5}>Level Budget</Text>
+                            <Select
+                              value={formData.ot_budget_level}
+                              onChange={e => setFormData(p => ({ ...p, ot_budget_level: e.target.value }))}
+                              variant="filled" bg={inputBg} h="46px" borderRadius="md" fontSize="sm"
+                              _hover={{ bg: inputHoverBg }}
+                              _focus={{ borderColor: primaryColor, bg: inputFocusBg }}
+                            >
+                              <option value="">Pilih budget...</option>
+                              <option value="1">1 — Di bawah Rp 500rb</option>
+                              <option value="2">2 — Rp 500rb–1jt</option>
+                              <option value="3">3 — Rp 1jt–2jt</option>
+                              <option value="4">4 — Rp 2jt–5jt</option>
+                              <option value="5">5 — Di atas Rp 5jt</option>
+                            </Select>
+                          </Box>
+                        </Grid>
+                      </Box>
+                      */}
                       <HStack justifyContent="flex-end" spacing={3} pt={4} mt={2} borderTop="1px dashed" borderColor={subtleBorderColor}>
                         <Button {...secondaryButtonStyle} onClick={handleCancelEdit} leftIcon={<CloseIcon boxSize={3} />}>Batal</Button>
                         <Button {...primaryButtonStyle} type="submit" isLoading={saving} leftIcon={<CheckIcon boxSize={3} />}>Simpan Perubahan</Button>
@@ -347,6 +437,27 @@ const Profile: React.FC = () => {
                       <InfoCard label="Nomor Telepon" value={userData.phone_number || '-'} iconAs={ChatIcon} {...infoCardProps} />
                       <InfoCard label="Bergabung Sejak" value={userData.joined_date} iconAs={TimeIcon} {...infoCardProps} />
                     </Grid>
+                    {/* HIDDEN: Preferensi Smart Open Trip (tampilan) — sembunyikan sementara, jangan hapus
+                    <Box pt={4} borderTop="1px dashed" borderColor={subtleBorderColor}>
+                      <Text fontSize="sm" fontWeight="semibold" color={primaryColor} mb={3}>Preferensi Smart Open Trip</Text>
+                      <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={5}>
+                        <InfoCard
+                          label="Usia"
+                          value={userData.ot_age != null ? `${userData.ot_age} tahun` : 'Belum diisi'}
+                          iconAs={InfoOutlineIcon} {...infoCardProps}
+                        />
+                        <InfoCard
+                          label="Level Budget"
+                          value={
+                            userData.ot_budget_level != null
+                              ? ['', 'Di bawah Rp 500rb', 'Rp 500rb–1jt', 'Rp 1jt–2jt', 'Rp 2jt–5jt', 'Di atas Rp 5jt'][userData.ot_budget_level] ?? 'Belum diisi'
+                              : 'Belum diisi'
+                          }
+                          iconAs={InfoOutlineIcon} {...infoCardProps}
+                        />
+                      </Grid>
+                    </Box>
+                    */}
                   </VStack>
                 )}
               </Box>

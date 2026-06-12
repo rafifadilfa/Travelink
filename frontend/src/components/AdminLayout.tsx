@@ -1,5 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  Badge,
   Box,
   Flex,
   Text,
@@ -25,9 +26,11 @@ import {
   FiLogOut,
   FiMenu,
   FiBell,
+  // HIDDEN: FiUserCheck,
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logoutAdmin } from '../utils/logout';
+import { adminApiClient } from '../services/api';
 
 interface NavItemProps extends FlexProps {
   icon: IconType;
@@ -46,6 +49,7 @@ interface AdminLayoutProps {
 const LinkItems = [
   { name: 'Verifikasi KYC',     icon: FiShield,     path: '/admin/kyc' },
   { name: 'Semua Guide',        icon: FiUsers,       path: '/admin/guides' },
+  // HIDDEN: { name: 'Pengguna', icon: FiUserCheck, path: '/admin/users' },
   { name: 'Verifikasi Cairkan', icon: FiCreditCard,  path: '/admin/withdrawals' },
 ];
 
@@ -128,11 +132,29 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const navigate = useNavigate();
   const pageBg = useColorModeValue('gray.100', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
 
   const adminRaw = localStorage.getItem('admin');
   const admin = adminRaw ? JSON.parse(adminRaw) : null;
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchUnread = () => {
+      adminApiClient.get('/notifications')
+          .then(res => setUnreadCount(res.data.unread_count ?? 0))
+          .catch(() => {});
+  };
+
+  useEffect(() => {
+      const token = localStorage.getItem('admin_token');
+      if (!token) return;
+      fetchUnread();
+      pollRef.current = setInterval(fetchUnread, 30_000);
+      return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
 
   return (
     <Box minH="100vh" bg={pageBg}>
@@ -180,12 +202,32 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </Text>
 
           <HStack spacing={{ base: '2', md: '6' }}>
-            <IconButton
-              size="lg"
-              variant="ghost"
-              aria-label="notifikasi"
-              icon={<FiBell />}
-            />
+            <Box position="relative" display="inline-flex">
+              <IconButton
+                size="lg"
+                variant="ghost"
+                aria-label="Notifikasi"
+                icon={<FiBell />}
+                onClick={() => navigate('/notifications')}
+              />
+              {unreadCount > 0 && (
+                <Badge
+                  position="absolute"
+                  top="2px"
+                  right="2px"
+                  colorScheme="red"
+                  borderRadius="full"
+                  fontSize="10px"
+                  minW="18px"
+                  h="18px"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Badge>
+              )}
+            </Box>
             <Flex alignItems="center">
               <HStack>
                 <Avatar

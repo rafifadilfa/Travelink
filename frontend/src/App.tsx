@@ -27,9 +27,11 @@ import AdminGuideList from './pages/AdminGuideList';
 import AdminPaymentList from './pages/AdminPaymentList';
 import AdminPaymentDetail from './pages/AdminPaymentDetail';
 import AdminWithdrawalList from './pages/AdminWithdrawalList';
+// HIDDEN: import AdminUserList from './pages/AdminUserList';
 import SmartOpenTripForm from './pages/SmartOpenTripForm';
 import WaitingRoom from './pages/WaitingRoom';
 import SearchResults from './pages/SearchResults';
+import NotificationsPage from './pages/NotificationsPage';
 
 interface ComingSoonProps { pageName: string; }
 interface ProtectedRouteProps {
@@ -89,6 +91,7 @@ const App: React.FC = () => {
       <Route path="/admin/payments"         element={<ProtectedRoute role="admin"><AdminPaymentList /></ProtectedRoute>} />
       <Route path="/admin/payments/:id"     element={<ProtectedRoute role="admin"><AdminPaymentDetail /></ProtectedRoute>} />
       <Route path="/admin/withdrawals"      element={<ProtectedRoute role="admin"><AdminWithdrawalList /></ProtectedRoute>} />
+      {/* HIDDEN: <Route path="/admin/users" element={<ProtectedRoute role="admin"><AdminUserList /></ProtectedRoute>} /> */}
 
       {/* Guide — tidak butuh verified */}
       <Route path="/guide/dashboard"        element={<ProtectedRoute role="guide"><GuideDashboard /></ProtectedRoute>} />
@@ -118,6 +121,10 @@ const App: React.FC = () => {
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
      
       
+      {/* Notifikasi — semua role, ProtectedRoute cukup cek tourist token;
+          resolveClient() di dalam halaman yang memilih client yang tepat */}
+      <Route path="/notifications" element={<NotificationsPage />} />
+
       {/* Settings (if needed) */}
       <Route
         path="/settings"

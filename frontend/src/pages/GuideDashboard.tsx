@@ -41,8 +41,12 @@ interface Completeness {
   about: boolean;
   languages: boolean;
   specialities: boolean;
+  experience_years: boolean;
+  base_rate: boolean;
   ktp_document: boolean;
+  selfie_ktp_document: boolean;
   certificate_document: boolean;
+  portfolio_document: boolean;
 }
 
 // ── ActionCard untuk dashboard verified ───────────────────────────────────
@@ -177,15 +181,29 @@ const GuideDashboard: React.FC = () => {
             p={{ base: 5, md: 8 }}
           >
             <HStack spacing={3} mb={2}>
-              <Icon as={FiClock} color={isPending ? 'blue.400' : 'orange.400'} boxSize={6} />
+              <Icon
+                as={FiClock}
+                color={isRejected ? 'orange.400' : isProfileComplete ? 'blue.400' : 'yellow.500'}
+                boxSize={6}
+              />
               <Heading size="md">
-                {isPending ? 'Menunggu Verifikasi Admin' : 'Verifikasi Memerlukan Perhatian'}
+                {isRejected
+                  ? 'Verifikasi Memerlukan Perhatian'
+                  : loadingProfile
+                    ? 'Memuat status akun...'
+                    : isProfileComplete
+                      ? 'Menunggu Verifikasi Admin'
+                      : 'Lengkapi Profil Anda'}
               </Heading>
             </HStack>
             <Text color={secondaryText} mb={6} fontSize="sm">
-              {isPending
-                ? 'Admin sedang meninjau akun Anda. Proses ini biasanya memakan waktu 1–3 hari kerja. Anda dapat mengelola dan menjual paket tour setelah akun diverifikasi.'
-                : 'Verifikasi akun Anda ditolak. Silakan hubungi admin atau lengkapi profil Anda dan ajukan ulang.'}
+              {isRejected
+                ? 'Verifikasi akun Anda ditolak. Silakan hubungi admin atau lengkapi profil Anda dan ajukan ulang.'
+                : loadingProfile
+                  ? ''
+                  : isProfileComplete
+                    ? 'Admin sedang meninjau akun Anda. Proses ini biasanya memakan waktu 1–3 hari kerja. Anda dapat mengelola dan menjual paket tour setelah akun diverifikasi.'
+                    : 'Harap lengkapi profil Anda terlebih dahulu untuk mendapatkan akses penuh aplikasi.'}
             </Text>
 
             <Divider mb={6} />
@@ -233,8 +251,11 @@ const GuideDashboard: React.FC = () => {
                     { key: 'about',                label: 'Tentang saya' },
                     { key: 'languages',            label: 'Minimal 1 bahasa' },
                     { key: 'specialities',         label: 'Minimal 1 spesialisasi' },
+                    { key: 'experience_years',     label: 'Tahun Pengalaman' },
+                    { key: 'base_rate',            label: 'Tarif Dasar (Rp)' },
                     { key: 'ktp_document',         label: 'Dokumen KTP' },
-                    { key: 'certificate_document', label: 'Sertifikat pemandu' },
+                    { key: 'selfie_ktp_document',  label: 'Selfie bersama KTP' },
+                    { key: 'portfolio_document',   label: 'Portofolio Trip' },
                   ].map(({ key, label }) => {
                     const done = completeness[key as keyof Completeness];
                     return (

@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Flex, Text, Heading, useColorModeValue, VStack, HStack,
-  Avatar, Spinner, Select, SimpleGrid, Progress,
+  Avatar, Spinner, Select, SimpleGrid, Progress, Badge,
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { FiStar } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import GuideLayout from '../components/GuideLayout';
 import { guideApiClient } from '../services/api';
 
 interface ReviewUser { id: number; name: string; avatar_url: string | null; }
 interface Review {
-  id: number; rating: number; comment: string | null;
-  created_at: string; user: ReviewUser | null;
+  id: string;
+  type: 'guide' | 'tour';
+  rating: number;
+  comment: string | null;
+  tour_name: string | null;
+  created_at: string;
+  user: ReviewUser | null;
 }
 interface Summary {
   average_rating: number; total_reviews: number;
@@ -26,9 +33,18 @@ const Stars = ({ rating }: { rating: number }) => (
 );
 
 const GuideReviews: React.FC = () => {
+  const navigate  = useNavigate();
   const secondary = useColorModeValue('gray.500', 'gray.400');
   const cardBg    = useColorModeValue('white', 'gray.800');
   const border    = useColorModeValue('gray.200', 'gray.700');
+
+  const guideRaw   = localStorage.getItem('guide');
+  const guide      = guideRaw ? JSON.parse(guideRaw) : null;
+  const isVerified = guide?.verification_status === 'verified';
+
+  useEffect(() => {
+    if (!isVerified) navigate('/guide/dashboard');
+  }, []);
 
   const [summary,  setSummary]  = useState<Summary | null>(null);
   const [reviews,  setReviews]  = useState<Review[]>([]);
@@ -54,9 +70,17 @@ const GuideReviews: React.FC = () => {
 
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
 
+  if (!isVerified) {
+    return <Flex justify="center" align="center" h="60vh"><Spinner size="xl" color="blue.400" /></Flex>;
+  }
+
   return (
     <GuideLayout>
       <Box maxW="container.lg" mx="auto">
+        <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondary}>
+          <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/guide/dashboard')}>Dashboard</BreadcrumbLink></BreadcrumbItem>
+          <BreadcrumbItem isCurrentPage><BreadcrumbLink color="blue.500" fontWeight="medium">Ulasan & Rating</BreadcrumbLink></BreadcrumbItem>
+        </Breadcrumb>
         <Heading as="h1" size="xl" mb={2}>Ulasan & Rating</Heading>
         <Text color={secondary} mb={6}>Lihat feedback wisatawan tentang Anda.</Text>
 
@@ -114,11 +138,21 @@ const GuideReviews: React.FC = () => {
             {reviews.map(r => (
               <Box key={r.id} bg={cardBg} p={5} borderRadius="lg" boxShadow="sm"
                 border="1px solid" borderColor={border}>
-                <Flex justify="space-between" mb={3}>
-                  <HStack>
+                <Flex justify="space-between" align="flex-start" mb={3} gap={2}>
+                  <HStack align="start" spacing={3}>
                     <Avatar name={r.user?.name ?? 'Wisatawan'} src={r.user?.avatar_url ?? undefined} size="sm" />
-                    <VStack align="start" spacing={0}>
-                      <Text fontWeight="semibold" fontSize="sm">{r.user?.name ?? 'Wisatawan'}</Text>
+                    <VStack align="start" spacing={0.5}>
+                      <HStack spacing={2}>
+                        <Text fontWeight="semibold" fontSize="sm">{r.user?.name ?? 'Wisatawan'}</Text>
+                        <Badge
+                          colorScheme={r.type === 'guide' ? 'blue' : 'teal'}
+                          fontSize="2xs"
+                          px={1.5}
+                          borderRadius="md"
+                        >
+                          {r.type === 'guide' ? 'Ulasan Pemandu' : `Paket: ${r.tour_name ?? '—'}`}
+                        </Badge>
+                      </HStack>
                       <Text fontSize="xs" color={secondary}>{fmtDate(r.created_at)}</Text>
                     </VStack>
                   </HStack>

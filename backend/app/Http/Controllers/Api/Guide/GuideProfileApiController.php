@@ -40,11 +40,11 @@ class GuideProfileApiController extends Controller
                 'portfolio_url'      => $url($guide->portfolio_document),
                 // Kelengkapan profil — flat (GuideDashboard) + nested (GuideEditProfile)
                 'completeness'       => $completeness,
-                'is_profile_complete' => $completeness['step1_complete'] && $completeness['step2']['ktp_document'] && $completeness['step2']['selfie_ktp_document'],
+                'is_profile_complete' => $completeness['step1_complete'] && $completeness['step2']['ktp_document'] && $completeness['step2']['selfie_ktp_document'] && $completeness['step2']['portfolio_document'],
                 'step1_complete'     => $completeness['step1_complete'],
                 'step2_complete'     => $completeness['step2_complete'],
-                // Guide bisa submit KYC kalau KTP + selfie sudah ada
-                'can_submit_kyc'     => !empty($guide->ktp_document) && !empty($guide->selfie_ktp_document),
+                // Guide bisa submit KYC kalau KTP + selfie + portofolio sudah ada
+                'can_submit_kyc'     => !empty($guide->ktp_document) && !empty($guide->selfie_ktp_document) && !empty($guide->portfolio_document),
             ]),
         ], 200);
     }
@@ -216,10 +216,10 @@ class GuideProfileApiController extends Controller
     {
         $guide = $request->user();
 
-        // Pastikan KTP dan selfie sudah ada sebelum submit
-        if (empty($guide->ktp_document) || empty($guide->selfie_ktp_document)) {
+        // Pastikan KTP, selfie, dan portofolio sudah ada sebelum submit
+        if (empty($guide->ktp_document) || empty($guide->selfie_ktp_document) || empty($guide->portfolio_document)) {
             return response()->json([
-                'message' => 'KTP dan selfie bersama KTP wajib diupload sebelum mengirim untuk verifikasi.',
+                'message' => 'KTP, selfie bersama KTP, dan portofolio trip wajib diupload sebelum mengirim untuk verifikasi.',
             ], 422);
         }
 
@@ -239,11 +239,12 @@ class GuideProfileApiController extends Controller
     private function buildCompleteness(Guide $guide): array
     {
         $step1 = [
-            'profile_picture' => !empty($guide->profile_picture),
-            'about'           => !empty($guide->about),
-            'languages'       => $guide->languages->count() > 0,
-            'specialities'    => $guide->specialities->count() > 0,
+            'profile_picture'  => !empty($guide->profile_picture),
+            'about'            => !empty($guide->about),
+            'languages'        => $guide->languages->count() > 0,
+            'specialities'     => $guide->specialities->count() > 0,
             'experience_years' => ($guide->experience_years ?? 0) > 0,
+            'base_rate'        => !is_null($guide->base_rate) && $guide->base_rate > 0,
         ];
 
         $step2 = [
@@ -254,8 +255,8 @@ class GuideProfileApiController extends Controller
         ];
 
         $step1Complete = !in_array(false, $step1, true);
-        // Step 2 selesai jika KTP + selfie ada (sertifikat & portofolio opsional)
-        $step2Complete = $step2['ktp_document'] && $step2['selfie_ktp_document'];
+        // Step 2 selesai jika KTP + selfie + portofolio ada (sertifikat opsional)
+        $step2Complete = $step2['ktp_document'] && $step2['selfie_ktp_document'] && $step2['portfolio_document'];
 
         // Flat fields dipertahankan agar GuideDashboard tetap bisa baca
         return array_merge(
@@ -264,8 +265,12 @@ class GuideProfileApiController extends Controller
                 'about'                => $step1['about'],
                 'languages'            => $step1['languages'],
                 'specialities'         => $step1['specialities'],
+                'experience_years'     => $step1['experience_years'],
+                'base_rate'            => $step1['base_rate'],
                 'ktp_document'         => $step2['ktp_document'],
+                'selfie_ktp_document'  => $step2['selfie_ktp_document'],
                 'certificate_document' => $step2['certificate_document'],
+                'portfolio_document'   => $step2['portfolio_document'],
             ],
             [
                 'step1'          => $step1,

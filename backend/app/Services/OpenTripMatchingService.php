@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\OpenTripGroup;
 use App\Models\OpenTripParticipant;
+use App\Models\Tour;
+use App\Services\NotificationService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -211,6 +213,20 @@ class OpenTripMatchingService
                 'members'        => $memberDetails,
                 'group_profile'  => $finalProfile,
             ];
+
+            // TC-036: notifikasi pemandu pemilik paket — grup terbentuk
+            $tour    = Tour::find($tourId);
+            $guideId = $tour?->tour_guide_id;
+            if ($guideId) {
+                NotificationService::send(
+                    'open_trip_group_formed',
+                    'guide',
+                    $guideId,
+                    'Grup Open Trip Siap',
+                    'Grup untuk paket ' . ($tour->name ?? 'wisata') . ' telah mencapai kuota minimum.',
+                    ['group_id' => $group->id, 'tour_id' => $tourId]
+                );
+            }
         });
 
         return $result;

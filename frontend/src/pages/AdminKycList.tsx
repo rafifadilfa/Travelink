@@ -16,6 +16,9 @@ import {
   HStack,
   Icon,
   useColorModeValue,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
 } from '@chakra-ui/react';
 import { FiShield, FiClock, FiCheckCircle } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -66,6 +69,10 @@ const AdminKycList: React.FC = () => {
 
   return (
     <AdminLayout>
+      <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryTxt}>
+        <BreadcrumbItem><BreadcrumbLink onClick={() => navigate('/admin/kyc')}>Admin</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem isCurrentPage><BreadcrumbLink color="purple.500" fontWeight="medium">Verifikasi KYC</BreadcrumbLink></BreadcrumbItem>
+      </Breadcrumb>
       {/* Header */}
       <Flex align="center" mb={2}>
         <Icon as={FiShield} color="purple.500" boxSize={7} mr={3} />
