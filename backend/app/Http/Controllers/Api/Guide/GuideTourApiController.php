@@ -57,7 +57,7 @@ class GuideTourApiController extends Controller
             'is_open_trip'   => (bool) $tour->is_open_trip,
             'available_days' => $tour->availabilities->pluck('day_of_week')->values(),
             'itinerary'      => $tour->itineraries->map(fn($it) => [
-                'time'     => $it->start_time ?? '',
+                'time'     => $it->start_time ? substr($it->start_time, 0, 5) : '',
                 'activity' => $it->activity ?? '',
             ])->values(),
             'included' => $included->isEmpty() ? [''] : $included->toArray(),
