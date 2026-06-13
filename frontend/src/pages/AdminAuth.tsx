@@ -36,6 +36,7 @@ const AdminAuth: React.FC = () => {
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors]     = useState<string[]>([]);
   const [isLoading, setIsLoading]         = useState(false);
   const [isHoveringSubmit, setIsHoveringSubmit] = useState(false);
@@ -278,16 +279,36 @@ const AdminAuth: React.FC = () => {
 
               <div>
                 <label style={labelStyle}>Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password"
-                  style={{ ...inputStyle, borderColor: errors.length > 0 ? '#dc3545' : BASE_INPUT_BORDER_COLOR }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR)}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = errors.length > 0 ? '#dc3545' : BASE_INPUT_BORDER_COLOR)}
-                  disabled={isLoading}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Masukkan password"
+                    style={{ ...inputStyle, borderColor: errors.length > 0 ? '#dc3545' : BASE_INPUT_BORDER_COLOR }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR)}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = errors.length > 0 ? '#dc3545' : BASE_INPUT_BORDER_COLOR)}
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{
+                      position: 'absolute',
+                      right: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#6c757d',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      padding: '5px',
+                    }}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
 
               <button

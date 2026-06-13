@@ -202,7 +202,11 @@ const GuideEditProfile: React.FC = () => {
       }
       toast({ title: 'Profil berhasil disimpan!', status: 'success', duration: 3000, isClosable: true, position: 'top' });
     } catch (err: any) {
-      toast({ title: 'Gagal menyimpan', description: err.response?.data?.message ?? 'Coba lagi.', status: 'error', duration: 4000, isClosable: true });
+      const errs = err.response?.data?.errors as Record<string, string[]> | undefined;
+      const description = errs
+        ? Object.values(errs).flat()[0]
+        : (err.response?.data?.message ?? 'Coba lagi.');
+      toast({ title: 'Gagal menyimpan', description, status: 'error', duration: 5000, isClosable: true, position: 'top' });
     } finally {
       setIsSaving(false);
     }
@@ -379,7 +383,18 @@ const GuideEditProfile: React.FC = () => {
                           style={{ display: 'none' }}
                           onChange={e => {
                             const f = e.target.files?.[0];
-                            if (f) { setPhotoFile(f); setPhotoPreview(URL.createObjectURL(f)); }
+                            if (!f) return;
+                            if (f.size > 2 * 1024 * 1024) {
+                              toast({
+                                title: 'Foto terlalu besar',
+                                description: 'Foto profil maksimal 2MB. Pilih foto dengan ukuran lebih kecil.',
+                                status: 'error', duration: 5000, isClosable: true, position: 'top',
+                              });
+                              e.target.value = '';
+                              return;
+                            }
+                            setPhotoFile(f);
+                            setPhotoPreview(URL.createObjectURL(f));
                           }} />
                       </Stack>
                     </FormControl>
@@ -487,7 +502,13 @@ const GuideEditProfile: React.FC = () => {
                     </FormControl>
                     <FormControl>
                       <FormLabel>Nomor Rekening</FormLabel>
-                      <Input value={bankAccount} onChange={e => setBankAccount(e.target.value)} bg={inputBg} placeholder="cth: 1234567890" />
+                      <Input
+                        value={bankAccount}
+                        onChange={e => setBankAccount(e.target.value.replace(/\D/g, ''))}
+                        inputMode="numeric"
+                        bg={inputBg}
+                        placeholder="cth: 1234567890"
+                      />
                     </FormControl>
                     <FormControl>
                       <FormLabel>Atas Nama</FormLabel>
