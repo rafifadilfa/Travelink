@@ -295,7 +295,16 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
                                 </Badge>
                             )}
                         </Box>
-                        <Flex alignItems={'center'}>
+                        <Flex
+                            alignItems="center"
+                            cursor="pointer"
+                            borderRadius="lg"
+                            px={2} py={1}
+                            _hover={{ bg: useColorModeValue('gray.100', 'gray.700') }}
+                            transition="background 0.15s"
+                            onClick={() => navigate('/guide/profile')}
+                            title="Lihat Profil Saya"
+                        >
                             <HStack>
                                 <Avatar size={'sm'} src={avatarSrc} name={guide?.name ?? 'Guide'} />
                                 <VStack display={{ base: 'none', md: 'flex' }} alignItems="flex-start" spacing="1px" ml="2">
