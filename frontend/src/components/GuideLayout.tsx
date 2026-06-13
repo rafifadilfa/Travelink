@@ -113,9 +113,14 @@ const SidebarContent = ({ onClose, onNavigate, onLogout, ...rest }: SidebarProps
         {...rest}
     >
         <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
-            <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
-                Travelink
-            </Text>
+            <Box>
+                <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold">
+                    Travelink
+                </Text>
+                <Text fontSize="xs" color="blue.500" fontWeight="semibold" letterSpacing="wide">
+                    PEMANDU WISATA
+                </Text>
+            </Box>
             <CloseButton display={{ base: 'flex', md: 'none' }} onClick={onClose} />
         </Flex>
         {LinkItems.map((link) => (
@@ -366,8 +371,8 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
                         <AlertDialogHeader fontSize="lg" fontWeight="bold">Keluar dari Travelink</AlertDialogHeader>
                         <AlertDialogBody>Apakah Anda yakin ingin keluar?</AlertDialogBody>
                         <AlertDialogFooter gap={3}>
-                            <Button ref={logoutCancelRef} onClick={closeLogout}>Tidak</Button>
-                            <Button colorScheme="red" onClick={() => void logoutGuide()}>Ya</Button>
+                            <Button ref={logoutCancelRef} bg="blue.500" color="white" _hover={{ bg: 'blue.600' }} onClick={closeLogout}>Tidak</Button>
+                            <Button bg="red.500" color="white" _hover={{ bg: 'red.600' }} onClick={() => void logoutGuide()}>Ya, Keluar</Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialogOverlay>

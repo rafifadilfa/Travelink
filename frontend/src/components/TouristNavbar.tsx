@@ -173,27 +173,26 @@ const TouristNavbar: React.FC = () => {
                             </Heading>
                         </Flex>
 
-                        {/* Search bar */}
-                        <InputGroup size="sm" maxW={{ base: '160px', md: '280px' }} flex="1">
-                            <InputLeftElement pointerEvents="none">
-                                <SearchIcon color="gray.400" boxSize={3.5} />
-                            </InputLeftElement>
-                            <Input
-                                placeholder="Cari pemandu..."
-                                value={searchInput}
-                                onChange={e => setSearchInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                                bg={inputBg}
-                                border="1px solid"
-                                borderColor={subtleBorder}
-                                borderRadius="full"
-                                fontSize="sm"
-                                _focus={{ borderColor: 'blue.400', boxShadow: `0 0 0 1px ${focusShadow}` }}
-                            />
-                        </InputGroup>
-
                         {/* Action buttons */}
                         <HStack spacing={2} flexShrink={0}>
+                            {/* Search bar — didekatkan dengan tombol Explore */}
+                            <InputGroup size="sm" w={{ base: '140px', md: '220px' }} display={{ base: 'none', md: 'flex' }}>
+                                <InputLeftElement pointerEvents="none">
+                                    <SearchIcon color="gray.400" boxSize={3.5} />
+                                </InputLeftElement>
+                                <Input
+                                    placeholder="Cari pemandu..."
+                                    value={searchInput}
+                                    onChange={e => setSearchInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                                    bg={inputBg}
+                                    border="1px solid"
+                                    borderColor={subtleBorder}
+                                    borderRadius="full"
+                                    fontSize="sm"
+                                    _focus={{ borderColor: 'blue.400', boxShadow: `0 0 0 1px ${focusShadow}` }}
+                                />
+                            </InputGroup>
                             <Button
                                 {...exploreBtnStyle}
                                 display={{ base: 'none', md: 'flex' }}
@@ -304,8 +303,8 @@ const TouristNavbar: React.FC = () => {
                         <AlertDialogHeader fontSize="lg" fontWeight="bold">Keluar dari Travelink</AlertDialogHeader>
                         <AlertDialogBody>Apakah Anda yakin ingin keluar?</AlertDialogBody>
                         <AlertDialogFooter gap={3}>
-                            <Button ref={logoutCancelRef} onClick={closeLogout}>Tidak</Button>
-                            <Button colorScheme="red" onClick={() => void logoutUser()}>Ya</Button>
+                            <Button ref={logoutCancelRef} bg="blue.500" color="white" _hover={{ bg: 'blue.600' }} onClick={closeLogout}>Tidak</Button>
+                            <Button bg="red.500" color="white" _hover={{ bg: 'red.600' }} onClick={() => void logoutUser()}>Ya, Keluar</Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialogOverlay>

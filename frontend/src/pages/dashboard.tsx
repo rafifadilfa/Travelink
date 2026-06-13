@@ -72,7 +72,6 @@ const bookingStatusLabel = (status: string): { label: string; color: string } =>
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [favorites, setFavorites] = useState<number[]>([]);
 
   // Data dari API
   const [featuredTours, setFeaturedTours]       = useState<ApiTour[]>([]);
@@ -101,9 +100,7 @@ const Dashboard: React.FC = () => {
   const primaryBtnHoverTo  = useColorModeValue('blue.500', 'blue.400');
   const secondaryHoverBg   = useColorModeValue('blue.50', 'rgba(49,130,206,0.08)');
   const bgPatternOpacity   = useColorModeValue(0.02, 0.01);
-  const favBtnBg           = useColorModeValue('white', 'gray.600');
-  const favBtnHoverBg      = useColorModeValue('gray.100', 'gray.500');
-  const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700');
+const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700');
   const starEmptyColor     = useColorModeValue('gray.300', 'gray.600');
 
   // ── Keyframes ─────────────────────────────────────────────────────────────
@@ -135,9 +132,6 @@ const Dashboard: React.FC = () => {
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(price);
 
-  const isFavorite = (id: number) => favorites.includes(id);
-  const toggleFavorite = (id: number) =>
-    setFavorites(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   // ── Fetch data ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -239,24 +233,6 @@ const Dashboard: React.FC = () => {
                         <Badge key={tag} variant="solid" bgGradient={accentGradient} color="white" px={2.5} py={1} borderRadius="md" fontSize="xs" boxShadow="sm">{tag}</Badge>
                       ))}
                     </HStack>
-                    <IconButton
-                      aria-label={`Favorit ${tour.name}`}
-                      icon={
-                        <Icon viewBox="0 0 24 24" boxSize="20px"
-                          fill={isFavorite(tour.id) ? "white" : favBtnBg}
-                          stroke={isFavorite(tour.id) ? "red.500" : secondaryTextColor}
-                          strokeWidth="1.5px"
-                        >
-                          <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                        </Icon>
-                      }
-                      isRound size="md"
-                      bg={isFavorite(tour.id) ? "red.500" : favBtnBg}
-                      position="absolute" top={4} right={4} boxShadow="md"
-                      _hover={{ bg: isFavorite(tour.id) ? "red.600" : favBtnHoverBg, transform: 'scale(1.1)', boxShadow: 'lg' }}
-                      transition="all 0.2s ease" zIndex={2}
-                      onClick={e => { e.stopPropagation(); toggleFavorite(tour.id); }}
-                    />
                     <Flex position="absolute" bottom={4} left={4} bg={ratingBadgeBg} backdropFilter="blur(8px)" px={3} py={1.5} borderRadius="lg" alignItems="center" boxShadow="md">
                       <Icon as={ChakraStarIcon} fill="yellow.400" color="yellow.400" boxSize={4} mr={1.5} />
                       <Text fontWeight="bold" color={primaryTextColor} fontSize="sm">{tour.rating.toFixed(1)}</Text>
