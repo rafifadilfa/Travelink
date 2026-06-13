@@ -201,6 +201,31 @@ class GuideTourApiController extends Controller
     }
 
     // ================================================================
+    // PATCH /api/guide/tours/{id}/status
+    // ================================================================
+    public function toggleStatus(Request $request, int $id): JsonResponse
+    {
+        $guide = $request->user();
+        $tour  = Tour::where('tour_guide_id', $guide->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:draft,published'],
+        ]);
+
+        $tour->tour_status = $validated['status'];
+        $tour->save();
+
+        $message = $validated['status'] === 'published'
+            ? 'Tour berhasil dipublish.'
+            : 'Tour dikembalikan ke draft.';
+
+        return response()->json([
+            'message' => $message,
+            'status'  => $tour->tour_status,
+        ], 200);
+    }
+
+    // ================================================================
     // DELETE /api/guide/tours/{id}  (soft delete)
     // TC-023: Blokir hapus jika ada booking aktif.
     // ================================================================
