@@ -183,6 +183,7 @@ Route::prefix('guide')->group(function () {
             Route::get('wallet',                      [GuideWalletApiController::class, 'index']);
 
             // Pencairan dana
+            Route::get('withdrawals',                 [GuideWithdrawalApiController::class, 'index']);
             Route::post('withdrawals',                [GuideWithdrawalApiController::class, 'store']);
         });
     });
