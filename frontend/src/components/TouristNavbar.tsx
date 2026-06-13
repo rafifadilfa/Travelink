@@ -26,10 +26,19 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
 import { logoutUser } from '../utils/logout';
 
+interface UserProfile {
+    name: string;
+    profile_photo_path?: string | null;
+}
+
 const TouristNavbar: React.FC = () => {
     const navigate = useNavigate();
     const [searchInput,  setSearchInput]  = useState('');
     const [unreadCount,  setUnreadCount]  = useState(0);
+    const [userProfile,  setUserProfile]  = useState<UserProfile | null>(() => {
+        const raw = localStorage.getItem('user');
+        return raw ? JSON.parse(raw) as UserProfile : null;
+    });
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const { isOpen: isLogoutOpen, onOpen: openLogout, onClose: closeLogout } = useDisclosure();
@@ -46,8 +55,22 @@ const TouristNavbar: React.FC = () => {
         if (!token) return;
         fetchUnread();
         pollRef.current = setInterval(fetchUnread, 30_000);
+
+        apiClient.get<{ user: UserProfile }>('/auth/user')
+            .then(res => {
+                const fresh = res.data.user;
+                setUserProfile(fresh);
+                localStorage.setItem('user', JSON.stringify(fresh));
+            })
+            .catch(() => {});
+
         return () => { if (pollRef.current) clearInterval(pollRef.current); };
     }, []);
+
+    const apiBase = ((import.meta.env.VITE_API_URL as string) ?? '').replace('/api', '');
+    const avatarSrc = userProfile?.profile_photo_path
+        ? `${apiBase}/storage/${userProfile.profile_photo_path}`
+        : undefined;
 
     const glassBg          = useColorModeValue('rgba(255, 255, 255, 0.9)', 'rgba(26, 32, 44, 0.85)');
     const primaryColor     = useColorModeValue('blue.500', 'blue.400');
@@ -228,7 +251,8 @@ const TouristNavbar: React.FC = () => {
                                     position="relative"
                                 >
                                     <Avatar
-                                        name="User"
+                                        src={avatarSrc}
+                                        name={userProfile?.name ?? 'User'}
                                         boxSize="38px"
                                         border="2px solid"
                                         borderColor="transparent"
@@ -271,7 +295,7 @@ const TouristNavbar: React.FC = () => {
             {/* Dialog konfirmasi logout */}
             <AlertDialog
                 isOpen={isLogoutOpen}
-                leastDestructiveRef={logoutCancelRef}
+                leastDestructiveRef={logoutCancelRef as React.RefObject<HTMLButtonElement>}
                 onClose={closeLogout}
                 isCentered
             >

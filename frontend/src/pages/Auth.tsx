@@ -49,11 +49,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [currentDestination, setCurrentDestination] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isHoveringSubmit, setIsHoveringSubmit] = useState(false);
   const [isHoveringGuideLogin, setIsHoveringGuideLogin] = useState(false);
   const [loginErrors, setLoginErrors] = useState<{ [key: string]: string }>({});
   const [registerErrors, setRegisterErrors] = useState<{ [key: string]: string }>({});
   const [resetErrors, setResetErrors] = useState<{ [key: string]: string }>({});
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
 
   useEffect(() => {
@@ -118,16 +120,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         password_confirmation: confirmPassword,
       });
 
-      console.log('Register success:', response.data);
-      
       if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-
-        if (onLogin) {
-          onLogin();
-        }
-        navigate('/dashboard');
+        setUsername('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setRegisterSuccess(true);
+        setActiveTab('login');
       }
     } catch (error: any) {
       console.error('Register error:', {
@@ -392,6 +391,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   setActiveTab(tabName as 'login' | 'signup');
                   setLoginErrors({});
                   setRegisterErrors({});
+                  setRegisterSuccess(false);
                 }}
               >
                 {tabName === 'login' ? 'Sign In' : 'Sign Up'}
@@ -402,6 +402,21 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           {activeTab === 'login' && (
             <form onSubmit={handleLogin}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {registerSuccess && (
+                  <div style={{
+                    padding: '12px 16px',
+                    backgroundColor: '#d1e7dd',
+                    borderRadius: '6px',
+                    color: '#0f5132',
+                    fontSize: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
+                    <span>✓</span>
+                    <span>Akun berhasil dibuat! Silakan masuk dengan email dan password Anda.</span>
+                  </div>
+                )}
                 {loginErrors.general && (
                   <div style={{
                     padding: '12px',
@@ -614,19 +629,39 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   <label style={{ fontWeight: '500', marginBottom: '8px', display: 'block', color: '#343a40' }}>
                     Confirm Password
                   </label>
-                  <input
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
-                    style={{
-                      ...inputStyle,
-                      borderColor: registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR
-                    }}
-                    onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
-                    onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
-                  />
-                  {registerErrors.password_confirmation && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{registerErrors.password_confirmation}</p>}
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      value={confirmPassword}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                      style={{
+                        ...inputStyle,
+                        borderColor: registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR
+                      }}
+                      onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR}
+                      onBlur={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.style.borderColor = registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR}
+                    />
+                    {registerErrors.password_confirmation && <p style={{ color: '#dc3545', fontSize: '13px', marginTop: '5px' }}>{registerErrors.password_confirmation}</p>}
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '12px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#6c757d',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        padding: '5px',
+                      }}
+                    >
+                      {showConfirmPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
                 </div>
 
                 <button

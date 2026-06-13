@@ -31,6 +31,7 @@ const GuideAuth: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isHoveringSubmit, setIsHoveringSubmit] = useState(false);
 
@@ -448,19 +449,24 @@ const GuideAuth: React.FC = () => {
 
                 <div>
                   <label style={labelStyle}>Konfirmasi Password</label>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Ulangi password Anda"
-                    value={signupPasswordConfirm}
-                    onChange={(e) => setSignupPasswordConfirm(e.target.value)}
-                    required
-                    style={{ ...inputStyle, borderColor: registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR)}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR)}
-                  />
-                  {registerErrors.password_confirmation && (
-                    <p style={fieldErrorStyle}>{registerErrors.password_confirmation}</p>
-                  )}
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Ulangi password Anda"
+                      value={signupPasswordConfirm}
+                      onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+                      required
+                      style={{ ...inputStyle, borderColor: registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = FOCUSED_INPUT_BORDER_COLOR)}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = registerErrors.password_confirmation ? '#dc3545' : BASE_INPUT_BORDER_COLOR)}
+                    />
+                    {registerErrors.password_confirmation && (
+                      <p style={fieldErrorStyle}>{registerErrors.password_confirmation}</p>
+                    )}
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={showHideButtonStyle}>
+                      {showConfirmPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
 
                 <button

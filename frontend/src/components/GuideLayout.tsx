@@ -166,6 +166,12 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    const parseGuide = () => {
+        const raw = localStorage.getItem('guide');
+        return raw ? JSON.parse(raw) : null;
+    };
+    const [guide, setGuide] = useState(parseGuide);
+
     const fetchUnread = () => {
         guideApiClient.get('/notifications')
             .then(res => setUnreadCount(res.data.unread_count ?? 0))
@@ -177,15 +183,21 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
         if (!token) return;
         fetchUnread();
         pollRef.current = setInterval(fetchUnread, 30_000);
+
+        guideApiClient.get<{ guide: typeof guide }>('/guide/auth/guide')
+            .then(res => {
+                const fresh = res.data.guide;
+                setGuide(fresh);
+                localStorage.setItem('guide', JSON.stringify(fresh));
+            })
+            .catch(() => {});
+
         return () => { if (pollRef.current) clearInterval(pollRef.current); };
     }, []);
 
     const pageBg = useColorModeValue('gray.100', 'gray.900');
     const cardBg = useColorModeValue('white', 'gray.800');
 
-    // Baca data guide dari localStorage — disimpan saat login di GuideAuth.tsx
-    const guideRaw   = localStorage.getItem('guide');
-    const guide      = guideRaw ? JSON.parse(guideRaw) : null;
     const isVerified = guide?.verification_status === 'verified';
 
     const handleNavigation = (path: string) => {
@@ -207,11 +219,9 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
     const location = useLocation();
     const isOnRestrictedPath = RESTRICTED_PATHS.includes(location.pathname);
 
-    // Konversi path storage Laravel ke URL penuh untuk foto profil
-    // Contoh: "public/guides/photos/file.jpg" → "http://localhost:8000/storage/guides/photos/file.jpg"
     const apiBase = ((import.meta.env.VITE_API_URL as string) ?? '').replace('/api', '');
     const avatarSrc = guide?.profile_picture
-        ? `${apiBase}/${guide.profile_picture.replace('public/', 'storage/')}`
+        ? `${apiBase}/storage/${guide.profile_picture}`
         : undefined;
 
     return (
@@ -338,7 +348,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
             {/* TC-010/011: Dialog konfirmasi logout pemandu */}
             <AlertDialog
                 isOpen={isLogoutOpen}
-                leastDestructiveRef={logoutCancelRef}
+                leastDestructiveRef={logoutCancelRef as React.RefObject<HTMLButtonElement>}
                 onClose={closeLogout}
                 isCentered
             >
