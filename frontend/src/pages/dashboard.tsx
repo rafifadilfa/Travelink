@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Box, Button, Flex, Text, Heading, Image, Container, Grid,
   useColorModeValue, IconButton, Icon, Badge, VStack, HStack,
-  Spinner,
+  Spinner, Avatar,
 } from '@chakra-ui/react';
 import { ArrowForwardIcon, StarIcon as ChakraStarIcon } from '@chakra-ui/icons';
 import TouristNavbar from '../components/TouristNavbar';
