@@ -5,6 +5,7 @@ import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { FiStar } from 'react-icons/fi';
+import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import GuideLayout from '../components/GuideLayout';
 import { guideApiClient } from '../services/api';
@@ -24,13 +25,20 @@ interface Summary {
   distribution: Record<number, number>;
 }
 
-const Stars = ({ rating }: { rating: number }) => (
-  <HStack spacing={0.5}>
-    {[1,2,3,4,5].map(i => (
-      <Box key={i} as={FiStar} color={i <= rating ? 'yellow.400' : 'gray.300'} fontSize="sm" />
-    ))}
-  </HStack>
-);
+const Stars = ({ rating }: { rating: number }) => {
+  const rounded = Math.round(rating * 2) / 2;
+  return (
+    <HStack spacing={0.5}>
+      {[1,2,3,4,5].map(i => {
+        let icon;
+        if (i <= Math.floor(rounded)) icon = FaStar;
+        else if (i === Math.ceil(rounded) && rounded % 1 !== 0) icon = FaStarHalfAlt;
+        else icon = FaRegStar;
+        return <Box key={i} as={icon} color="yellow.400" fontSize="sm" />;
+      })}
+    </HStack>
+  );
+};
 
 const GuideReviews: React.FC = () => {
   const navigate  = useNavigate();
@@ -92,7 +100,7 @@ const GuideReviews: React.FC = () => {
               <Text fontSize="5xl" fontWeight="bold" color="blue.500">
                 {summary.average_rating.toFixed(1)}
               </Text>
-              <Stars rating={Math.round(summary.average_rating)} />
+              <Stars rating={summary.average_rating} />
               <Text mt={2} color={secondary}>{summary.total_reviews} ulasan</Text>
             </Box>
 
