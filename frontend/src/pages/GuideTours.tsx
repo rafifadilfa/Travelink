@@ -229,7 +229,7 @@ const GuideTours: React.FC = () => {
                                         icon={<FiEye />}
                                         aria-label="View Tour"
                                         variant="ghost"
-                                        onClick={() => navigate(`/tours/${tour.id}`)}
+                                        onClick={() => navigate(`/guide/tours/${tour.id}/preview`)}
                                     />
                                     <IconButton
                                         icon={<FiEdit />}

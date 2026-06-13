@@ -32,6 +32,7 @@ import SmartOpenTripForm from './pages/SmartOpenTripForm';
 import WaitingRoom from './pages/WaitingRoom';
 import SearchResults from './pages/SearchResults';
 import NotificationsPage from './pages/NotificationsPage';
+import GuideTourPreview from './pages/GuideTourPreview';
 
 interface ComingSoonProps { pageName: string; }
 interface ProtectedRouteProps {
@@ -104,6 +105,7 @@ const App: React.FC = () => {
       <Route path="/guide/tours"            element={<ProtectedRoute role="guide" requireVerified><GuideTours /></ProtectedRoute>} />
       <Route path="/guide/tours/new"        element={<ProtectedRoute role="guide" requireVerified><CreateTour /></ProtectedRoute>} />
       <Route path="/guide/tours/edit/:tourId" element={<ProtectedRoute role="guide" requireVerified><EditTour /></ProtectedRoute>} />
+      <Route path="/guide/tours/:id/preview"  element={<ProtectedRoute role="guide" requireVerified><GuideTourPreview /></ProtectedRoute>} />
       <Route path="/guide/bookings"         element={<ProtectedRoute role="guide" requireVerified><GuideBookings /></ProtectedRoute>} />
       <Route path="/guide/bookings/cancel/:bookingId" element={<ProtectedRoute role="guide" requireVerified><CancelBooking /></ProtectedRoute>} />
       
