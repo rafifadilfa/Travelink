@@ -162,6 +162,7 @@ Route::prefix('guide')->group(function () {
             Route::get('tours/{id}',               [GuideTourApiController::class, 'show']);
             Route::put('tours/{id}',               [GuideTourApiController::class, 'update']);
             Route::post('tours/{id}',              [GuideTourApiController::class, 'update']); // method override dari PUT via FormData
+            Route::patch('tours/{id}/status',      [GuideTourApiController::class, 'toggleStatus']);
             Route::delete('tours/{id}',            [GuideTourApiController::class, 'destroy']);
             Route::post('tours/{id}/images',              [GuideTourApiController::class, 'uploadImages']);
             Route::delete('tours/{id}/images/{imageId}',  [GuideTourApiController::class, 'destroyImage']);

@@ -57,7 +57,7 @@ class GuideTourApiController extends Controller
             'is_open_trip'   => (bool) $tour->is_open_trip,
             'available_days' => $tour->availabilities->pluck('day_of_week')->values(),
             'itinerary'      => $tour->itineraries->map(fn($it) => [
-                'time'     => $it->start_time ?? '',
+                'time'     => $it->start_time ? substr($it->start_time, 0, 5) : '',
                 'activity' => $it->activity ?? '',
             ])->values(),
             'included' => $included->isEmpty() ? [''] : $included->toArray(),
@@ -197,6 +197,31 @@ class GuideTourApiController extends Controller
         return response()->json([
             'message' => 'Tour berhasil diperbarui.',
             'tour'    => $this->formatTourDetail($tour),
+        ], 200);
+    }
+
+    // ================================================================
+    // PATCH /api/guide/tours/{id}/status
+    // ================================================================
+    public function toggleStatus(Request $request, int $id): JsonResponse
+    {
+        $guide = $request->user();
+        $tour  = Tour::where('tour_guide_id', $guide->id)->findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => ['required', 'in:draft,published'],
+        ]);
+
+        $tour->tour_status = $validated['status'];
+        $tour->save();
+
+        $message = $validated['status'] === 'published'
+            ? 'Tour berhasil dipublish.'
+            : 'Tour dikembalikan ke draft.';
+
+        return response()->json([
+            'message' => $message,
+            'status'  => $tour->tour_status,
         ], 200);
     }
 

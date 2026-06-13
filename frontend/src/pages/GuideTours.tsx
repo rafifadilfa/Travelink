@@ -59,6 +59,7 @@ const GuideTours: React.FC = () => {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [tourToDelete, setTourToDelete] = useState<number | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [togglingStatusId, setTogglingStatusId] = useState<number | null>(null);
 
     const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -78,6 +79,25 @@ const GuideTours: React.FC = () => {
     };
 
     useEffect(() => { fetchTours(); }, []);
+
+    const toggleStatus = async (tour: TourRow) => {
+        const newStatus = tour.status === 'published' ? 'draft' : 'published';
+        setTogglingStatusId(tour.id);
+        try {
+            await guideApiClient.patch(`/guide/tours/${tour.id}/status`, { status: newStatus });
+            setTours(prev => prev.map(t => t.id === tour.id ? { ...t, status: newStatus } : t));
+            toast({
+                title: newStatus === 'published' ? 'Tour berhasil dipublish!' : 'Tour dikembalikan ke draft.',
+                status: 'success',
+                duration: 3000,
+                isClosable: true,
+            });
+        } catch {
+            toast({ title: 'Gagal mengubah status tour', status: 'error', duration: 3000, isClosable: true });
+        } finally {
+            setTogglingStatusId(null);
+        }
+    };
 
     const openDeleteDialog = (tourId: number) => {
         setTourToDelete(tourId);
@@ -196,6 +216,15 @@ const GuideTours: React.FC = () => {
                                     Rp {tour.price.toLocaleString('id-ID')}
                                 </Text>
                                 <HStack spacing={2}>
+                                    <Button
+                                        size="sm"
+                                        colorScheme={tour.status === 'published' ? 'orange' : 'green'}
+                                        variant="outline"
+                                        isLoading={togglingStatusId === tour.id}
+                                        onClick={() => toggleStatus(tour)}
+                                    >
+                                        {tour.status === 'published' ? 'Unpublish' : 'Publish'}
+                                    </Button>
                                     <IconButton
                                         icon={<FiEye />}
                                         aria-label="View Tour"
