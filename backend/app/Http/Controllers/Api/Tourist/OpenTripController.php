@@ -469,6 +469,62 @@ class OpenTripController extends Controller
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // POST /api/open-trip/confirm
+    // TC-056: Peserta konfirmasi keikutsertaan dalam window 6 jam setelah
+    // countdown grup berakhir (expires_at sudah lewat, tapi belum > +6 jam).
+    // ════════════════════════════════════════════════════════════════════════
+
+    public function confirm(Request $request): JsonResponse
+    {
+        $request->validate([
+            'participant_id' => ['required', 'integer'],
+        ]);
+
+        $participant = OpenTripParticipant::where('id', $request->integer('participant_id'))
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        // Harus sudah masuk grup (status matched)
+        if ($participant->status !== 'matched' || ! $participant->group_id) {
+            return response()->json([
+                'message' => 'Kamu belum masuk ke grup Smart Open Trip.',
+            ], 422);
+        }
+
+        $group = $participant->group;
+
+        // Countdown harus sudah habis (expires_at sudah lewat)
+        if ($group->isActive()) {
+            return response()->json([
+                'message' => 'Countdown belum berakhir. Konfirmasi akan tersedia setelah countdown habis.',
+            ], 422);
+        }
+
+        // Window 6 jam setelah countdown harus belum lewat
+        $confirmationDeadline = $group->expires_at->addHours(6);
+        if (now()->greaterThan($confirmationDeadline)) {
+            return response()->json([
+                'message' => 'Batas waktu konfirmasi (6 jam setelah countdown) sudah habis.',
+            ], 422);
+        }
+
+        // Sudah konfirmasi sebelumnya
+        if ($participant->confirmed_at !== null) {
+            return response()->json([
+                'message'       => 'Kamu sudah mengkonfirmasi keikutsertaan ini.',
+                'confirmed_at'  => $participant->confirmed_at->toIso8601String(),
+            ], 200);
+        }
+
+        $participant->update(['confirmed_at' => now()]);
+
+        return response()->json([
+            'message'      => 'Konfirmasi keikutsertaan berhasil dicatat.',
+            'confirmed_at' => $participant->fresh()->confirmed_at->toIso8601String(),
+        ], 200);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // GET /api/open-trip/debug-pool?tour_id=X&trip_date=Y   (SEMENTARA)
     // Dry-run: lihat pool & skor kompatibilitas tanpa ubah data apapun.
     // Hapus setelah bug ditemukan & diperbaiki.

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\Guide;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\Guide;
 use App\Models\Language;
 use App\Models\Speciality;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -118,7 +120,7 @@ class GuideProfileApiController extends Controller
     public function uploadKtp(Request $request): JsonResponse
     {
         $request->validate([
-            'ktp_document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'ktp_document' => ['required', 'file', 'mimes:jpg,jpeg,png', 'max:2048'],
         ]);
 
         $guide = $request->user();
@@ -142,7 +144,7 @@ class GuideProfileApiController extends Controller
     public function uploadSelfieKtp(Request $request): JsonResponse
     {
         $request->validate([
-            'selfie_ktp_document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'selfie_ktp_document' => ['required', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
         ]);
 
         $guide = $request->user();
@@ -224,6 +226,18 @@ class GuideProfileApiController extends Controller
         }
 
         $guide->update(['verification_status' => 'menunggu_verifikasi']);
+
+        // Notifikasi semua admin: ada pengajuan KYC baru
+        Admin::all()->each(function (Admin $admin) use ($guide) {
+            NotificationService::send(
+                'kyc_submitted',
+                'admin',
+                $admin->id,
+                'KYC Baru Menunggu Verifikasi',
+                "Pemandu \"{$guide->name}\" telah mengajukan dokumen KYC. Silakan tinjau dan verifikasi.",
+                ['guide_id' => $guide->id]
+            );
+        });
 
         return response()->json([
             'message' => 'Dokumen berhasil dikirim. Admin akan meninjau dalam 1-3 hari kerja.',

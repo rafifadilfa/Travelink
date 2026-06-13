@@ -7,7 +7,6 @@ use App\Models\Guide;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class AdminKycApiController extends Controller
 {
@@ -17,7 +16,7 @@ class AdminKycApiController extends Controller
      */
     public function index(): JsonResponse
     {
-        $guides = Guide::where('verification_status', 'pending')
+        $guides = Guide::where('verification_status', 'menunggu_verifikasi')
             ->orderBy('created_at', 'asc')
             ->get(['id', 'name', 'email', 'created_at', 'ktp_document', 'certificate_document']);
 
@@ -34,15 +33,16 @@ class AdminKycApiController extends Controller
             ->findOrFail($id);
 
         $host = request()->getSchemeAndHttpHost();
+        $url  = fn($path) => $path ? $host . '/storage/' . $path : null;
 
         return response()->json([
             'guide' => array_merge($guide->toArray(), [
-                'languages'       => $guide->languages->pluck('name'),
-                'specialities'    => $guide->specialities->pluck('name'),
-                'ktp_url'         => $guide->ktp_document
-                    ? $host . Storage::disk('public')->url($guide->ktp_document) : null,
-                'certificate_url' => $guide->certificate_document
-                    ? $host . Storage::disk('public')->url($guide->certificate_document) : null,
+                'languages'        => $guide->languages->pluck('name'),
+                'specialities'     => $guide->specialities->pluck('name'),
+                'ktp_url'          => $url($guide->ktp_document),
+                'selfie_ktp_url'   => $url($guide->selfie_ktp_document),
+                'certificate_url'  => $url($guide->certificate_document),
+                'portfolio_url'    => $url($guide->portfolio_document),
             ]),
         ], 200);
     }
@@ -67,10 +67,26 @@ class AdminKycApiController extends Controller
     {
         $guide = Guide::findOrFail($id);
 
+        if ($guide->verification_status !== 'menunggu_verifikasi') {
+            return response()->json([
+                'message' => 'Guide ini tidak sedang menunggu verifikasi.',
+            ], 422);
+        }
+
         $guide->update([
             'verification_status' => 'verified',
             'rejection_reason'    => null,
         ]);
+
+        // Notifikasi pemandu: KYC disetujui
+        NotificationService::send(
+            'kyc_approved',
+            'guide',
+            $guide->id,
+            'Verifikasi Disetujui',
+            'Selamat! Akun Anda telah terverifikasi. Anda sekarang dapat menggunakan semua fitur pemandu wisata.',
+            ['guide_id' => $guide->id]
+        );
 
         return response()->json([
             'message' => "Guide {$guide->name} berhasil diverifikasi.",
@@ -101,6 +117,12 @@ class AdminKycApiController extends Controller
         ]);
 
         $guide = Guide::findOrFail($id);
+
+        if ($guide->verification_status !== 'menunggu_verifikasi') {
+            return response()->json([
+                'message' => 'Guide ini tidak sedang menunggu verifikasi.',
+            ], 422);
+        }
 
         $guide->update([
             'verification_status' => 'rejected',

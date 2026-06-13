@@ -9,6 +9,7 @@ import {
 import { ArrowBackIcon, CheckCircleIcon, CalendarIcon, InfoOutlineIcon } from '@chakra-ui/icons';
 import { FiMapPin, FiUsers } from 'react-icons/fi';
 import apiClient from '../services/api';
+import TouristNavbar from '../components/TouristNavbar';
 
 // Tambahkan tipe snap ke window global agar TypeScript tidak complain
 declare global {
@@ -228,22 +229,7 @@ const Payment: React.FC = () => {
 
   return (
     <Box minH="100vh" bg={overallBg}>
-      {/* ── Header ── */}
-      <Box bg={glassBg} backdropFilter="blur(18px)" boxShadow="md" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={borderColor}>
-        <Container maxW="container.xl">
-          <Flex h="68px" justify="space-between" align="center">
-            <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-              <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
-              </Flex>
-              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">Travelink</Heading>
-            </Flex>
-            <Button {...outlineBtn} size="sm" onClick={() => navigate(-1)} leftIcon={<ArrowBackIcon />}>
-              Kembali
-            </Button>
-          </Flex>
-        </Container>
-      </Box>
+      <TouristNavbar />
 
       <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
         <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryText}>

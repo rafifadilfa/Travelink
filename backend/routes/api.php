@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Guide\GuideReviewApiController;
 use App\Http\Controllers\Api\Guide\GuideTourApiController;
 use App\Http\Controllers\Api\Guide\GuideWalletApiController;
 use App\Http\Controllers\Api\Guide\GuideWithdrawalApiController;
+use App\Http\Controllers\Api\MidtransCallbackController;
 use App\Http\Controllers\Api\NotificationApiController;
 use App\Http\Controllers\Api\Tourist\OpenTripController;
 use App\Http\Controllers\Api\Tourist\PrivateBookingController;
@@ -26,8 +27,9 @@ use Illuminate\Support\Facades\Route;
 // ============================================================
 // PUBLIC TOUR ROUTES
 // ============================================================
-Route::get('tours',      [TourListApiController::class, 'index']);
-Route::get('tours/{id}', [TourListApiController::class, 'show']);
+Route::get('tours',                        [TourListApiController::class, 'index']);
+Route::get('tours/{id}',                   [TourListApiController::class, 'show']);
+Route::get('tours/{id}/availabilities',    [TourListApiController::class, 'availabilities']);
 
 // ============================================================
 // PUBLIC GUIDE ROUTES
@@ -62,6 +64,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('notifications/read-all',   [NotificationApiController::class, 'markAllRead']);
     Route::patch('notifications/{id}/read',  [NotificationApiController::class, 'markRead']);
 });
+
+// ============================================================
+// PAYMENT WEBHOOK — Midtrans callback (TC-047)
+// Tidak butuh auth — Midtrans mengirim POST langsung ke endpoint ini.
+// Verifikasi dilakukan via signature key di controller.
+// ============================================================
+Route::post('payment/midtrans/callback', [MidtransCallbackController::class, 'handle']);
 
 // ============================================================
 // REVIEW & RATING ROUTES (Tourist)
@@ -107,6 +116,9 @@ Route::prefix('open-trip')->group(function () {
 
         // Cancel peserta (hanya Tahap 1 / status = waiting)
         Route::delete('participants/{participantId}', [OpenTripController::class, 'cancel']);
+
+        // TC-056: Konfirmasi keikutsertaan dalam window 6 jam setelah countdown habis
+        Route::post('confirm', [OpenTripController::class, 'confirm']);
 
         // Pembayaran split bill (Tahap 2)
         Route::post('payment/create',                  [OpenTripController::class, 'createPayment']);

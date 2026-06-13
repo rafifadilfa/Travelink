@@ -14,13 +14,17 @@ class OpenTripGroup extends Model
         'matched_at',
         'expires_at',
         'rejected_at',
+        'confirmed_at',
+        'sot_processed_at',
     ];
 
     protected $casts = [
-        'trip_date'   => 'date',
-        'matched_at'  => 'datetime',
-        'expires_at'  => 'datetime',
-        'rejected_at' => 'datetime',
+        'trip_date'         => 'date',
+        'matched_at'        => 'datetime',
+        'expires_at'        => 'datetime',
+        'rejected_at'       => 'datetime',
+        'confirmed_at'      => 'datetime',
+        'sot_processed_at'  => 'datetime',
     ];
 
     // ── Relasi ──────────────────────────────────────────────────────────────

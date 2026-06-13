@@ -30,14 +30,19 @@ interface GuideRow {
   created_at: string;
 }
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; colorScheme: string; icon: typeof FiClock }> = {
   pending: {
-    label: 'Menunggu',
+    label: 'Belum Diverifikasi',
+    colorScheme: 'gray',
+    icon: FiClock,
+  },
+  menunggu_verifikasi: {
+    label: 'Menunggu Verifikasi',
     colorScheme: 'orange',
     icon: FiClock,
   },
   verified: {
-    label: 'Terverifikasi',
+    label: 'Aktif',
     colorScheme: 'green',
     icon: FiCheckCircle,
   },
@@ -81,9 +86,19 @@ const AdminGuideList: React.FC = () => {
 
   // Hitung ringkasan per status
   const counts = guides.reduce(
-    (acc, g) => { acc[g.verification_status]++; return acc; },
-    { pending: 0, verified: 0, rejected: 0 }
+    (acc: Record<string, number>, g) => {
+      acc[g.verification_status] = (acc[g.verification_status] ?? 0) + 1;
+      return acc;
+    },
+    {}
   );
+
+  const statCards = [
+    { key: 'pending',             label: 'Belum Diverifikasi',  colorScheme: 'gray',   icon: FiClock },
+    { key: 'menunggu_verifikasi', label: 'Menunggu Verifikasi', colorScheme: 'orange', icon: FiClock },
+    { key: 'verified',            label: 'Aktif',               colorScheme: 'green',  icon: FiCheckCircle },
+    { key: 'rejected',            label: 'Ditolak',             colorScheme: 'red',    icon: FiXCircle },
+  ];
 
   return (
     <AdminLayout>
@@ -98,23 +113,21 @@ const AdminGuideList: React.FC = () => {
 
       {/* Stat cards */}
       <HStack spacing={4} mb={6} flexWrap="wrap">
-        {(Object.entries(statusConfig) as [keyof typeof statusConfig, typeof statusConfig[keyof typeof statusConfig]][]).map(
-          ([status, cfg]) => (
-            <Box
-              key={status}
-              bg={cardBg} borderRadius="xl" boxShadow="sm"
-              border="1px solid" borderColor={borderColor}
-              p={4} display="flex" alignItems="center" gap={3}
-              minW="140px"
-            >
-              <Icon as={cfg.icon} color={`${cfg.colorScheme}.400`} boxSize={5} />
-              <Box>
-                <Text fontSize="xl" fontWeight="bold" lineHeight={1}>{counts[status]}</Text>
-                <Text fontSize="xs" color={secondaryTxt}>{cfg.label}</Text>
-              </Box>
+        {statCards.map(({ key, label, colorScheme, icon }) => (
+          <Box
+            key={key}
+            bg={cardBg} borderRadius="xl" boxShadow="sm"
+            border="1px solid" borderColor={borderColor}
+            p={4} display="flex" alignItems="center" gap={3}
+            minW="140px"
+          >
+            <Icon as={icon} color={`${colorScheme}.400`} boxSize={5} />
+            <Box>
+              <Text fontSize="xl" fontWeight="bold" lineHeight={1}>{counts[key] ?? 0}</Text>
+              <Text fontSize="xs" color={secondaryTxt}>{label}</Text>
             </Box>
-          )
-        )}
+          </Box>
+        ))}
       </HStack>
 
       {/* Konten */}
@@ -158,16 +171,13 @@ const AdminGuideList: React.FC = () => {
             <Tbody>
               {guides.map((g) => {
                 const cfg = statusConfig[g.verification_status] ?? statusConfig['pending'];
+                const canReview = g.verification_status === 'menunggu_verifikasi';
                 return (
                   <Tr
                     key={g.id}
                     _hover={{ bg: tableHover }}
-                    cursor={g.verification_status === 'pending' ? 'pointer' : 'default'}
-                    onClick={() => {
-                      if (g.verification_status === 'pending') {
-                        navigate(`/admin/kyc/${g.id}`);
-                      }
-                    }}
+                    cursor={canReview ? 'pointer' : 'default'}
+                    onClick={() => { if (canReview) navigate(`/admin/kyc/${g.id}`); }}
                   >
                     <Td fontWeight="semibold">{g.name}</Td>
                     <Td color={secondaryTxt} fontSize="sm">{g.email}</Td>
@@ -184,7 +194,7 @@ const AdminGuideList: React.FC = () => {
                       </Badge>
                     </Td>
                     <Td>
-                      {g.verification_status === 'pending' && (
+                      {canReview && (
                         <HStack justify="flex-end">
                           <Button
                             size="sm"

@@ -100,6 +100,11 @@ class Tour extends Model
         return $this->hasMany(OpenTripGroup::class, 'tour_id');
     }
 
+    public function availabilities()
+    {
+        return $this->hasMany(TourAvailability::class, 'tour_id')->orderBy('day_of_week');
+    }
+
     protected $appends = ['slug'];
 
     public function getSlugAttribute(): string

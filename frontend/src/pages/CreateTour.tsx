@@ -12,6 +12,7 @@ import {
   IconButton,
   FormControl,
   FormLabel,
+  FormHelperText,
   Input,
   InputGroup,
   InputLeftAddon,
@@ -22,6 +23,8 @@ import {
   Image,
   useToast,
   CloseButton,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
 import { FiPlus, FiTrash2, FiUploadCloud } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
@@ -46,6 +49,8 @@ const CreateTour: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isOpenTrip, setIsOpenTrip]     = useState(false);
 
+    const [selectedDays, setSelectedDays] = useState<number[]>([]);
+
     const [itinerary, setItinerary] = useState<ItineraryStep[]>([{ time: '', activity: '' }]);
     const [included, setIncluded]   = useState<string[]>(['']);
     const [excluded, setExcluded]   = useState<string[]>(['']);
@@ -57,6 +62,18 @@ const CreateTour: React.FC = () => {
 
     const cardBg  = useColorModeValue('white', 'gray.800');
     const inputBg = useColorModeValue('gray.50', 'gray.700');
+
+    const DAY_LABELS = [
+        { value: 1, label: 'Senin' }, { value: 2, label: 'Selasa' },
+        { value: 3, label: 'Rabu' },  { value: 4, label: 'Kamis' },
+        { value: 5, label: 'Jumat' }, { value: 6, label: 'Sabtu' },
+        { value: 0, label: 'Minggu' },
+    ];
+
+    const toggleDay = (val: number) =>
+        setSelectedDays(prev =>
+            prev.includes(val) ? prev.filter(d => d !== val) : [...prev, val]
+        );
 
     // ── Format tampilan harga ────────────────────────────────────────
     const formatPrice = (raw: string): string => {
@@ -116,6 +133,16 @@ const CreateTour: React.FC = () => {
     // ── Submit ────────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        // TC-029: Validasi harga wajib > 0
+        if (!priceRaw || Number(priceRaw) <= 0) {
+            toast({ title: 'Harga paket wajib diisi dan harus lebih dari 0', status: 'error', duration: 4000, isClosable: true });
+            return;
+        }
+        // TC-030: Validasi minimal satu hari ketersediaan
+        if (selectedDays.length === 0) {
+            toast({ title: 'Pilih minimal satu hari ketersediaan paket', status: 'error', duration: 4000, isClosable: true });
+            return;
+        }
         setIsSubmitting(true);
         try {
             // 1. Buat tour (JSON)
@@ -123,14 +150,15 @@ const CreateTour: React.FC = () => {
                 title,
                 description,
                 location,
-                price:       Number(priceRaw) || 0,
+                price:        Number(priceRaw),
                 duration,
                 category,
-                status:      'draft',
+                status:       'draft',
                 is_open_trip: isOpenTrip,
-                itinerary:   itinerary.filter(s => s.activity.trim()),
-                included:    included.filter(s => s.trim()),
-                excluded:    excluded.filter(s => s.trim()),
+                available_days: selectedDays,
+                itinerary:    itinerary.filter(s => s.activity.trim()),
+                included:     included.filter(s => s.trim()),
+                excluded:     excluded.filter(s => s.trim()),
             });
 
             const tourId: number = res.data.tour.id;
@@ -259,6 +287,29 @@ const CreateTour: React.FC = () => {
                                     <FormLabel htmlFor="is-open-trip" mb={0} cursor="pointer">
                                         Jadikan Smart Open Trip
                                     </FormLabel>
+                                </FormControl>
+
+                                {/* TC-028/030: Jadwal Ketersediaan */}
+                                <FormControl isRequired>
+                                    <FormLabel>Jadwal Ketersediaan</FormLabel>
+                                    <Wrap spacing={2}>
+                                        {DAY_LABELS.map(d => (
+                                            <WrapItem key={d.value}>
+                                                <Button
+                                                    size="sm"
+                                                    variant={selectedDays.includes(d.value) ? 'solid' : 'outline'}
+                                                    colorScheme="blue"
+                                                    onClick={() => toggleDay(d.value)}
+                                                    type="button"
+                                                >
+                                                    {d.label}
+                                                </Button>
+                                            </WrapItem>
+                                        ))}
+                                    </Wrap>
+                                    <FormHelperText>
+                                        Pilih hari-hari saat Anda tersedia untuk memandu tour ini. Pilih minimal 1 hari.
+                                    </FormHelperText>
                                 </FormControl>
                             </VStack>
                         </Box>

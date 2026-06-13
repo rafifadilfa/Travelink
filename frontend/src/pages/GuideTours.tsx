@@ -231,17 +231,17 @@ const GuideTours: React.FC = () => {
                 <AlertDialogOverlay>
                     <AlertDialogContent>
                         <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                            Delete Tour
+                            Hapus Paket Wisata?
                         </AlertDialogHeader>
                         <AlertDialogBody>
-                            Are you sure you want to delete this tour? This action cannot be undone.
+                            Apakah Anda yakin ingin menghapus paket wisata ini? Tindakan ini tidak dapat dibatalkan.
                         </AlertDialogBody>
                         <AlertDialogFooter>
                             <Button ref={cancelRef} onClick={() => setIsDeleteDialogOpen(false)}>
-                                Cancel
+                                Batal
                             </Button>
                             <Button colorScheme="red" onClick={confirmDelete} ml={3} isLoading={isDeleting}>
-                                Delete
+                                ya, Hapus
                             </Button>
                         </AlertDialogFooter>
                     </AlertDialogContent>

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Button, Flex, Text, Heading, Image, Container, Grid, Input,
-  useColorModeValue, IconButton, Icon, Badge, VStack, HStack, Avatar,
-  Tooltip, Spinner,
+  Box, Button, Flex, Text, Heading, Image, Container, Grid,
+  useColorModeValue, IconButton, Icon, Badge, VStack, HStack,
+  Spinner,
 } from '@chakra-ui/react';
-import { logoutUser } from '../utils/logout';
 import { ArrowForwardIcon, StarIcon as ChakraStarIcon } from '@chakra-ui/icons';
+import TouristNavbar from '../components/TouristNavbar';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
@@ -50,14 +50,6 @@ interface ApiBooking {
   } | null;
 }
 
-interface MenuItem { label: string; path: string; iconString: string; }
-const menuItems: MenuItem[] = [
-  { label: 'Explore', path: '/tours', iconString: '🗺️' },
-  { label: 'Booking Saya', path: '/bookings', iconString: '📅' },
-  { label: 'Profil', path: '/profile', iconString: '👤' },
-  { label: 'Pengaturan', path: '/settings', iconString: '⚙️' },
-];
-
 const ShineIcon = (props: React.ComponentProps<typeof Icon>) => (
   <Icon viewBox="0 0 24 24" {...props}>
     <path fill="currentColor" d="M12 0L13.845 10.155L24 12L13.845 13.845L12 24L10.155 13.845L0 12L10.155 10.155L12 0Z" />
@@ -80,9 +72,7 @@ const bookingStatusLabel = (status: string): { label: string; color: string } =>
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [searchQuery, setSearchQuery]   = useState('');
-  const [favorites, setFavorites]       = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<number[]>([]);
 
   // Data dari API
   const [featuredTours, setFeaturedTours]       = useState<ApiTour[]>([]);
@@ -95,7 +85,6 @@ const Dashboard: React.FC = () => {
   // ── Semua useColorModeValue di level atas ─────────────────────────────────
   const overallBg          = useColorModeValue('blue.50', 'gray.900');
   const cardBg             = useColorModeValue('white', 'gray.800');
-  const glassBg            = useColorModeValue('rgba(255, 255, 255, 0.85)', 'rgba(26, 32, 44, 0.8)');
   const primaryColor       = useColorModeValue('blue.500', 'blue.400');
   const primaryHoverColor  = useColorModeValue('blue.600', 'blue.500');
   const primaryTextColor   = useColorModeValue('gray.800', 'whiteAlpha.900');
@@ -112,14 +101,6 @@ const Dashboard: React.FC = () => {
   const primaryBtnHoverTo  = useColorModeValue('blue.500', 'blue.400');
   const secondaryHoverBg   = useColorModeValue('blue.50', 'rgba(49,130,206,0.08)');
   const bgPatternOpacity   = useColorModeValue(0.02, 0.01);
-  const searchBg           = useColorModeValue('whiteAlpha.900', 'whiteAlpha.100');
-  const searchFocusBg      = useColorModeValue('white', 'gray.750');
-  const searchFocusShadow  = useColorModeValue('blue.300', 'blue.600');
-  const logoutIconColor    = useColorModeValue('gray.500', 'gray.400');
-  const drawerMenuHoverBg  = useColorModeValue('blue.100', 'rgba(49,130,206,0.15)');
-  const drawerCloseBtnHoverBg = useColorModeValue('red.100', 'red.800');
-  const drawerCloseBtnHoverColor = useColorModeValue('red.500', 'red.200');
-  const mobileMenuBtnHoverBg = useColorModeValue('gray.200', 'gray.700');
   const favBtnBg           = useColorModeValue('white', 'gray.600');
   const favBtnHoverBg      = useColorModeValue('gray.100', 'gray.500');
   const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700');
@@ -193,89 +174,7 @@ const Dashboard: React.FC = () => {
         zIndex={0} pointerEvents="none"
       />
 
-      {/* Navbar */}
-      <Box bg={glassBg} backdropFilter="blur(18px)" boxShadow="md" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={subtleBorderColor}>
-        <Container maxW="container.xl">
-          <Flex h="68px" justify="space-between" align="center">
-            <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-              <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                <Text fontSize="xl" color="white" fontWeight="bold" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.2)' }}>✈</Text>
-              </Flex>
-              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">Travelink</Heading>
-            </Flex>
-            <HStack display={{ base: 'none', md: 'flex' }} spacing={3}>
-              <Box maxW="280px" mr={2} position="relative">
-                <Input
-                  placeholder="Cari destinasi..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  pl={10} pr={4} h="42px" borderRadius="full"
-                  bg={searchBg} borderColor={subtleBorderColor}
-                  boxShadow="inner" fontSize="sm" variant="outline"
-                  _hover={{ borderColor: primaryColor }}
-                  _focus={{ borderColor: primaryColor, boxShadow: `0 0 0 2px ${searchFocusShadow}`, bg: searchFocusBg }}
-                />
-                <Box position="absolute" left={3.5} top="50%" transform="translateY(-50%)" color={secondaryTextColor} zIndex={1} fontSize="md">🔍</Box>
-              </Box>
-              <Button {...secondaryButtonStyle} h="42px" onClick={() => navigate('/tours')} leftIcon={<Text as="span" mr={1}>🧭</Text>}>Explore</Button>
-              <Button {...primaryButtonStyle} h="42px" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" mr={1}>💼</Text>}>Booking Saya</Button>
-              <Box position="relative" onClick={() => navigate('/profile')} cursor="pointer">
-                <Avatar name="User" boxSize="42px" border="2px solid" borderColor="transparent" _hover={{ borderColor: primaryColor, transform: 'scale(1.08)', boxShadow: 'lg' }} transition="all 0.2s ease-in-out" boxShadow="md" />
-                <Box position="absolute" top="-1px" right="-1px" boxSize="12px" borderRadius="full" bg="green.400" border="2px solid" borderColor={cardBg} boxShadow="sm" />
-              </Box>
-              <Tooltip label="Logout" placement="bottom">
-                <IconButton
-                  aria-label="Logout" variant="ghost" size="md"
-                  onClick={() => void logoutUser()}
-                  icon={<Icon viewBox="0 0 24 24" boxSize="20px"><path fill="currentColor" d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" /></Icon>}
-                  color={logoutIconColor} _hover={{ bg: 'red.50', color: 'red.500' }} transition="all 0.2s ease"
-                />
-              </Tooltip>
-            </HStack>
-            <Box display={{ base: 'block', md: 'none' }}>
-              <IconButton onClick={() => setIsDrawerOpen(true)} aria-label="Buka Menu" variant="ghost" size="lg"
-                icon={<Icon viewBox="0 0 24 24" boxSize="24px"><path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" /></Icon>}
-                _hover={{ bg: mobileMenuBtnHoverBg }}
-              />
-            </Box>
-          </Flex>
-        </Container>
-      </Box>
-
-      {/* Mobile drawer */}
-      {isDrawerOpen && (
-        <>
-          <Box position="fixed" top={0} left={0} right={0} bottom={0} bg="blackAlpha.700" backdropFilter="blur(8px)" zIndex={1999} onClick={() => setIsDrawerOpen(false)} />
-          <Box position="fixed" top="0" right="0" bottom="0" w="300px" bg={glassBg} backdropFilter="blur(18px)" boxShadow="2xl" zIndex={2000} p={6} display="flex" flexDirection="column">
-            <Flex justify="space-between" mb={8} align="center">
-              <Heading size="lg" color={primaryTextColor} fontWeight="bold">Menu</Heading>
-              <IconButton aria-label="Tutup Menu"
-                icon={<Icon viewBox="0 0 24 24" boxSize="20px"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" /></Icon>}
-                size="md" variant="ghost" onClick={() => setIsDrawerOpen(false)}
-                _hover={{ bg: drawerCloseBtnHoverBg, color: drawerCloseBtnHoverColor }}
-              />
-            </Flex>
-            <VStack spacing={4} align="stretch">
-              <Input placeholder="Cari..." bg={searchBg} borderColor={subtleBorderColor} borderRadius="full" h="44px" mb={2} _focus={{ borderColor: primaryColor, boxShadow: `0 0 0 1px ${primaryColor}` }} />
-              {menuItems.map(item => (
-                <Button
-                  key={item.path} w="full" variant="ghost" color={primaryTextColor}
-                  _hover={{ bg: drawerMenuHoverBg, color: primaryColor, transform: 'translateX(4px)' }}
-                  onClick={() => { navigate(item.path); setIsDrawerOpen(false); }}
-                  justifyContent="flex-start"
-                  leftIcon={<Text as="span" fontSize="xl" mr={3}>{item.iconString}</Text>}
-                  h="56px" fontWeight="medium" transition="all 0.2s ease" borderRadius="lg"
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </VStack>
-            <Button w="full" bg="red.500" color="white" _hover={{ bg: 'red.600', transform: 'translateY(-2px)', boxShadow: 'lg' }} onClick={() => void logoutUser()} borderRadius="lg" h="56px" fontWeight="bold" transition="all 0.2s ease" leftIcon={<Text as="span" fontSize="xl" mr={3}>🚪</Text>} mt="auto">
-              Logout
-            </Button>
-          </Box>
-        </>
-      )}
+      <TouristNavbar />
 
       <Container maxW="container.xl" py={{ base: 6, md: 10 }} position="relative" zIndex={1}>
         {/* Hero */}
@@ -540,6 +439,7 @@ const Dashboard: React.FC = () => {
           </Box>
         </Grid>
       </Container>
+
     </Box>
   );
 };

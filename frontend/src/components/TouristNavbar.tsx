@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    AlertDialog, AlertDialogBody, AlertDialogContent, AlertDialogFooter,
+    AlertDialogHeader, AlertDialogOverlay,
+    Avatar,
     Badge,
     Box,
     Button,
@@ -7,23 +10,30 @@ import {
     Flex,
     Heading,
     HStack,
+    Icon,
     IconButton,
     Input,
     InputGroup,
     InputLeftElement,
     Text,
+    Tooltip,
     useColorModeValue,
+    useDisclosure,
 } from '@chakra-ui/react';
 import { SearchIcon } from '@chakra-ui/icons';
-import { FiBell } from 'react-icons/fi';
+import { FiBell, FiLogOut } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
+import { logoutUser } from '../utils/logout';
 
 const TouristNavbar: React.FC = () => {
     const navigate = useNavigate();
     const [searchInput,  setSearchInput]  = useState('');
     const [unreadCount,  setUnreadCount]  = useState(0);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const { isOpen: isLogoutOpen, onOpen: openLogout, onClose: closeLogout } = useDisclosure();
+    const logoutCancelRef = useRef<HTMLButtonElement>(null);
 
     const fetchUnread = () => {
         apiClient.get('/notifications')
@@ -50,6 +60,7 @@ const TouristNavbar: React.FC = () => {
     const btnEndColor      = useColorModeValue('blue.400', 'blue.300');
     const btnHoverEnd      = useColorModeValue('blue.500', 'blue.400');
     const inputBg          = useColorModeValue('white', 'gray.800');
+    const logoutIconColor  = useColorModeValue('gray.500', 'gray.400');
 
     const handleSearch = () => {
         const kw = searchInput.trim();
@@ -97,115 +108,185 @@ const TouristNavbar: React.FC = () => {
     };
 
     return (
-        <Box
-            bg={glassBg}
-            backdropFilter="blur(18px)"
-            boxShadow="md"
-            position="sticky"
-            top={0}
-            zIndex={1000}
-            borderBottom="1px solid"
-            borderColor={subtleBorder}
-        >
-            <Container maxW="container.xl">
-                <Flex h="68px" justify="space-between" align="center" gap={4}>
-                    {/* Logo */}
-                    <Flex
-                        align="center"
-                        gap={2.5}
-                        onClick={() => navigate('/dashboard')}
-                        cursor="pointer"
-                        role="link"
-                        tabIndex={0}
-                        flexShrink={0}
-                        _focus={{ outline: '2px solid', outlineColor: 'blue.300', borderRadius: 'md' }}
-                    >
+        <>
+            <Box
+                bg={glassBg}
+                backdropFilter="blur(18px)"
+                boxShadow="md"
+                position="sticky"
+                top={0}
+                zIndex={1000}
+                borderBottom="1px solid"
+                borderColor={subtleBorder}
+            >
+                <Container maxW="container.xl">
+                    <Flex h="68px" justify="space-between" align="center" gap={4}>
+                        {/* Logo */}
                         <Flex
-                            alignItems="center"
-                            justifyContent="center"
-                            boxSize="40px"
-                            borderRadius="lg"
-                            bgGradient={accentGradient}
-                            boxShadow="lg"
-                            transition="all 0.3s ease"
-                            _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}
+                            align="center"
+                            gap={2.5}
+                            onClick={() => navigate('/dashboard')}
+                            cursor="pointer"
+                            role="link"
+                            tabIndex={0}
+                            flexShrink={0}
+                            _focus={{ outline: '2px solid', outlineColor: 'blue.300', borderRadius: 'md' }}
                         >
-                            <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
+                            <Flex
+                                alignItems="center"
+                                justifyContent="center"
+                                boxSize="40px"
+                                borderRadius="lg"
+                                bgGradient={accentGradient}
+                                boxShadow="lg"
+                                transition="all 0.3s ease"
+                                _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}
+                            >
+                                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
+                            </Flex>
+                            <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold"
+                                display={{ base: 'none', sm: 'block' }}>
+                                Travelink
+                            </Heading>
                         </Flex>
-                        <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold"
-                            display={{ base: 'none', sm: 'block' }}>
-                            Travelink
-                        </Heading>
-                    </Flex>
 
-                    {/* Search bar */}
-                    <InputGroup size="sm" maxW={{ base: '160px', md: '280px' }} flex="1">
-                        <InputLeftElement pointerEvents="none">
-                            <SearchIcon color="gray.400" boxSize={3.5} />
-                        </InputLeftElement>
-                        <Input
-                            placeholder="Cari pemandu..."
-                            value={searchInput}
-                            onChange={e => setSearchInput(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                            bg={inputBg}
-                            border="1px solid"
-                            borderColor={subtleBorder}
-                            borderRadius="full"
-                            fontSize="sm"
-                            _focus={{ borderColor: 'blue.400', boxShadow: `0 0 0 1px ${focusShadow}` }}
-                        />
-                    </InputGroup>
-
-                    {/* Action buttons */}
-                    <HStack spacing={3} flexShrink={0}>
-                        <Button
-                            {...exploreBtnStyle}
-                            size="sm"
-                            onClick={() => navigate('/tours')}
-                            leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}
-                        >
-                            Explore
-                        </Button>
-                        <Button
-                            {...bookingsBtnStyle}
-                            size="sm"
-                            onClick={() => navigate('/bookings')}
-                            leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}
-                        >
-                            My Bookings
-                        </Button>
-                        {/* Bell icon — notifikasi */}
-                        <Box position="relative" display="inline-flex">
-                            <IconButton
-                                aria-label="Notifikasi"
-                                icon={<FiBell />}
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => navigate('/notifications')}
+                        {/* Search bar */}
+                        <InputGroup size="sm" maxW={{ base: '160px', md: '280px' }} flex="1">
+                            <InputLeftElement pointerEvents="none">
+                                <SearchIcon color="gray.400" boxSize={3.5} />
+                            </InputLeftElement>
+                            <Input
+                                placeholder="Cari pemandu..."
+                                value={searchInput}
+                                onChange={e => setSearchInput(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                                bg={inputBg}
+                                border="1px solid"
+                                borderColor={subtleBorder}
+                                borderRadius="full"
+                                fontSize="sm"
+                                _focus={{ borderColor: 'blue.400', boxShadow: `0 0 0 1px ${focusShadow}` }}
                             />
-                            {unreadCount > 0 && (
-                                <Badge
-                                    position="absolute"
-                                    top="-4px"
-                                    right="-4px"
-                                    colorScheme="red"
-                                    borderRadius="full"
-                                    fontSize="10px"
-                                    minW="18px"
-                                    h="18px"
-                                    display="flex"
-                                    alignItems="center"
-                                    justifyContent="center"
+                        </InputGroup>
+
+                        {/* Action buttons */}
+                        <HStack spacing={2} flexShrink={0}>
+                            <Button
+                                {...exploreBtnStyle}
+                                display={{ base: 'none', md: 'flex' }}
+                                size="sm"
+                                onClick={() => navigate('/tours')}
+                                leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}
+                            >
+                                Explore
+                            </Button>
+                            <Button
+                                {...bookingsBtnStyle}
+                                display={{ base: 'none', md: 'flex' }}
+                                size="sm"
+                                onClick={() => navigate('/bookings')}
+                                leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}
+                            >
+                                Booking Saya
+                            </Button>
+
+                            {/* Notifikasi */}
+                            <Box position="relative" display="inline-flex">
+                                <Tooltip label="Notifikasi" placement="bottom">
+                                    <IconButton
+                                        aria-label="Notifikasi"
+                                        icon={<FiBell />}
+                                        variant="ghost"
+                                        size="md"
+                                        onClick={() => navigate('/notifications?role=tourist')}
+                                    />
+                                </Tooltip>
+                                {unreadCount > 0 && (
+                                    <Badge
+                                        position="absolute"
+                                        top="-4px"
+                                        right="-4px"
+                                        colorScheme="red"
+                                        borderRadius="full"
+                                        fontSize="10px"
+                                        minW="18px"
+                                        h="18px"
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                    >
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </Badge>
+                                )}
+                            </Box>
+
+                            {/* Profil */}
+                            <Tooltip label="Profil Saya" placement="bottom">
+                                <Box
+                                    onClick={() => navigate('/profile')}
+                                    cursor="pointer"
+                                    position="relative"
                                 >
-                                    {unreadCount > 99 ? '99+' : unreadCount}
-                                </Badge>
-                            )}
-                        </Box>
-                    </HStack>
-                </Flex>
-            </Container>
-        </Box>
+                                    <Avatar
+                                        name="User"
+                                        boxSize="38px"
+                                        border="2px solid"
+                                        borderColor="transparent"
+                                        _hover={{ borderColor: primaryColor, transform: 'scale(1.08)', boxShadow: 'lg' }}
+                                        transition="all 0.2s ease-in-out"
+                                        boxShadow="md"
+                                    />
+                                    <Box
+                                        position="absolute"
+                                        top="-1px"
+                                        right="-1px"
+                                        boxSize="11px"
+                                        borderRadius="full"
+                                        bg="green.400"
+                                        border="2px solid white"
+                                    />
+                                </Box>
+                            </Tooltip>
+
+                            {/* Logout */}
+                            <Tooltip label="Keluar" placement="bottom">
+                                <IconButton
+                                    aria-label="Logout"
+                                    variant="ghost"
+                                    size="md"
+                                    onClick={openLogout}
+                                    icon={
+                                        <Icon as={FiLogOut} boxSize="18px" />
+                                    }
+                                    color={logoutIconColor}
+                                    _hover={{ bg: 'red.50', color: 'red.500' }}
+                                    transition="all 0.2s ease"
+                                />
+                            </Tooltip>
+                        </HStack>
+                    </Flex>
+                </Container>
+            </Box>
+
+            {/* Dialog konfirmasi logout */}
+            <AlertDialog
+                isOpen={isLogoutOpen}
+                leastDestructiveRef={logoutCancelRef}
+                onClose={closeLogout}
+                isCentered
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader fontSize="lg" fontWeight="bold">Keluar dari Travelink</AlertDialogHeader>
+                        <AlertDialogBody>Apakah Anda yakin ingin keluar?</AlertDialogBody>
+                        <AlertDialogFooter gap={3}>
+                            <Button ref={logoutCancelRef} onClick={closeLogout}>Tidak</Button>
+                            <Button colorScheme="red" onClick={() => void logoutUser()}>Ya</Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
+        </>
     );
 };
 

@@ -160,12 +160,13 @@ const PRIVATE_STATUS_CONFIG: Record<string, { label: string; colorScheme: string
   menunggu_konfirmasi_pemandu:    { label: 'Menunggu Konfirmasi',  colorScheme: 'blue'   },
   menunggu_verifikasi_pembayaran: { label: 'Dalam Verifikasi',     colorScheme: 'purple' },
   terkonfirmasi:                  { label: 'Terkonfirmasi',        colorScheme: 'green'  },
-  selesai:                        { label: 'Selesai',              colorScheme: 'gray'   },
+  selesai:                        { label: 'Selesai',              colorScheme: 'teal'   },
   ditolak:                        { label: 'Ditolak',              colorScheme: 'red'    },
   dibatalkan:                     { label: 'Dibatalkan',           colorScheme: 'red'    },
+  dibatalkan_otomatis:            { label: 'Dibatalkan Otomatis',  colorScheme: 'red'    },
 };
 
-const PRIVATE_TERMINAL = ['selesai', 'ditolak', 'dibatalkan'];
+const PRIVATE_TERMINAL = ['selesai', 'ditolak', 'dibatalkan', 'dibatalkan_otomatis'];
 
 // ─── Konstanta ──────────────────────────────────────────────────────────────
 
@@ -808,9 +809,11 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
   const cfg     = PRIVATE_STATUS_CONFIG[localStatus] ?? { label: localStatus, colorScheme: 'gray' };
   const isPaid  = localStatus === 'terkonfirmasi' || localStatus === 'selesai';
 
-  // Trip selesai: sudah bayar + tanggal lewat
-  const tripDone = isPaid && tx?.tour_date ? isPast(tx.tour_date) : false;
-  const canReview = tripDone && !localReviewed;
+  // Trip selesai: status 'selesai' (backend set ini setelah trip + settlement)
+  const tripDone = localStatus === 'selesai';
+
+  // TC-062: tombol "Tulis Ulasan" HANYA muncul jika status === 'selesai' (bukan 'terkonfirmasi')
+  const canReview = localStatus === 'selesai' && !localReviewed;
 
   const stripGradient =
     cfg.colorScheme === 'green'  ? 'linear(to-r, green.300, teal.300)'    :
@@ -1469,7 +1472,7 @@ const Bookings: React.FC = () => {
             Pesanan Saya
           </Heading>
           <Text color={subtleColor} fontSize="sm" mt={1}>
-            Smart Open Trip yang kamu ikuti
+            Semua pesanan Private Trip & Smart Open Trip kamu
           </Text>
         </Box>
 

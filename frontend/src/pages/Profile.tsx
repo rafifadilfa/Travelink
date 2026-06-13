@@ -5,6 +5,7 @@ import {
   useColorModeValue, Icon, Badge, VStack, HStack, Tabs,
   TabList, TabPanels, Tab, TabPanel, Avatar, Divider, Switch, useToast,
   Tooltip, Spinner, Breadcrumb, BreadcrumbItem, BreadcrumbLink,
+  FormControl, FormErrorMessage,
 } from '@chakra-ui/react';
 import {
   ChevronRightIcon, EditIcon, CheckIcon, CloseIcon, SettingsIcon, CalendarIcon,
@@ -13,6 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
+import TouristNavbar from '../components/TouristNavbar';
 
 // --- Keyframes ---
 const slideInUp = keyframes`
@@ -90,6 +92,7 @@ const Profile: React.FC = () => {
   const [saving, setSaving]           = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [userData, setUserData]       = useState<UserProfile | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData]       = useState({
     name: '', email: '', phone_number: '',
     ot_age: '', ot_budget_level: '',
@@ -197,6 +200,7 @@ const Profile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     setSaving(true);
     try {
       const payload = {
@@ -210,9 +214,18 @@ const Profile: React.FC = () => {
       const updated: UserProfile = res.data.user;
       setUserData(updated);
       setIsEditing(false);
-      toast({ title: 'Profil diperbarui', status: 'success', duration: 3000, position: 'top' });
-    } catch {
-      toast({ title: 'Gagal menyimpan perubahan', status: 'error', duration: 3000, position: 'top' });
+      toast({ title: 'Profil berhasil diperbarui', status: 'success', duration: 3000, position: 'top' });
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { status?: number; data?: { errors?: Record<string, string[]> } } };
+      if (apiErr.response?.status === 422 && apiErr.response.data?.errors) {
+        const errs: Record<string, string> = {};
+        for (const [field, msgs] of Object.entries(apiErr.response.data.errors)) {
+          errs[field] = (msgs as string[])[0];
+        }
+        setFieldErrors(errs);
+      } else {
+        toast({ title: 'Gagal menyimpan perubahan', status: 'error', duration: 3000, position: 'top' });
+      }
     } finally {
       setSaving(false);
     }
@@ -226,6 +239,7 @@ const Profile: React.FC = () => {
         ot_budget_level: userData.ot_budget_level?.toString() ?? '',
       });
     }
+    setFieldErrors({});
     setIsEditing(false);
     toast({ title: 'Edit dibatalkan', status: 'info', duration: 2000, position: 'top-right' });
   };
@@ -282,22 +296,7 @@ const Profile: React.FC = () => {
 
   return (
     <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
-      <Box bg={glassBg} backdropFilter="blur(18px)" boxShadow="md" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={subtleBorderColor}>
-        <Container maxW="container.xl">
-          <Flex h="68px" justify="space-between" align="center">
-            <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-              <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
-              </Flex>
-              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">Travelink</Heading>
-            </Flex>
-            <HStack spacing={3}>
-              <Button {...secondaryButtonStyle} size="sm" onClick={() => navigate('/tours')} leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}>Explore</Button>
-              <Button {...primaryButtonStyle} size="sm" onClick={() => navigate('/bookings')} leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}>Booking Saya</Button>
-            </HStack>
-          </Flex>
-        </Container>
-      </Box>
+      <TouristNavbar />
 
       <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
         <Breadcrumb separator="›" mb={4} fontSize="sm" color={secondaryTextColor}>
@@ -373,7 +372,7 @@ const Profile: React.FC = () => {
                     <VStack spacing={5} align="stretch">
                       <Heading size="lg" color={primaryTextColor} mb={2} textAlign="center">Perbarui Informasi Anda</Heading>
                       {fields.map(field => (
-                        <Box key={field.name}>
+                        <FormControl key={field.name} isInvalid={!!fieldErrors[field.name]}>
                           <HStack as="label" htmlFor={field.name} fontSize="sm" fontWeight="medium" color={secondaryTextColor} mb={1.5} display="flex" align="center">
                             {field.iconAs && <Icon as={field.iconAs} color={primaryColor} boxSize={4} />}
                             <Text ml={field.iconAs != null ? 1 : 0}>{field.label}</Text>
@@ -385,7 +384,10 @@ const Profile: React.FC = () => {
                             _hover={{ bg: inputHoverBg }}
                             _focus={{ borderColor: primaryColor, boxShadow: `0 0 0 2px ${inputFocusShadow}`, bg: inputFocusBg }}
                           />
-                        </Box>
+                          {fieldErrors[field.name] && (
+                            <FormErrorMessage fontSize="xs">{fieldErrors[field.name]}</FormErrorMessage>
+                          )}
+                        </FormControl>
                       ))}
                       {/* HIDDEN: Preferensi Smart Open Trip (form edit) — sembunyikan sementara, jangan hapus
                       <Box pt={2} borderTop="1px dashed" borderColor={subtleBorderColor}>

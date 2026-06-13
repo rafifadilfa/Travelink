@@ -20,12 +20,14 @@ class OpenTripParticipant extends Model
         'registration_count',
         'payment_status',
         'midtrans_order_id',
+        'confirmed_at',
         'income_settled_at',
         'guide_reviewed',
     ];
 
     protected $casts = [
         'trip_date'          => 'date',
+        'confirmed_at'       => 'datetime',
         'income_settled_at'  => 'datetime',
         'age'                => 'integer',
         'budget_level'       => 'integer',

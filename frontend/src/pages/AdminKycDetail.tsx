@@ -49,13 +49,15 @@ interface GuideDetail {
   email: string;
   about: string | null;
   profile_picture: string | null;
-  verification_status: 'pending' | 'verified' | 'rejected';
+  verification_status: 'pending' | 'menunggu_verifikasi' | 'verified' | 'rejected';
   rejection_reason: string | null;
   created_at: string;
   languages: string[];
   specialities: string[];
   ktp_url: string | null;
+  selfie_ktp_url: string | null;
   certificate_url: string | null;
+  portfolio_url: string | null;
 }
 
 // ── Komponen preview dokumen ─────────────────────────────────
@@ -230,7 +232,7 @@ const AdminKycDetail: React.FC = () => {
     );
   }
 
-  const hasKyc = guide.ktp_url && guide.certificate_url;
+  const hasKyc = !!(guide.ktp_url && guide.selfie_ktp_url && guide.portfolio_url);
 
   return (
     <AdminLayout>
@@ -352,7 +354,9 @@ const AdminKycDetail: React.FC = () => {
             <VStack align="stretch" spacing={2}>
               {[
                 { label: 'KTP', ok: !!guide.ktp_url },
-                { label: 'Sertifikat Pemandu', ok: !!guide.certificate_url },
+                { label: 'Selfie bersama KTP', ok: !!guide.selfie_ktp_url },
+                { label: 'Sertifikat Pemandu (opsional)', ok: !!guide.certificate_url },
+                { label: 'Portofolio Trip', ok: !!guide.portfolio_url },
               ].map(({ label, ok }) => (
                 <HStack key={label}>
                   <Icon
@@ -372,27 +376,7 @@ const AdminKycDetail: React.FC = () => {
             border="1px solid" borderColor={borderColor} p={5}
           >
             <Text fontSize="sm" fontWeight="semibold" mb={4}>Ambil Keputusan</Text>
-            {guide.verification_status !== 'pending' ? (
-              <Box
-                bg={guide.verification_status === 'verified' ? 'green.50' : 'red.50'}
-                borderRadius="lg" p={4}
-              >
-                <Text
-                  fontSize="sm"
-                  color={guide.verification_status === 'verified' ? 'green.700' : 'red.700'}
-                  fontWeight="semibold"
-                >
-                  {guide.verification_status === 'verified'
-                    ? '✅ Guide ini sudah diverifikasi.'
-                    : '❌ Verifikasi guide ini sudah ditolak.'}
-                </Text>
-                {guide.rejection_reason && (
-                  <Text fontSize="sm" color="red.600" mt={2}>
-                    Alasan: {guide.rejection_reason}
-                  </Text>
-                )}
-              </Box>
-            ) : (
+            {guide.verification_status === 'menunggu_verifikasi' ? (
               <VStack spacing={3}>
                 <Button
                   colorScheme="green"
@@ -414,6 +398,28 @@ const AdminKycDetail: React.FC = () => {
                   Tolak Verifikasi
                 </Button>
               </VStack>
+            ) : (
+              <Box
+                bg={guide.verification_status === 'verified' ? 'green.50' : 'red.50'}
+                borderRadius="lg" p={4}
+              >
+                <Text
+                  fontSize="sm"
+                  color={guide.verification_status === 'verified' ? 'green.700' : 'red.700'}
+                  fontWeight="semibold"
+                >
+                  {guide.verification_status === 'verified'
+                    ? '✅ Guide ini sudah diverifikasi.'
+                    : guide.verification_status === 'rejected'
+                    ? '❌ Verifikasi guide ini sudah ditolak.'
+                    : 'ℹ️ Pengajuan KYC belum dikirim.'}
+                </Text>
+                {guide.rejection_reason && (
+                  <Text fontSize="sm" color="red.600" mt={2}>
+                    Alasan: {guide.rejection_reason}
+                  </Text>
+                )}
+              </Box>
             )}
           </Box>
         </VStack>
@@ -427,7 +433,9 @@ const AdminKycDetail: React.FC = () => {
             <Heading size="sm" mb={5}>Dokumen KYC</Heading>
             <VStack spacing={5} align="stretch">
               <DocPreview label="Kartu Tanda Penduduk (KTP)" url={guide.ktp_url} />
-              <DocPreview label="Sertifikat Pemandu Wisata" url={guide.certificate_url} />
+              <DocPreview label="Selfie bersama KTP" url={guide.selfie_ktp_url} />
+              <DocPreview label="Sertifikat Pemandu Wisata (opsional)" url={guide.certificate_url} />
+              <DocPreview label="Portofolio Trip" url={guide.portfolio_url} />
             </VStack>
           </Box>
         </VStack>

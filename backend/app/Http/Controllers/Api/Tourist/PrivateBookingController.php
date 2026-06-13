@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Tour;
 use App\Models\Transaction as TransactionModel;
+use App\Services\NotificationService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -68,6 +69,16 @@ class PrivateBookingController extends Controller
             'transaction_id' => $transaction->id,
             'booking_status' => Booking::STATUS_MENUNGGU_KONFIRMASI_PEMANDU,
         ]);
+
+        // Notifikasi pemandu: ada pesanan baru masuk
+        NotificationService::send(
+            'new_booking_request',
+            'guide',
+            $tour->guide->id,
+            'Pesanan Baru Masuk',
+            "Ada wisatawan yang memesan \"{$tour->name}\" untuk {$validated['participants']} peserta. Silakan konfirmasi atau tolak pesanan.",
+            ['booking_id' => $booking->id]
+        );
 
         return response()->json([
             'message'          => 'Booking berhasil dibuat. Silakan lanjutkan pembayaran.',
@@ -232,6 +243,28 @@ class PrivateBookingController extends Controller
                 if ($guide) {
                     WalletService::creditPending($guide, (float) $transaction->total_amount);
                 }
+
+                // Notifikasi wisatawan & pemandu — hanya dari path polling ini
+                // (jika Midtrans webhook aktif, notif sudah dikirim di MidtransCallbackController)
+                $tourName = $transaction->tour?->name ?? 'paket wisata';
+                NotificationService::send(
+                    'payment_confirmed',
+                    'user',
+                    $request->user()->id,
+                    'Pembayaran Dikonfirmasi',
+                    "Pembayaran untuk \"{$tourName}\" berhasil. Booking Anda terkonfirmasi.",
+                    ['booking_id' => $booking->id]
+                );
+                if ($guide) {
+                    NotificationService::send(
+                        'new_payment_received',
+                        'guide',
+                        $guide->id,
+                        'Pembayaran Diterima',
+                        "Wisatawan telah menyelesaikan pembayaran untuk \"{$tourName}\".",
+                        ['booking_id' => $booking->id]
+                    );
+                }
             }
         } catch (\Exception) {
             // Midtrans belum punya record (order baru dibuat, belum ada aksi bayar)
@@ -258,6 +291,21 @@ class PrivateBookingController extends Controller
             'booking_status'    => Booking::STATUS_DIBATALKAN,
             'cancelation_reason' => 'Dibatalkan oleh wisatawan.',
         ]);
+
+        // Notifikasi pemandu: wisatawan membatalkan pesanan
+        $booking->load(['transaction.tour.guide']);
+        $guide    = $booking->transaction?->tour?->guide;
+        $tourName = $booking->transaction?->tour?->name ?? 'paket wisata';
+        if ($guide) {
+            NotificationService::send(
+                'booking_cancelled_by_tourist',
+                'guide',
+                $guide->id,
+                'Pesanan Dibatalkan Wisatawan',
+                "Wisatawan membatalkan pesanan untuk \"{$tourName}\".",
+                ['booking_id' => $booking->id]
+            );
+        }
 
         return response()->json([
             'message' => 'Booking berhasil dibatalkan.',

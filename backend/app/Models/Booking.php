@@ -16,6 +16,7 @@ class Booking extends Model
     const STATUS_SELESAI                        = 'selesai';
     const STATUS_DITOLAK                        = 'ditolak';
     const STATUS_DIBATALKAN                     = 'dibatalkan';
+    const STATUS_DIBATALKAN_OTOMATIS            = 'dibatalkan_otomatis'; // TC-045, TC-049
 
     // Status yang masih "aktif" (belum terminal)
     const ACTIVE_STATUSES = [
@@ -30,6 +31,7 @@ class Booking extends Model
         self::STATUS_SELESAI,
         self::STATUS_DITOLAK,
         self::STATUS_DIBATALKAN,
+        self::STATUS_DIBATALKAN_OTOMATIS,
     ];
 
     protected $fillable = [

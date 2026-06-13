@@ -33,7 +33,7 @@ interface GuideData {
   id: number;
   name: string;
   email: string;
-  verification_status: 'pending' | 'verified' | 'rejected';
+  verification_status: 'pending' | 'menunggu_verifikasi' | 'verified' | 'rejected';
 }
 
 interface Completeness {
@@ -124,7 +124,8 @@ const GuideDashboard: React.FC = () => {
   const guide: GuideData | null = guideRaw ? JSON.parse(guideRaw) : null;
 
   const firstName  = guide?.name?.split(' ')[0] ?? 'Guide';
-  const isPending  = guide?.verification_status === 'pending';
+  // pending = baru daftar; menunggu_verifikasi = sudah kirim dokumen, tunggu admin
+  const isPending  = guide?.verification_status === 'pending' || guide?.verification_status === 'menunggu_verifikasi';
   const isRejected = guide?.verification_status === 'rejected';
 
   // State untuk kelengkapan profil — hanya di-fetch kalau guide masih pending/rejected
@@ -193,7 +194,7 @@ const GuideDashboard: React.FC = () => {
                     ? 'Memuat status akun...'
                     : isProfileComplete
                       ? 'Menunggu Verifikasi Admin'
-                      : 'Lengkapi Profil Anda'}
+                      : 'Lengkapi Profil dan Verifikasi Dokumen Anda'}
               </Heading>
             </HStack>
             <Text color={secondaryText} mb={6} fontSize="sm">
@@ -203,7 +204,7 @@ const GuideDashboard: React.FC = () => {
                   ? ''
                   : isProfileComplete
                     ? 'Admin sedang meninjau akun Anda. Proses ini biasanya memakan waktu 1–3 hari kerja. Anda dapat mengelola dan menjual paket tour setelah akun diverifikasi.'
-                    : 'Harap lengkapi profil Anda terlebih dahulu untuk mendapatkan akses penuh aplikasi.'}
+                    : 'Lengkapi profil dan verifikasi dokumen Anda untuk mendapatkan akses penuh ke fitur pemandu wisata.'}
             </Text>
 
             <Divider mb={6} />

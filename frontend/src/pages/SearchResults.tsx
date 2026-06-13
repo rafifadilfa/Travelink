@@ -308,14 +308,22 @@ const TourCard: React.FC<TourCardProps> = ({ tour, index }) => {
 interface EmptyProps { type: 'guide' | 'tour'; keyword: string; }
 
 const EmptyState: React.FC<EmptyProps> = ({ type, keyword }) => {
-  const subtleColor = useColorModeValue('gray.500', 'gray.400');
+  const subtleColor  = useColorModeValue('gray.500', 'gray.400');
+  const suggestionBg = useColorModeValue('blue.50', 'blue.900');
+  const primaryColor = useColorModeValue('blue.600', 'blue.300');
   return (
     <Box textAlign="center" py={8}>
       <Text fontSize="2xl" mb={2}>{type === 'guide' ? '🧭' : '🗺️'}</Text>
-      <Text color={subtleColor} fontSize="sm">
+      <Text color={subtleColor} fontSize="sm" mb={3}>
         Tidak ada {type === 'guide' ? 'pemandu' : 'paket wisata'} ditemukan untuk{' '}
         <Text as="span" fontWeight="semibold">"{keyword}"</Text>.
       </Text>
+      <Box bg={suggestionBg} borderRadius="lg" p={3} display="inline-block" textAlign="left" maxW="360px">
+        <Text fontSize="xs" color={primaryColor} fontWeight="semibold" mb={1}>Saran filter alternatif:</Text>
+        <Text fontSize="xs" color={subtleColor}>• Coba kata kunci yang lebih umum (misal: "Bali" atau "pantai")</Text>
+        <Text fontSize="xs" color={subtleColor}>• Periksa ejaan kata kunci pencarian</Text>
+        <Text fontSize="xs" color={subtleColor}>• Hapus filter untuk melihat semua {type === 'guide' ? 'pemandu' : 'paket wisata'}</Text>
+      </Box>
     </Box>
   );
 };

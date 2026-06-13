@@ -1,7 +1,14 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Badge,
   Box,
+  Button,
   Flex,
   Text,
   useColorModeValue,
@@ -40,6 +47,7 @@ interface NavItemProps extends FlexProps {
 
 interface SidebarProps extends BoxProps {
   onClose: () => void;
+  onLogout: () => void;
 }
 
 interface AdminLayoutProps {
@@ -78,10 +86,8 @@ const NavItem = ({ icon, children, path, ...rest }: NavItemProps) => {
   );
 };
 
-const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
+const SidebarContent = ({ onClose, onLogout, ...rest }: SidebarProps) => {
   const logoutColor = useColorModeValue('gray.600', 'gray.200');
-
-  const handleLogout = () => void logoutAdmin();
 
   return (
     <Box
@@ -113,7 +119,7 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
 
       <VStack pos="absolute" bottom="8" w="full" spacing={2} align="stretch">
         <Flex
-          onClick={handleLogout}
+          onClick={onLogout}
           align="center"
           p="3"
           mx="4"
@@ -132,6 +138,8 @@ const SidebarContent = ({ onClose, ...rest }: SidebarProps) => {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isLogoutOpen, onOpen: openLogout, onClose: closeLogout } = useDisclosure();
+  const logoutCancelRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const pageBg = useColorModeValue('gray.100', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
@@ -158,7 +166,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   return (
     <Box minH="100vh" bg={pageBg}>
-      <SidebarContent onClose={onClose} display={{ base: 'none', md: 'block' }} />
+      <SidebarContent onClose={onClose} onLogout={openLogout} display={{ base: 'none', md: 'block' }} />
       <Drawer
         autoFocus={false}
         isOpen={isOpen}
@@ -170,7 +178,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       >
         <DrawerOverlay />
         <DrawerContent>
-          <SidebarContent onClose={onClose} />
+          <SidebarContent onClose={onClose} onLogout={openLogout} />
         </DrawerContent>
       </Drawer>
 
@@ -208,7 +216,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 variant="ghost"
                 aria-label="Notifikasi"
                 icon={<FiBell />}
-                onClick={() => navigate('/notifications')}
+                onClick={() => navigate('/notifications?role=admin')}
               />
               {unreadCount > 0 && (
                 <Badge
@@ -257,6 +265,27 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           {children}
         </Box>
       </Flex>
+
+      {/* Dialog konfirmasi logout admin */}
+      <AlertDialog
+        isOpen={isLogoutOpen}
+        leastDestructiveRef={logoutCancelRef}
+        onClose={closeLogout}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Keluar dari Travelink
+            </AlertDialogHeader>
+            <AlertDialogBody>Apakah Anda yakin ingin keluar?</AlertDialogBody>
+            <AlertDialogFooter gap={3}>
+              <Button ref={logoutCancelRef} onClick={closeLogout}>Tidak</Button>
+              <Button colorScheme="red" onClick={() => void logoutAdmin()}>Ya</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

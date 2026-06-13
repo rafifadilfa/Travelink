@@ -247,6 +247,10 @@ const WaitingRoom: React.FC = () => {
   const [countdown, setCountdown] = useState<number>(0);
   const [myUserId, setMyUserId]   = useState<number | null>(null);
 
+  // TC-055/056: Konfirmasi keikutsertaan
+  const [myConfirmedAt, setMyConfirmedAt] = useState<string | null>(null);
+  const [isConfirming,  setIsConfirming]  = useState(false);
+
   // Payment state
   const [paymentStatuses, setPaymentStatuses]   = useState<Record<number, 'unpaid' | 'paid'>>({});
   const [myPaymentStatus, setMyPaymentStatus]   = useState<'unpaid' | 'paid'>('unpaid');
@@ -305,6 +309,35 @@ const WaitingRoom: React.FC = () => {
       onCancelClose();
     }
   }, [participantId, navigate, toast, onCancelClose]);
+
+  // ── TC-056: Konfirmasi keikutsertaan dalam window 6 jam ────
+  const handleConfirm = useCallback(async () => {
+    if (!participantId) return;
+    setIsConfirming(true);
+    try {
+      await apiClient.post('/open-trip/confirm', {
+        participant_id: parseInt(participantId, 10),
+      });
+      setMyConfirmedAt(new Date().toISOString());
+      toast({
+        title: 'Keikutsertaan dikonfirmasi!',
+        description: 'Pesanan Anda akan dikirim ke pemandu setelah window 6 jam berakhir.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast({
+        title: msg ?? 'Gagal mengkonfirmasi keikutsertaan.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setIsConfirming(false);
+    }
+  }, [participantId, toast]);
 
   // ── Ambil status bayar semua anggota dari backend ─────────
   const fetchPaymentStatuses = useCallback(async (pId: number) => {
@@ -1094,16 +1127,62 @@ const WaitingRoom: React.FC = () => {
             <Divider my={5} />
 
             <VStack spacing={3}>
-              {countdown > 0 ? (
-                <Text color="gray.500" fontSize="sm" textAlign="center">
-                  Countdown berakhir dalam <strong>{formatCountdown(countdown)}</strong>.
-                </Text>
-              ) : (
-                <Alert status="warning" borderRadius="xl" fontSize="sm">
-                  <AlertIcon />
-                  Waktu konfirmasi telah berakhir.
-                </Alert>
-              )}
+              {(() => {
+                // Hitung deadline konfirmasi: expires_at + 6 jam
+                const confirmDeadline = groupData?.group?.expires_at
+                  ? new Date(groupData.group.expires_at).getTime() + 6 * 3600 * 1000
+                  : null;
+                const withinWindow = confirmDeadline && Date.now() < confirmDeadline;
+
+                if (countdown > 0) {
+                  // Matching countdown masih berjalan
+                  return (
+                    <Text color="gray.500" fontSize="sm" textAlign="center">
+                      Countdown berakhir dalam <strong>{formatCountdown(countdown)}</strong>.
+                    </Text>
+                  );
+                }
+
+                if (myConfirmedAt) {
+                  // Sudah konfirmasi
+                  return (
+                    <Alert status="success" borderRadius="xl" fontSize="sm">
+                      <AlertIcon />
+                      Keikutsertaan Anda sudah dikonfirmasi! Menunggu pemandu memproses.
+                    </Alert>
+                  );
+                }
+
+                if (withinWindow) {
+                  // Window 6 jam aktif, belum konfirmasi
+                  return (
+                    <>
+                      <Alert status="info" borderRadius="xl" fontSize="sm">
+                        <AlertIcon />
+                        Konfirmasi keikutsertaan Anda sebelum window 6 jam berakhir.
+                      </Alert>
+                      <Button
+                        colorScheme="green"
+                        size="lg"
+                        w="full"
+                        isLoading={isConfirming}
+                        loadingText="Mengkonfirmasi..."
+                        onClick={handleConfirm}
+                      >
+                        Konfirmasi Keikutsertaan
+                      </Button>
+                    </>
+                  );
+                }
+
+                // Window sudah berakhir
+                return (
+                  <Alert status="warning" borderRadius="xl" fontSize="sm">
+                    <AlertIcon />
+                    Waktu konfirmasi telah berakhir.
+                  </Alert>
+                );
+              })()}
               <Button variant="ghost" colorScheme="blue" size="sm" onClick={() => navigate('/dashboard')}>
                 Kembali ke Dashboard
               </Button>

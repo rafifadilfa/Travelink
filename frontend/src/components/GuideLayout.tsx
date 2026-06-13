@@ -1,7 +1,11 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  Alert, AlertDescription, AlertIcon, AlertTitle,
+  AlertDialog, AlertDialogBody, AlertDialogContent, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogOverlay,
   Badge,
   Box,
+  Button,
   Flex,
   Text,
   useColorModeValue,
@@ -50,6 +54,7 @@ interface NavItemProps extends FlexProps {
 interface SidebarProps extends BoxProps {
   onClose: () => void;
   onNavigate?: (path: string) => void;
+  onLogout?: () => void;
 }
 
 interface GuideLayoutProps {
@@ -94,10 +99,8 @@ const NavItem = ({ icon, children, path, onNavigate, ...rest }: NavItemProps) =>
   );
 };
 
-const SidebarContent = ({ onClose, onNavigate, ...rest }: SidebarProps) => {
+const SidebarContent = ({ onClose, onNavigate, onLogout, ...rest }: SidebarProps) => {
   const logoutItemColor = useColorModeValue('gray.600', 'gray.200');
-
-  const handleLogout = () => void logoutGuide();
 
   return (
     <Box
@@ -134,7 +137,7 @@ const SidebarContent = ({ onClose, onNavigate, ...rest }: SidebarProps) => {
             {/* Logout: pakai Flex dengan onClick, bukan NavItem dengan path,
                 supaya bisa menjalankan handleLogout sebelum berpindah halaman */}
             <Flex
-                onClick={handleLogout}
+                onClick={onLogout}
                 align="center"
                 p="3"
                 mx="4"
@@ -155,6 +158,8 @@ const SidebarContent = ({ onClose, onNavigate, ...rest }: SidebarProps) => {
 // --- MAIN LAYOUT COMPONENT ---
 const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const { isOpen: isLogoutOpen, onOpen: openLogout, onClose: closeLogout } = useDisclosure();
+    const logoutCancelRef = useRef<HTMLButtonElement>(null);
     const navigate = useNavigate();
     const toast    = useToast();
 
@@ -199,6 +204,9 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
         navigate(path);
     };
 
+    const location = useLocation();
+    const isOnRestrictedPath = RESTRICTED_PATHS.includes(location.pathname);
+
     // Konversi path storage Laravel ke URL penuh untuk foto profil
     // Contoh: "public/guides/photos/file.jpg" → "http://localhost:8000/storage/guides/photos/file.jpg"
     const apiBase = ((import.meta.env.VITE_API_URL as string) ?? '').replace('/api', '');
@@ -208,7 +216,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
 
     return (
         <Box minH="100vh" bg={pageBg}>
-            <SidebarContent onClose={onClose} onNavigate={handleNavigation} display={{ base: 'none', md: 'block' }} />
+            <SidebarContent onClose={onClose} onNavigate={handleNavigation} onLogout={openLogout} display={{ base: 'none', md: 'block' }} />
              <Drawer
                 autoFocus={false}
                 isOpen={isOpen}
@@ -220,7 +228,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
             >
                 <DrawerOverlay />
                 <DrawerContent>
-                    <SidebarContent onClose={onClose} onNavigate={handleNavigation} />
+                    <SidebarContent onClose={onClose} onNavigate={handleNavigation} onLogout={openLogout} />
                 </DrawerContent>
             </Drawer>
 
@@ -257,7 +265,7 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
                                 variant="ghost"
                                 aria-label="Notifikasi"
                                 icon={<FiBell />}
-                                onClick={() => navigate('/notifications')}
+                                onClick={() => navigate('/notifications?role=guide')}
                             />
                             {unreadCount > 0 && (
                                 <Badge
@@ -293,9 +301,58 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
 
                 {/* Main Content */}
                 <Box as="main" p={{ base: 4, md: 8 }}>
-                    {children}
+                    {/* TC-022: Guard route terbatas untuk guide yang belum terverifikasi */}
+                    {!isVerified && isOnRestrictedPath ? (
+                        <Alert
+                            status="warning"
+                            borderRadius="xl"
+                            flexDirection="column"
+                            alignItems="flex-start"
+                            p={6}
+                            gap={1}
+                        >
+                            <HStack>
+                                <AlertIcon boxSize={5} />
+                                <AlertTitle fontSize="md">Fitur Belum Dapat Diakses</AlertTitle>
+                            </HStack>
+                            <AlertDescription fontSize="sm" mt={1}>
+                                Fitur ini hanya tersedia untuk pemandu wisata yang sudah terverifikasi.
+                                Lengkapi profil dan verifikasi dokumen Anda terlebih dahulu,
+                                lalu tunggu persetujuan admin.
+                            </AlertDescription>
+                            <Button
+                                mt={4}
+                                colorScheme="blue"
+                                size="sm"
+                                onClick={() => navigate('/guide/profile')}
+                            >
+                                Lengkapi Profil Saya
+                            </Button>
+                        </Alert>
+                    ) : (
+                        children
+                    )}
                 </Box>
             </Flex>
+
+            {/* TC-010/011: Dialog konfirmasi logout pemandu */}
+            <AlertDialog
+                isOpen={isLogoutOpen}
+                leastDestructiveRef={logoutCancelRef}
+                onClose={closeLogout}
+                isCentered
+            >
+                <AlertDialogOverlay>
+                    <AlertDialogContent>
+                        <AlertDialogHeader fontSize="lg" fontWeight="bold">Keluar dari Travelink</AlertDialogHeader>
+                        <AlertDialogBody>Apakah Anda yakin ingin keluar?</AlertDialogBody>
+                        <AlertDialogFooter gap={3}>
+                            <Button ref={logoutCancelRef} onClick={closeLogout}>Tidak</Button>
+                            <Button colorScheme="red" onClick={() => void logoutGuide()}>Ya</Button>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialogOverlay>
+            </AlertDialog>
         </Box>
     );
 };

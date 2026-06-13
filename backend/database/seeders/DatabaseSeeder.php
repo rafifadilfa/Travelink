@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             PhoneCountryCodeSeeder::class,
             LocationSeeder::class,
             UserSeeder::class,
+            AdminSeeder::class,
             GuideSeeder::class,
             GuideSpecialitySeeder::class,
             GuideLanguageSeeder::class,
@@ -46,6 +47,7 @@ class DatabaseSeeder extends Seeder
             TourTagSeeder::class,
             TransactionSeeder::class,
             OpenTripParticipantSeeder::class,
+            BbtDataSeeder::class,
         ]);
     }
 }

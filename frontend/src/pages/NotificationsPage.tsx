@@ -16,9 +16,10 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { FiBell, FiArrowLeft, FiCheck } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import apiClient, { adminApiClient, guideApiClient } from '../services/api';
 import type { AxiosInstance } from 'axios';
+import TouristNavbar from '../components/TouristNavbar';
 
 // ── Tipe data notifikasi ───────────────────────────────────────────────────────
 interface AppNotification {
@@ -31,11 +32,16 @@ interface AppNotification {
   data: Record<string, unknown> | null;
 }
 
-// ── Tentukan API client berdasarkan token yang tersedia ───────────────────────
-function resolveClient(): { client: AxiosInstance } {
-  if (localStorage.getItem('admin_token'))  return { client: adminApiClient };
-  if (localStorage.getItem('guide_token'))  return { client: guideApiClient };
-  return { client: apiClient };
+// ── Pilih API client berdasarkan ?role= di URL (dikirim oleh masing-masing layout)
+// Ini mencegah salah pilih client saat beberapa token ada di localStorage sekaligus.
+function resolveClient(role: string | null): AxiosInstance {
+  if (role === 'admin')   return adminApiClient;
+  if (role === 'guide')   return guideApiClient;
+  if (role === 'tourist') return apiClient;
+  // Fallback jika tidak ada role param (mis. bookmark langsung)
+  if (localStorage.getItem('admin_token')) return adminApiClient;
+  if (localStorage.getItem('guide_token')) return guideApiClient;
+  return apiClient;
 }
 
 // ── Utilitas: waktu relatif ───────────────────────────────────────────────────
@@ -108,8 +114,9 @@ const NotificationRow = ({
 const NotificationsPage: React.FC = () => {
   const toast    = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const { client } = resolveClient();
+  const client = resolveClient(searchParams.get('role'));
 
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount,   setUnreadCount]   = useState(0);
@@ -161,8 +168,11 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
+  const role = searchParams.get('role');
+
   return (
     <Box minH="100vh" bg={pageBg}>
+      {role === 'tourist' && <TouristNavbar />}
       {/* Mini header */}
       <Box
         bg={cardBg}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Flex, Heading, useColorModeValue, VStack, HStack, Stack,
   Button, Link, FormControl, FormLabel, Input, Textarea, Avatar,
@@ -106,6 +107,7 @@ const UploadCard = ({
 // ── Komponen utama ────────────────────────────────────────────────────────────
 const GuideEditProfile: React.FC = () => {
   const toast      = useToast();
+  const navigate   = useNavigate();
   const cardBg     = useColorModeValue('white', 'gray.800');
   const inputBg    = useColorModeValue('gray.50', 'gray.700');
   const secondary  = useColorModeValue('gray.500', 'gray.400');
@@ -204,6 +206,24 @@ const GuideEditProfile: React.FC = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // ── Batal edit — reset ke data tersimpan dan kembali ke dashboard ───────
+  const handleCancel = () => {
+    if (profile) {
+      setName(profile.name ?? '');
+      setAbout(profile.about ?? '');
+      setExperienceYears(profile.experience_years ?? 0);
+      setBaseRate(profile.base_rate ? String(profile.base_rate) : '');
+      setLanguages(profile.languages ?? []);
+      setSpecialities(profile.specialities ?? []);
+      setBankName(profile.bank_name ?? '');
+      setBankAccount(profile.bank_account_number ?? '');
+      setBankHolder(profile.bank_account_holder ?? '');
+    }
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    navigate('/guide/dashboard');
   };
 
   // ── Upload helpers ───────────────────────────────────────────────────────
@@ -390,6 +410,8 @@ const GuideEditProfile: React.FC = () => {
                       <FormControl flex={1} minW="140px">
                         <FormLabel>Tarif Dasar (Rp)</FormLabel>
                         <Input type="number" value={baseRate} onChange={e => setBaseRate(e.target.value)}
+                          onWheel={e => (e.target as HTMLInputElement).blur()}
+                          min={0} step={1}
                           bg={inputBg} placeholder="cth: 500000" />
                       </FormControl>
                     </HStack>
@@ -474,8 +496,13 @@ const GuideEditProfile: React.FC = () => {
                   </VStack>
                 </Box>
 
-                {/* Tombol Simpan */}
-                <Flex justify={{ base: 'stretch', md: 'flex-end' }} py={2}>
+                {/* Tombol aksi */}
+                <Flex justify={{ base: 'stretch', md: 'flex-end' }} gap={3} py={2}
+                  flexDirection={{ base: 'column-reverse', md: 'row' }}>
+                  <Button variant="outline" onClick={handleCancel}
+                    w={{ base: 'full', md: 'auto' }} size="lg">
+                    Batal
+                  </Button>
                   <Button colorScheme="blue" leftIcon={<FiSave />}
                     onClick={handleSave} isLoading={isSaving} loadingText="Menyimpan..."
                     w={{ base: 'full', md: 'auto' }} size="lg">

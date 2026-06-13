@@ -1,25 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import {
+    Alert,
+    AlertIcon,
+    Badge,
     Box,
+    Button,
     Container,
     Flex,
     Heading,
-    Text,
-    Button,
+    HStack,
+    Icon,
     Image,
-    Badge,
     Input,
     SimpleGrid,
-    useColorModeValue,
-    Icon,
-    HStack,
-    VStack,
-    Avatar,
     Spinner,
+    Text,
+    useColorModeValue,
+    useToast,
+    VStack,
+    Wrap,
+    WrapItem,
+    Avatar,
 } from '@chakra-ui/react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
-import { FiClock, FiMapPin, FiMessageCircle, FiStar } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiMessageCircle, FiStar } from 'react-icons/fi';
 import apiClient from '../services/api';
 import TouristNavbar from '../components/TouristNavbar';
 
@@ -51,6 +56,7 @@ interface TourData {
     itinerary: { time: string; activity: string }[];
     included: string[];
     excluded: string[];
+    available_days: { day_of_week: number; label: string }[];
     guide: {
         id: number;
         name: string;
@@ -61,16 +67,21 @@ interface TourData {
 
 const TourDetail: React.FC = () => {
     const navigate   = useNavigate();
+    const toast      = useToast();
     const { id }     = useParams<{ id: string }>();
     const { state }  = useLocation() as { state: { is_open_trip?: boolean } | null };
 
-    const [tour,       setTour]       = useState<TourData | null>(null);
-    const [loading,    setLoading]    = useState(true);
-    const [error,      setError]      = useState(false);
-    const [activeImage, setActiveImage] = useState(0);
-    const [activeTab,   setActiveTab]   = useState(0);
-    const [participants, setParticipants] = useState(1);
-    const [tourDate,    setTourDate]    = useState('');
+    const [tour,           setTour]           = useState<TourData | null>(null);
+    const [loading,        setLoading]        = useState(true);
+    const [error,          setError]          = useState(false);
+    const [activeImage,    setActiveImage]    = useState(0);
+    const [activeTab,      setActiveTab]      = useState(0);
+    const [participants,   setParticipants]   = useState(1);
+    const [tourDate,       setTourDate]       = useState('');
+    const [dateError,      setDateError]      = useState('');
+    const [availableDates, setAvailableDates] = useState<string[]>([]);
+    const [isBooking,      setIsBooking]      = useState(false);
+    const [loadingAvail,   setLoadingAvail]   = useState(false);
 
     // ── Fetch data tour ──────────────────────────────────────────
     useEffect(() => {
@@ -79,6 +90,16 @@ const TourDetail: React.FC = () => {
             .then(res => setTour(res.data.tour))
             .catch(() => setError(true))
             .finally(() => setLoading(false));
+    }, [id]);
+
+    // ── Fetch jadwal ketersediaan ────────────────────────────────
+    useEffect(() => {
+        if (!id) return;
+        setLoadingAvail(true);
+        apiClient.get(`/tours/${id}/availabilities`)
+            .then(res => setAvailableDates(res.data.available_dates ?? []))
+            .catch(() => {}) // non-fatal
+            .finally(() => setLoadingAvail(false));
     }, [id]);
 
     // is_open_trip bisa dari state navigasi (dari ViewAllTours) atau dari data API
@@ -130,6 +151,7 @@ const TourDetail: React.FC = () => {
     const tourImages   = tour.images.length > 0 ? tour.images : [];
     const maxGroupSize = 10;
     const minGroupSize = 1;
+    const noSchedule   = !loadingAvail && availableDates.length === 0;
 
     const handleIncreaseParticipants = () => { if (participants < maxGroupSize) setParticipants(p => p + 1); };
     const handleDecreaseParticipants = () => { if (participants > minGroupSize)  setParticipants(p => p - 1); };
@@ -140,31 +162,59 @@ const TourDetail: React.FC = () => {
         else if (e.target.value === '') setParticipants(minGroupSize);
     };
 
-    const handleBookNow = () => {
+    const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setTourDate(val);
+        if (!val) { setDateError(''); return; }
+        if (availableDates.length > 0 && !availableDates.includes(val)) {
+            setDateError('Tanggal ini tidak tersedia. Pilih tanggal yang tersedia sesuai jadwal pemandu.');
+        } else {
+            setDateError('');
+        }
+    };
+
+    // TC-041: Buat booking langsung via API, lalu redirect ke /bookings
+    const handleBookNow = async () => {
         if (!tourDate) {
-            alert('Pilih tanggal tour terlebih dahulu.');
+            toast({ title: 'Pilih tanggal tour terlebih dahulu.', status: 'warning', duration: 3000, isClosable: true });
             return;
         }
-        navigate('/payment/new', {
-            state: {
-                bookingDetails: {
-                    tourId:         tour.id,
-                    tourName:       tour.name,
-                    tourLocation:   tour.location,
-                    participants,
-                    pricePerPerson: tour.price,
-                    totalPrice,
-                    tourDate,
-                    guideName:      tour.guide?.name ?? '-',
-                },
-            },
-        });
+        if (availableDates.length > 0 && !availableDates.includes(tourDate)) {
+            toast({ title: 'Tanggal tidak tersedia.', description: 'Pilih tanggal sesuai jadwal ketersediaan pemandu.', status: 'error', duration: 4000, isClosable: true });
+            return;
+        }
+        setIsBooking(true);
+        try {
+            await apiClient.post('/bookings', {
+                tour_id:      tour.id,
+                participants,
+                tour_date:    tourDate,
+            });
+            toast({
+                title: 'Booking berhasil dibuat!',
+                description: 'Pemandu akan segera mengonfirmasi pesanan Anda.',
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+            navigate('/bookings');
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            toast({ title: msg ?? 'Gagal membuat booking. Coba lagi.', status: 'error', duration: 4000, isClosable: true });
+        } finally {
+            setIsBooking(false);
+        }
     };
 
     // Tanggal minimum yang bisa dipilih (besok)
     const minDate = new Date();
     minDate.setDate(minDate.getDate() + 1);
     const minDateStr = minDate.toISOString().split('T')[0];
+
+    // Tanggal maksimum 3 bulan ke depan
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 3);
+    const maxDateStr = maxDate.toISOString().split('T')[0];
 
     return (
         <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
@@ -256,43 +306,93 @@ const TourDetail: React.FC = () => {
                     <Box flex="1" bg={cardBg} p={{ base: 5, md: 7 }} borderRadius="xl" boxShadow="xl" height="fit-content" borderTop="4px solid" borderColor={primaryColor} animation={`${slideInUp} 0.7s ease-out 0.3s both`}>
                         <Heading size="lg" mb={6} color={primaryTextColor} fontWeight="bold" pb={3} borderBottom="2px solid" borderColor={subtleBorderColor}>Pesan Tour Ini</Heading>
                         <VStack spacing={5} align="stretch">
-                            {/* ── Pilih Tanggal Tour ── */}
-                            <Box>
-                                <Text fontWeight="bold" fontSize="md" color={primaryTextColor} mb={3}>Tanggal Tour</Text>
-                                <Input
-                                    type="date"
-                                    value={tourDate}
-                                    min={minDateStr}
-                                    onChange={e => setTourDate(e.target.value)}
-                                    focusBorderColor={primaryColor}
-                                    bg={subtleInputBg}
-                                    borderRadius="lg"
-                                    h="42px"
-                                />
-                            </Box>
 
-                            <Box>
-                                <HStack justify="space-between" mb={3}>
-                                    <Text fontWeight="bold" fontSize="md" color={primaryTextColor}>Jumlah Peserta</Text>
-                                    <Badge colorScheme="blue" variant="solid" px={2} py={0.5} borderRadius="md" fontSize="xs">Maks {maxGroupSize}</Badge>
-                                </HStack>
-                                <Flex align="center" justify="space-between" bg={useColorModeValue('gray.100', 'gray.700')} p={3} borderRadius="lg">
-                                    <HStack>
-                                        <Button size="sm" isDisabled={participants <= minGroupSize} onClick={handleDecreaseParticipants} borderRadius="full" w="36px" h="36px">-</Button>
-                                        <Input type="number" value={participants} onChange={handleInputChange} min={minGroupSize} max={maxGroupSize} mx={1} textAlign="center" fontWeight="bold" w="60px" h="36px" bg={cardBg} focusBorderColor={primaryColor} />
-                                        <Button size="sm" isDisabled={participants >= maxGroupSize} onClick={handleIncreaseParticipants} borderRadius="full" w="36px" h="36px">+</Button>
+                            {/* TC-038: Jadwal Ketersediaan */}
+                            {loadingAvail ? (
+                                <Flex align="center" gap={2}>
+                                    <Spinner size="xs" color="blue.400" />
+                                    <Text fontSize="sm" color={secondaryTextColor}>Memuat jadwal...</Text>
+                                </Flex>
+                            ) : tour.available_days && tour.available_days.length > 0 ? (
+                                <Box bg={useColorModeValue('blue.50', 'blue.900')} p={3} borderRadius="lg" border="1px solid" borderColor={useColorModeValue('blue.100', 'blue.700')}>
+                                    <HStack mb={2}>
+                                        <Icon as={FiCalendar} color={primaryColor} />
+                                        <Text fontSize="sm" fontWeight="semibold" color={primaryColor}>Jadwal Ketersediaan</Text>
                                     </HStack>
-                                    <Text color={secondaryTextColor} fontWeight="medium" fontSize="sm" pr={2}>× {formatPrice(tour.price)}</Text>
-                                </Flex>
-                            </Box>
+                                    <Wrap spacing={2}>
+                                        {tour.available_days.map(d => (
+                                            <WrapItem key={d.day_of_week}>
+                                                <Badge colorScheme="blue" variant="solid" borderRadius="full" px={3} py={1} fontSize="xs">{d.label}</Badge>
+                                            </WrapItem>
+                                        ))}
+                                    </Wrap>
+                                </Box>
+                            ) : null}
 
-                            <Box bg={useColorModeValue('blue.50', 'blue.900')} p={4} borderRadius="lg" borderLeft="5px solid" borderColor={primaryColor} boxShadow="md">
-                                <Flex justify="space-between" align="center">
-                                    <Text fontWeight="bold" fontSize="lg" color={primaryTextColor}>Total Harga</Text>
-                                    <Text fontSize="xl" fontWeight="extrabold" color={primaryColor}>{formatPrice(totalPrice)}</Text>
-                                </Flex>
-                                <Text fontSize="xs" color={secondaryTextColor} mt={1}>{participants} orang × {formatPrice(tour.price)}</Text>
-                            </Box>
+                            {/* TC-040: Tidak ada jadwal tersedia */}
+                            {noSchedule && !isOpenTrip && (
+                                <Alert status="warning" borderRadius="lg" fontSize="sm">
+                                    <AlertIcon />
+                                    <Box>
+                                        <Text fontWeight="semibold">Tidak ada jadwal tersedia</Text>
+                                        <Text>Paket ini belum memiliki jadwal ketersediaan. Coba paket wisata lain.</Text>
+                                    </Box>
+                                </Alert>
+                            )}
+
+                            {/* TC-039: Pilih Tanggal Tour */}
+                            {!noSchedule && (
+                                <Box>
+                                    <Text fontWeight="bold" fontSize="md" color={primaryTextColor} mb={2}>Tanggal Tour</Text>
+                                    {availableDates.length > 0 && (
+                                        <Text fontSize="xs" color={secondaryTextColor} mb={2}>
+                                            Pilih tanggal sesuai jadwal ketersediaan pemandu
+                                        </Text>
+                                    )}
+                                    <Input
+                                        type="date"
+                                        value={tourDate}
+                                        min={minDateStr}
+                                        max={maxDateStr}
+                                        onChange={handleDateChange}
+                                        focusBorderColor={dateError ? 'red.400' : primaryColor}
+                                        borderColor={dateError ? 'red.400' : undefined}
+                                        bg={subtleInputBg}
+                                        borderRadius="lg"
+                                        h="42px"
+                                    />
+                                    {dateError && (
+                                        <Text fontSize="xs" color="red.500" mt={1}>{dateError}</Text>
+                                    )}
+                                </Box>
+                            )}
+
+                            {!noSchedule && (
+                                <Box>
+                                    <HStack justify="space-between" mb={3}>
+                                        <Text fontWeight="bold" fontSize="md" color={primaryTextColor}>Jumlah Peserta</Text>
+                                        <Badge colorScheme="blue" variant="solid" px={2} py={0.5} borderRadius="md" fontSize="xs">Maks {maxGroupSize}</Badge>
+                                    </HStack>
+                                    <Flex align="center" justify="space-between" bg={useColorModeValue('gray.100', 'gray.700')} p={3} borderRadius="lg">
+                                        <HStack>
+                                            <Button size="sm" isDisabled={participants <= minGroupSize} onClick={handleDecreaseParticipants} borderRadius="full" w="36px" h="36px">-</Button>
+                                            <Input type="number" value={participants} onChange={handleInputChange} min={minGroupSize} max={maxGroupSize} mx={1} textAlign="center" fontWeight="bold" w="60px" h="36px" bg={cardBg} focusBorderColor={primaryColor} />
+                                            <Button size="sm" isDisabled={participants >= maxGroupSize} onClick={handleIncreaseParticipants} borderRadius="full" w="36px" h="36px">+</Button>
+                                        </HStack>
+                                        <Text color={secondaryTextColor} fontWeight="medium" fontSize="sm" pr={2}>× {formatPrice(tour.price)}</Text>
+                                    </Flex>
+                                </Box>
+                            )}
+
+                            {!noSchedule && (
+                                <Box bg={useColorModeValue('blue.50', 'blue.900')} p={4} borderRadius="lg" borderLeft="5px solid" borderColor={primaryColor} boxShadow="md">
+                                    <Flex justify="space-between" align="center">
+                                        <Text fontWeight="bold" fontSize="lg" color={primaryTextColor}>Total Harga</Text>
+                                        <Text fontSize="xl" fontWeight="extrabold" color={primaryColor}>{formatPrice(totalPrice)}</Text>
+                                    </Flex>
+                                    <Text fontSize="xs" color={secondaryTextColor} mt={1}>{participants} orang × {formatPrice(tour.price)}</Text>
+                                </Box>
+                            )}
 
                             {isOpenTrip && (
                                 <Box>
@@ -308,23 +408,43 @@ const TourDetail: React.FC = () => {
                                         Ikut Smart Open Trip
                                     </Button>
                                     <Text fontSize="xs" color={secondaryTextColor} textAlign="center" mt={2}>
-                                        Bergabung dengan wisatawan lain & hemat biaya bersama
+                                        Bergabung dengan wisatawan lain &amp; hemat biaya bersama
                                     </Text>
                                 </Box>
                             )}
 
-                            <Button
-                                {...ctaButtonStyle}
-                                bgGradient="linear(to-r, green.400, green.500)"
-                                color="white"
-                                _hover={{ bgGradient: 'linear(to-r, green.500, green.600)' }}
-                                onClick={handleBookNow}
-                                leftIcon={<Text fontSize="xl">🎫</Text>}
-                            >
-                                Pesan Sekarang
-                            </Button>
+                            {/* TC-041: Tombol booking langsung ke API */}
+                            {!noSchedule && (
+                                <Button
+                                    {...ctaButtonStyle}
+                                    bgGradient="linear(to-r, green.400, green.500)"
+                                    color="white"
+                                    _hover={{ bgGradient: 'linear(to-r, green.500, green.600)' }}
+                                    onClick={handleBookNow}
+                                    isLoading={isBooking}
+                                    loadingText="Memproses..."
+                                    isDisabled={!!dateError}
+                                    leftIcon={<Text fontSize="xl">🎫</Text>}
+                                >
+                                    Pesan Sekarang
+                                </Button>
+                            )}
 
-                            <Text fontSize="sm" color={secondaryTextColor} textAlign="center">✨ Pembatalan gratis hingga 24 jam sebelum tour</Text>
+                            {noSchedule && !isOpenTrip && (
+                                <Button
+                                    {...ctaButtonStyle}
+                                    w="full"
+                                    colorScheme="blue"
+                                    variant="outline"
+                                    onClick={() => navigate('/tours')}
+                                >
+                                    Lihat Paket Lain
+                                </Button>
+                            )}
+
+                            {!noSchedule && (
+                                <Text fontSize="sm" color={secondaryTextColor} textAlign="center">✨ Pembatalan gratis hingga 24 jam sebelum tour</Text>
+                            )}
                         </VStack>
                     </Box>
                 </Flex>
@@ -360,6 +480,22 @@ const TourDetail: React.FC = () => {
                                             <Text fontSize="sm" color={secondaryTextColor} fontWeight="medium">Kategori</Text>
                                             <Text fontWeight="bold" color={primaryTextColor}>{tour.categories.join(', ')}</Text>
                                         </Box>
+                                    </Flex>
+                                )}
+                                {/* TC-038: Tampilkan jadwal ketersediaan di detail */}
+                                {tour.available_days && tour.available_days.length > 0 && (
+                                    <Flex align="flex-start" bg={useColorModeValue('gray.100', 'gray.700')} p={4} borderRadius="lg" flexDir="column">
+                                        <HStack mb={2}>
+                                            <Icon as={FiCalendar} boxSize={5} color={primaryColor} />
+                                            <Text fontSize="sm" color={secondaryTextColor} fontWeight="medium">Tersedia</Text>
+                                        </HStack>
+                                        <Wrap spacing={1}>
+                                            {tour.available_days.map(d => (
+                                                <WrapItem key={d.day_of_week}>
+                                                    <Badge colorScheme="blue" fontSize="xs" borderRadius="md">{d.label}</Badge>
+                                                </WrapItem>
+                                            ))}
+                                        </Wrap>
                                     </Flex>
                                 )}
                             </SimpleGrid>

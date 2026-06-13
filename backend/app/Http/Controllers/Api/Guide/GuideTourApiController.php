@@ -8,6 +8,7 @@ use App\Models\Country;
 use App\Models\Item;
 use App\Models\Location;
 use App\Models\Tour;
+use App\Models\TourAvailability;
 use App\Models\TourImage;
 use App\Models\TourItinerary;
 use Illuminate\Http\JsonResponse;
@@ -37,7 +38,7 @@ class GuideTourApiController extends Controller
     // ── Helper: format tour lengkap untuk form edit ───────────────────────────
     private function formatTourDetail(Tour $tour): array
     {
-        $tour->load(['categories', 'itineraries', 'items', 'images']);
+        $tour->load(['categories', 'itineraries', 'items', 'images', 'availabilities']);
 
         $included = $tour->items->where('pivot.is_included', true)->pluck('name')->values();
         $excluded = $tour->items->where('pivot.is_included', false)->pluck('name')->values();
@@ -45,16 +46,17 @@ class GuideTourApiController extends Controller
         $host = request()->getSchemeAndHttpHost();
 
         return [
-            'id'           => $tour->id,
-            'title'        => $tour->name,
-            'description'  => $tour->tour_description,
-            'location'     => $tour->location?->name ?? '',
-            'category'     => $tour->categories->first()?->name ?? '',
-            'price'        => (string) ((int) ($tour->tour_price ?? 0)),
-            'duration'     => $tour->tour_duration ?? '',
-            'status'       => $tour->tour_status ?? 'draft',
-            'is_open_trip' => (bool) $tour->is_open_trip,
-            'itinerary'    => $tour->itineraries->map(fn($it) => [
+            'id'             => $tour->id,
+            'title'          => $tour->name,
+            'description'    => $tour->tour_description,
+            'location'       => $tour->location?->name ?? '',
+            'category'       => $tour->categories->first()?->name ?? '',
+            'price'          => (string) ((int) ($tour->tour_price ?? 0)),
+            'duration'       => $tour->tour_duration ?? '',
+            'status'         => $tour->tour_status ?? 'draft',
+            'is_open_trip'   => (bool) $tour->is_open_trip,
+            'available_days' => $tour->availabilities->pluck('day_of_week')->values(),
+            'itinerary'      => $tour->itineraries->map(fn($it) => [
                 'time'     => $it->start_time ?? '',
                 'activity' => $it->activity ?? '',
             ])->values(),
@@ -88,21 +90,27 @@ class GuideTourApiController extends Controller
         $guide = $request->user();
 
         $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:200'],
-            'description' => ['sometimes', 'nullable', 'string'],
-            'location'    => ['sometimes', 'nullable', 'string', 'max:200'],
-            'category'    => ['sometimes', 'nullable', 'string', 'max:100'],
-            'price'       => ['required', 'numeric', 'min:0'],
-            'duration'    => ['sometimes', 'nullable', 'string', 'max:100'],
-            'status'       => ['sometimes', 'in:draft,published'],
-            'is_open_trip' => ['sometimes', 'boolean'],
-            'itinerary'   => ['sometimes', 'array'],
+            'title'          => ['required', 'string', 'max:200'],
+            'description'    => ['sometimes', 'nullable', 'string'],
+            'location'       => ['sometimes', 'nullable', 'string', 'max:200'],
+            'category'       => ['sometimes', 'nullable', 'string', 'max:100'],
+            'price'          => ['required', 'numeric', 'min:1'],
+            'duration'       => ['sometimes', 'nullable', 'string', 'max:100'],
+            'status'         => ['sometimes', 'in:draft,published'],
+            'is_open_trip'   => ['sometimes', 'boolean'],
+            'available_days'   => ['required', 'array', 'min:1'],
+            'available_days.*' => ['integer', 'between:0,6'],
+            'itinerary'      => ['sometimes', 'array'],
             'itinerary.*.time'     => ['sometimes', 'string'],
             'itinerary.*.activity' => ['sometimes', 'string'],
             'included'    => ['sometimes', 'array'],
             'included.*'  => ['string'],
             'excluded'    => ['sometimes', 'array'],
             'excluded.*'  => ['string'],
+        ], [
+            'price.min'               => 'Harga paket wajib diisi dan harus lebih dari 0.',
+            'available_days.required' => 'Pilih minimal satu hari ketersediaan paket.',
+            'available_days.min'      => 'Pilih minimal satu hari ketersediaan paket.',
         ]);
 
         $locationId = $this->resolveLocationId($validated['location'] ?? null);
@@ -148,21 +156,27 @@ class GuideTourApiController extends Controller
         $tour  = Tour::where('tour_guide_id', $guide->id)->findOrFail($id);
 
         $validated = $request->validate([
-            'title'        => ['sometimes', 'string', 'max:200'],
-            'description'  => ['sometimes', 'nullable', 'string'],
-            'location'     => ['sometimes', 'nullable', 'string', 'max:200'],
-            'category'     => ['sometimes', 'nullable', 'string', 'max:100'],
-            'price'        => ['sometimes', 'numeric', 'min:0'],
-            'duration'     => ['sometimes', 'nullable', 'string', 'max:100'],
-            'status'       => ['sometimes', 'in:draft,published'],
-            'is_open_trip' => ['sometimes', 'boolean'],
-            'itinerary'    => ['sometimes', 'array'],
+            'title'          => ['sometimes', 'string', 'max:200'],
+            'description'    => ['sometimes', 'nullable', 'string'],
+            'location'       => ['sometimes', 'nullable', 'string', 'max:200'],
+            'category'       => ['sometimes', 'nullable', 'string', 'max:100'],
+            'price'          => ['sometimes', 'numeric', 'min:1'],
+            'duration'       => ['sometimes', 'nullable', 'string', 'max:100'],
+            'status'         => ['sometimes', 'in:draft,published'],
+            'is_open_trip'   => ['sometimes', 'boolean'],
+            'available_days'   => ['required', 'array', 'min:1'],
+            'available_days.*' => ['integer', 'between:0,6'],
+            'itinerary'      => ['sometimes', 'array'],
             'itinerary.*.time'     => ['sometimes', 'string'],
             'itinerary.*.activity' => ['sometimes', 'string'],
             'included'     => ['sometimes', 'array'],
             'included.*'   => ['string'],
             'excluded'     => ['sometimes', 'array'],
             'excluded.*'   => ['string'],
+        ], [
+            'price.min'               => 'Harga paket wajib diisi dan harus lebih dari 0.',
+            'available_days.required' => 'Pilih minimal satu hari ketersediaan paket.',
+            'available_days.min'      => 'Pilih minimal satu hari ketersediaan paket.',
         ]);
 
         if (array_key_exists('location', $validated) && !empty($validated['location'])) {
@@ -203,7 +217,7 @@ class GuideTourApiController extends Controller
 
         if ($hasActiveBookings) {
             return response()->json([
-                'message' => 'Paket tidak dapat dihapus karena terdapat booking aktif.',
+                'message' => 'Paket tidak dapat dihapus karena terdapat booking aktif. Nonaktifkan paket terlebih dahulu untuk menghentikan pemesanan baru.',
             ], 422);
         }
 
@@ -276,9 +290,18 @@ class GuideTourApiController extends Controller
         return $location->id;
     }
 
-    // ── Private: sync kategori, itinerary, item ───────────────────────────────
+    // ── Private: sync kategori, itinerary, item, dan hari ketersediaan ──────────
     private function syncRelations(Tour $tour, array $data): void
     {
+        // Hari ketersediaan — hapus lama, buat baru (unique days 0-6)
+        if (isset($data['available_days'])) {
+            $days = array_unique(array_map('intval', $data['available_days']));
+            TourAvailability::where('tour_id', $tour->id)->delete();
+            foreach ($days as $day) {
+                TourAvailability::create(['tour_id' => $tour->id, 'day_of_week' => $day]);
+            }
+        }
+
         // Kategori
         if (!empty($data['category'])) {
             $cat = Category::firstOrCreate(['name' => trim($data['category'])]);

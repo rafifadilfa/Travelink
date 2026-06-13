@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Booking;
+use App\Services\NotificationService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Verifikasi pembayaran oleh admin (UC-18).
@@ -120,7 +120,29 @@ class AdminPaymentApiController extends Controller
         // Tambah pending_balance pemandu (WalletService — satu-satunya sumber kebenaran)
         WalletService::creditPending($guide, $transaction->total_amount);
 
-        // TODO: notifikasi wisatawan & pemandu (out of scope)
+        $tourName = $transaction->tour?->name ?? 'paket wisata';
+        $userId   = $transaction->user?->id;
+        $guideId  = $guide->id;
+
+        if ($userId) {
+            NotificationService::send(
+                'payment_verified',
+                'user',
+                $userId,
+                'Pembayaran Dikonfirmasi',
+                "Pembayaran Anda untuk {$tourName} telah diverifikasi. Selamat menikmati perjalanan!",
+                ['booking_id' => $booking->id]
+            );
+        }
+
+        NotificationService::send(
+            'payment_verified',
+            'guide',
+            $guideId,
+            'Pembayaran Dikonfirmasi',
+            "Pembayaran untuk booking {$tourName} oleh {$transaction->user?->name} telah dikonfirmasi.",
+            ['booking_id' => $booking->id]
+        );
 
         $booking->load(['transaction.tour', 'transaction.user', 'transaction.guide']);
 
@@ -135,7 +157,7 @@ class AdminPaymentApiController extends Controller
     // Bukti tidak valid (UC-18 Alternate Flow A1)
     // terkonfirmasi → menunggu_pembayaran (wisatawan perlu upload ulang)
     // ================================================================
-    public function rejectPayment(Request $request, int $id): JsonResponse
+    public function rejectPayment(int $id): JsonResponse
     {
         $booking = Booking::where('booking_status', Booking::STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN)
             ->findOrFail($id);
@@ -147,9 +169,21 @@ class AdminPaymentApiController extends Controller
             'paid_at'           => null,
         ]);
 
-        // TODO: notifikasi wisatawan (out of scope)
-
         $booking->load(['transaction.tour', 'transaction.user', 'transaction.guide']);
+
+        $tourName = $booking->transaction?->tour?->name ?? 'paket wisata';
+        $userId   = $booking->transaction?->user?->id;
+
+        if ($userId) {
+            NotificationService::send(
+                'payment_rejected',
+                'user',
+                $userId,
+                'Bukti Pembayaran Ditolak',
+                "Bukti pembayaran untuk {$tourName} tidak valid. Silakan upload ulang bukti pembayaran.",
+                ['booking_id' => $booking->id]
+            );
+        }
 
         return response()->json([
             'message' => 'Bukti pembayaran ditolak. Wisatawan perlu mengunggah ulang bukti pembayaran.',

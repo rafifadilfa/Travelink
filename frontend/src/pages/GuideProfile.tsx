@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/icons';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
+import TouristNavbar from '../components/TouristNavbar';
 
 const fadeIn = keyframes`
   from { opacity: 0; }
@@ -148,23 +149,7 @@ const GuideProfile: React.FC = () => {
 
   return (
     <Box minH="100vh" bg={overallBg} animation={`${fadeIn} 0.5s ease-out`}>
-      {/* Navbar */}
-      <Box bg={glassBg} backdropFilter="blur(18px)" boxShadow="sm" position="sticky" top={0} zIndex={1000} borderBottom="1px solid" borderColor={subtleBorderColor}>
-        <Container maxW="container.xl">
-          <Flex h="68px" justify="space-between" align="center">
-            <Flex align="center" gap={2.5} onClick={() => navigate('/dashboard')} cursor="pointer">
-              <Flex alignItems="center" justifyContent="center" boxSize="40px" borderRadius="lg" bgGradient={accentGradient} boxShadow="lg" transition="all 0.3s ease" _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}>
-                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
-              </Flex>
-              <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold">Travelink</Heading>
-            </Flex>
-            <HStack spacing={3}>
-              <Button {...secondaryButtonStyle} size="sm" onClick={() => navigate('/tours')} leftIcon={<ExternalLinkIcon />}>Explore Tour</Button>
-              <Button {...primaryButtonStyle} size="sm" onClick={() => navigate('/dashboard')} leftIcon={<ArrowBackIcon />}>Dashboard</Button>
-            </HStack>
-          </Flex>
-        </Container>
-      </Box>
+      <TouristNavbar />
 
       <Container maxW="container.lg" py={{ base: 6, md: 10 }}>
         {/* Header guide */}

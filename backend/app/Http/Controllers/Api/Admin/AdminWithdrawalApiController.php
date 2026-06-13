@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
 use App\Models\Withdrawal;
+use App\Services\NotificationService;
 use App\Services\WalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -108,13 +109,21 @@ class AdminWithdrawalApiController extends Controller
         // Kurangi available_balance + buat wallet_transaction (WalletService — satu-satunya sumber kebenaran)
         WalletService::debitAvailable($guide, $withdrawal);
 
-        // TODO: notifikasi pemandu (out of scope)
-
         $withdrawal->load('guide');
 
+        $amountFormatted = number_format($withdrawal->amount, 0, ',', '.');
+
+        NotificationService::send(
+            'withdrawal_processed',
+            'guide',
+            $guide->id,
+            'Pencairan Dana Diproses',
+            "Pencairan dana Rp {$amountFormatted} telah diproses. Dana sudah ditransfer ke rekening Anda.",
+            ['withdrawal_id' => $withdrawal->id]
+        );
+
         return response()->json([
-            'message'    => "Pencairan Rp " . number_format($withdrawal->amount, 0, ',', '.') .
-                " untuk {$guide->name} berhasil diproses.",
+            'message'    => "Pencairan Rp {$amountFormatted} untuk {$guide->name} berhasil diproses.",
             'withdrawal' => $this->formatWithdrawal($withdrawal),
         ], 200);
     }
@@ -139,7 +148,16 @@ class AdminWithdrawalApiController extends Controller
             'rejection_reason' => $validated['rejection_reason'],
         ]);
 
-        // TODO: notifikasi pemandu (out of scope)
+        $amountFormatted = number_format($withdrawal->amount, 0, ',', '.');
+
+        NotificationService::send(
+            'withdrawal_rejected',
+            'guide',
+            $withdrawal->guide->id,
+            'Pencairan Dana Ditolak',
+            "Permintaan pencairan Rp {$amountFormatted} ditolak. Alasan: {$validated['rejection_reason']}",
+            ['withdrawal_id' => $withdrawal->id]
+        );
 
         return response()->json([
             'message'    => 'Permintaan pencairan ditolak.',

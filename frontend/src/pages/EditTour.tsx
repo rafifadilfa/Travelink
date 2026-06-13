@@ -12,6 +12,7 @@ import {
   IconButton,
   FormControl,
   FormLabel,
+  FormHelperText,
   Input,
   InputGroup,
   InputLeftAddon,
@@ -23,6 +24,8 @@ import {
   useToast,
   CloseButton,
   Spinner,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
 import { FiPlus, FiTrash2, FiUploadCloud } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -56,6 +59,8 @@ const EditTour: React.FC = () => {
     const [category,    setCategory]    = useState('');
     const [isOpenTrip,  setIsOpenTrip]  = useState(false);
 
+    const [selectedDays, setSelectedDays] = useState<number[]>([]);
+
     const [itinerary, setItinerary] = useState<ItineraryStep[]>([{ time: '', activity: '' }]);
     const [included,  setIncluded]  = useState<string[]>(['']);
     const [excluded,  setExcluded]  = useState<string[]>(['']);
@@ -67,9 +72,21 @@ const EditTour: React.FC = () => {
     const [photoPreviews,   setPhotoPreviews]   = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const cardBg       = useColorModeValue('white', 'gray.800');
-    const inputBg      = useColorModeValue('gray.50', 'gray.700');
+    const cardBg        = useColorModeValue('white', 'gray.800');
+    const inputBg       = useColorModeValue('gray.50', 'gray.700');
     const dropzoneBorder = useColorModeValue('gray.300', 'gray.600');
+
+    const DAY_LABELS = [
+        { value: 1, label: 'Senin' }, { value: 2, label: 'Selasa' },
+        { value: 3, label: 'Rabu' },  { value: 4, label: 'Kamis' },
+        { value: 5, label: 'Jumat' }, { value: 6, label: 'Sabtu' },
+        { value: 0, label: 'Minggu' },
+    ];
+
+    const toggleDay = (val: number) =>
+        setSelectedDays(prev =>
+            prev.includes(val) ? prev.filter(d => d !== val) : [...prev, val]
+        );
 
     // ── Format tampilan harga ─────────────────────────────────────
     const formatPrice = (raw: string): string => {
@@ -95,6 +112,7 @@ const EditTour: React.FC = () => {
                 setDuration(t.duration ?? '');
                 setCategory(t.category ?? '');
                 setIsOpenTrip(Boolean(t.is_open_trip));
+                setSelectedDays(Array.isArray(t.available_days) ? t.available_days.map(Number) : []);
                 setItinerary(t.itinerary?.length  ? t.itinerary  : [{ time: '', activity: '' }]);
                 setIncluded(t.included?.length    ? t.included   : ['']);
                 setExcluded(t.excluded?.length    ? t.excluded   : ['']);
@@ -167,19 +185,24 @@ const EditTour: React.FC = () => {
     // ── Submit ────────────────────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (selectedDays.length === 0) {
+            toast({ title: 'Pilih minimal satu hari ketersediaan paket', status: 'error', duration: 4000, isClosable: true });
+            return;
+        }
         setIsSubmitting(true);
         try {
             await guideApiClient.put(`/guide/tours/${tourId}`, {
                 title,
                 description,
                 location,
-                price:        Number(priceRaw) || 0,
+                price:          Number(priceRaw) || 0,
                 duration,
                 category,
-                is_open_trip: isOpenTrip,
-                itinerary:    itinerary.filter(s => s.activity.trim()),
-                included:     included.filter(s => s.trim()),
-                excluded:     excluded.filter(s => s.trim()),
+                is_open_trip:   isOpenTrip,
+                available_days: selectedDays,
+                itinerary:      itinerary.filter(s => s.activity.trim()),
+                included:       included.filter(s => s.trim()),
+                excluded:       excluded.filter(s => s.trim()),
             });
 
             // Upload foto baru (kalau ada)
@@ -316,6 +339,29 @@ const EditTour: React.FC = () => {
                                     <FormLabel htmlFor="is-open-trip" mb={0} cursor="pointer">
                                         Jadikan Smart Open Trip
                                     </FormLabel>
+                                </FormControl>
+
+                                {/* TC-031: Jadwal Ketersediaan */}
+                                <FormControl isRequired>
+                                    <FormLabel>Jadwal Ketersediaan</FormLabel>
+                                    <Wrap spacing={2}>
+                                        {DAY_LABELS.map(d => (
+                                            <WrapItem key={d.value}>
+                                                <Button
+                                                    size="sm"
+                                                    variant={selectedDays.includes(d.value) ? 'solid' : 'outline'}
+                                                    colorScheme="blue"
+                                                    onClick={() => toggleDay(d.value)}
+                                                    type="button"
+                                                >
+                                                    {d.label}
+                                                </Button>
+                                            </WrapItem>
+                                        ))}
+                                    </Wrap>
+                                    <FormHelperText>
+                                        Pilih hari-hari saat Anda tersedia untuk memandu tour ini. Pilih minimal 1 hari.
+                                    </FormHelperText>
                                 </FormControl>
                             </VStack>
                         </Box>
