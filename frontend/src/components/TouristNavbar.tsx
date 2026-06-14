@@ -6,6 +6,7 @@ import {
     Badge,
     Box,
     Button,
+    Collapse,
     Container,
     Flex,
     Heading,
@@ -21,7 +22,7 @@ import {
     useDisclosure,
 } from '@chakra-ui/react';
 import { SearchIcon } from '@chakra-ui/icons';
-import { FiBell, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiLogOut, FiSearch } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
 import { logoutUser } from '../utils/logout';
@@ -40,6 +41,8 @@ const TouristNavbar: React.FC = () => {
         return raw ? JSON.parse(raw) as UserProfile : null;
     });
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    const [showMobileSearch, setShowMobileSearch] = useState(false);
 
     const { isOpen: isLogoutOpen, onOpen: openLogout, onClose: closeLogout } = useDisclosure();
     const logoutCancelRef = useRef<HTMLButtonElement>(null);
@@ -92,6 +95,14 @@ const TouristNavbar: React.FC = () => {
         setSearchInput('');
     };
 
+    const handleMobileSearch = () => {
+        const kw = searchInput.trim();
+        if (!kw) return;
+        navigate(`/search?q=${encodeURIComponent(kw)}`);
+        setSearchInput('');
+        setShowMobileSearch(false);
+    };
+
     const baseStyle = {
         borderRadius: 'lg',
         fontWeight: 'semibold',
@@ -132,13 +143,11 @@ const TouristNavbar: React.FC = () => {
 
     return (
         <>
+            <Box position="sticky" top={0} zIndex={1000}>
             <Box
                 bg={glassBg}
                 backdropFilter="blur(18px)"
                 boxShadow="md"
-                position="sticky"
-                top={0}
-                zIndex={1000}
                 borderBottom="1px solid"
                 borderColor={subtleBorder}
             >
@@ -174,7 +183,19 @@ const TouristNavbar: React.FC = () => {
                         </Flex>
 
                         {/* Action buttons */}
-                        <HStack spacing={2} flexShrink={0}>
+                        <HStack spacing={1} flexShrink={0}>
+                            {/* Mobile-only nav icons */}
+                            <Tooltip label="Cari Pemandu" placement="bottom">
+                                <IconButton
+                                    display={{ base: 'flex', md: 'none' }}
+                                    aria-label="Cari pemandu"
+                                    icon={<Icon as={FiSearch} boxSize="18px" />}
+                                    variant="ghost"
+                                    size="md"
+                                    color={showMobileSearch ? primaryColor : undefined}
+                                    onClick={() => setShowMobileSearch(prev => !prev)}
+                                />
+                            </Tooltip>
                             {/* Search bar — didekatkan dengan tombol Explore */}
                             <InputGroup size="sm" w={{ base: '140px', md: '220px' }} display={{ base: 'none', md: 'flex' }}>
                                 <InputLeftElement pointerEvents="none">
@@ -289,6 +310,38 @@ const TouristNavbar: React.FC = () => {
                         </HStack>
                     </Flex>
                 </Container>
+            </Box>
+
+            {/* Mobile search bar — sticky di bawah navbar saat icon search diklik */}
+            <Collapse in={showMobileSearch} animateOpacity>
+                <Box
+                    display={{ base: 'block', md: 'none' }}
+                    bg={glassBg}
+                    backdropFilter="blur(18px)"
+                    borderBottom="1px solid"
+                    borderColor={subtleBorder}
+                    px={4}
+                    py={3}
+                >
+                    <InputGroup size="md">
+                        <InputLeftElement pointerEvents="none">
+                            <SearchIcon color="gray.400" />
+                        </InputLeftElement>
+                        <Input
+                            placeholder="Cari pemandu..."
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleMobileSearch()}
+                            bg={inputBg}
+                            border="1px solid"
+                            borderColor={subtleBorder}
+                            borderRadius="full"
+                            autoFocus
+                            _focus={{ borderColor: 'blue.400', boxShadow: `0 0 0 1px ${focusShadow}` }}
+                        />
+                    </InputGroup>
+                </Box>
+            </Collapse>
             </Box>
 
             {/* Dialog konfirmasi logout */}

@@ -435,11 +435,11 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     display: 'block',
                     color: '#343a40'
                   }}>
-                    Email or Username
+                    Email
                   </label>
                   <input
                     type="email"
-                    placeholder="your@email.com or username"
+                    placeholder="your@email.com"
                     value={email}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     style={{
@@ -772,22 +772,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
             </div>
           )}
 
-          <div style={{
-            marginTop: '32px',
-            textAlign: 'center'
-          }}>
-            <p style={{ fontSize: '13px', color: '#6c757d', lineHeight: 1.6 }}>
-              By signing in or creating an account, you agree to our
-              <br />
-              <a href="/terms" style={{ color: '#007bff', textDecoration: 'none', fontWeight: '500' }}>
-                Terms & Conditions
-              </a>
-              {' '}and{' '}
-              <a href="/privacy" style={{ color: '#007bff', textDecoration: 'none', fontWeight: '500' }}>
-                Privacy Policy
-              </a>.
-            </p>
-          </div>
         </div>
       </div>
     </div>

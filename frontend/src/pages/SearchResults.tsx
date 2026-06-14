@@ -133,8 +133,9 @@ const GuideCard: React.FC<GuideCardProps> = ({ guide, index }) => {
       p={5}
       boxShadow="sm"
       display="flex"
+      flexDirection={{ base: 'column', md: 'row' }}
       gap={4}
-      alignItems="flex-start"
+      alignItems={{ base: 'center', md: 'flex-start' }}
       animation={`${fadeUp} 0.35s ease both`}
       style={{ animationDelay: `${index * 60}ms` }}
       _hover={{ boxShadow: 'lg', transform: 'translateY(-2px)', transition: 'all 0.2s ease' }}
@@ -150,7 +151,7 @@ const GuideCard: React.FC<GuideCardProps> = ({ guide, index }) => {
         _hover={{ opacity: 0.85 }}
       />
 
-      <Box flex="1" minW={0}>
+      <Box flex="1" minW={0} w="full" textAlign={{ base: 'center', md: 'left' }}>
         <Heading
           size="sm"
           color={nameColor}
@@ -164,7 +165,7 @@ const GuideCard: React.FC<GuideCardProps> = ({ guide, index }) => {
         </Heading>
 
         {/* Rating */}
-        <HStack spacing={1} mb={2}>
+        <HStack spacing={1} mb={2} justify={{ base: 'center', md: 'flex-start' }}>
           {renderStars(guide.rating)}
           <Text fontSize="xs" color={subtleColor} ml={1}>
             {guide.rating > 0 ? guide.rating.toFixed(1) : 'Belum ada rating'}
@@ -172,7 +173,7 @@ const GuideCard: React.FC<GuideCardProps> = ({ guide, index }) => {
         </HStack>
 
         {/* Info baris */}
-        <VStack spacing={1} align="flex-start" mb={3}>
+        <VStack spacing={1} align={{ base: 'center', md: 'flex-start' }} mb={3}>
           <HStack spacing={1.5} fontSize="xs" color={subtleColor}>
             <Icon as={FiMapPin} boxSize={3} />
             <Text>{guide.location}</Text>

@@ -158,6 +158,7 @@ const AdminGuideList: React.FC = () => {
           border="1px solid" borderColor={borderColor}
           overflow="hidden"
         >
+          <Box overflowX="auto">
           <Table variant="simple">
             <Thead bg={theadBg}>
               <Tr>
@@ -215,6 +216,7 @@ const AdminGuideList: React.FC = () => {
               })}
             </Tbody>
           </Table>
+          </Box>
         </Box>
       )}
     </AdminLayout>

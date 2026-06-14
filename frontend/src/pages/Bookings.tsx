@@ -322,9 +322,9 @@ const StatRow: React.FC<StatRowProps> = ({ memberCount, matchingScore, tourPrice
       {items.map((item, idx) => (
         <React.Fragment key={item.label}>
           {idx > 0 && <Divider orientation="vertical" h="auto" />}
-          <Box flex={1} px={3} py={2.5} textAlign="center">
+          <Box flex={1} px={{ base: 2, md: 3 }} py={2.5} textAlign="center">
             <Text fontSize="xs" color={labelColor} mb={0.5}>{item.icon} {item.label}</Text>
-            <Text fontSize="sm" fontWeight="semibold" color={valueColor}>{item.value}</Text>
+            <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="semibold" color={valueColor} noOfLines={1}>{item.value}</Text>
           </Box>
         </React.Fragment>
       ))}

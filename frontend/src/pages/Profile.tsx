@@ -3,13 +3,13 @@ import {
   As,
   Box, Button, Flex, Text, Heading, Container, Grid, Input, Select,
   useColorModeValue, Icon, Badge, VStack, HStack, Tabs,
-  TabList, TabPanels, Tab, TabPanel, Avatar, Divider, Switch, useToast,
-  Tooltip, Spinner, Breadcrumb, BreadcrumbItem, BreadcrumbLink,
+  TabList, TabPanels, Tab, TabPanel, Avatar, Divider, useToast,
+  Spinner, Breadcrumb, BreadcrumbItem, BreadcrumbLink,
   FormControl, FormErrorMessage,
 } from '@chakra-ui/react';
 import {
   ChevronRightIcon, EditIcon, CheckIcon, CloseIcon, SettingsIcon, CalendarIcon,
-  LockIcon, DeleteIcon, WarningTwoIcon, EmailIcon, ChatIcon, TimeIcon, InfoOutlineIcon
+  EmailIcon, ChatIcon, TimeIcon, InfoOutlineIcon
 } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
@@ -116,11 +116,6 @@ const Profile: React.FC = () => {
   const primaryBtnGradFrom  = useColorModeValue('blue.400', 'blue.300');
   const primaryBtnHoverTo   = useColorModeValue('blue.500', 'blue.400');
   const secondaryBtnHoverBg = useColorModeValue('blue.50', 'rgba(49,130,206,0.1)');
-  const dangerBg            = useColorModeValue('red.50', 'red.800');
-  const dangerColor         = useColorModeValue('red.600', 'red.200');
-  const dangerBorderColor   = useColorModeValue('red.400', 'red.500');
-  const dangerHoverBg       = useColorModeValue('red.100', 'red.700');
-  const dangerHoverBorder   = useColorModeValue('red.500', 'red.400');
 
   const avatarBorderColor   = useColorModeValue('white', 'gray.700');
   const tabHoverBg          = useColorModeValue('blue.100', 'gray.700');
@@ -128,13 +123,6 @@ const Profile: React.FC = () => {
   const inputHoverBg        = useColorModeValue('gray.200', 'gray.600');
   const inputFocusShadow    = useColorModeValue('blue.300', 'blue.600');
   const inputFocusBg        = useColorModeValue('white', 'gray.700');
-  const settingRowBg        = useColorModeValue('gray.50', 'gray.750');
-  const dangerZoneRedFrom   = useColorModeValue('red.50', 'red.900');
-  const dangerZoneOrangeTo  = useColorModeValue('orange.50', 'orange.900');
-  const dangerZoneBorder    = useColorModeValue('red.200', 'red.700');
-  const dangerIconColor     = useColorModeValue('red.500', 'red.300');
-  const dangerHeadingColor  = useColorModeValue('red.700', 'red.200');
-  const dangerTextColor     = useColorModeValue('red.700', 'red.300');
 
   const baseButtonStyle = {
     borderRadius: "lg", fontWeight: "semibold", h: "44px",
@@ -163,15 +151,6 @@ const Profile: React.FC = () => {
     },
   };
 
-  const dangerButtonStyle = {
-    ...baseButtonStyle,
-    bg: dangerBg, color: dangerColor,
-    border: "1px solid", borderColor: dangerBorderColor,
-    _hover: {
-      bg: dangerHoverBg, borderColor: dangerHoverBorder,
-      transform: 'translateY(-2px)', boxShadow: 'md'
-    },
-  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -269,7 +248,6 @@ const Profile: React.FC = () => {
   const tabs = [
     { label: "Detail Profil", icon: SettingsIcon },
     { label: "Riwayat Booking", icon: CalendarIcon },
-    { label: "Pengaturan Akun", icon: LockIcon },
   ];
 
   const fields = userData ? [
@@ -338,7 +316,7 @@ const Profile: React.FC = () => {
                 </Box>
               </HStack>
             </Box>
-            {!isEditing && (
+            {!isEditing && activeTabIndex === 0 && (
               <Button {...primaryButtonStyle} leftIcon={<EditIcon boxSize={4} />} onClick={() => setIsEditing(true)} alignSelf={{ base: 'stretch', md: 'flex-start' }} mt={{ base: 4, md: 0 }} animation={`${fadeIn} 0.8s ease-out 0.5s both`}>
                 Edit Profil
               </Button>
@@ -477,44 +455,6 @@ const Profile: React.FC = () => {
               </Box>
             </TabPanel>
 
-            {/* Tab 3: Pengaturan Akun */}
-            <TabPanel p={0}>
-              <Box bg={cardBg} p={{ base: 5, md: 6 }} borderRadius="xl" boxShadow="xl" border="1px solid" borderColor={subtleBorderColor} animation={`${fadeIn} 0.5s ease-out`}>
-                <VStack spacing={8} align="stretch">
-                  <Box>
-                    <Heading size="lg" color={primaryTextColor} mb={6} textAlign="center">Kelola Akun Anda</Heading>
-                    <VStack spacing={4} align="stretch">
-                      <Flex justify="space-between" align="center" p={4} bg={settingRowBg} borderRadius="lg" boxShadow="inner">
-                        <HStack><Icon as={EmailIcon} color={primaryColor} boxSize={5} /><Text fontWeight="medium" color={primaryTextColor} fontSize="md">Notifikasi Email</Text></HStack>
-                        <Switch colorScheme="blue" size="md" defaultChecked />
-                      </Flex>
-                      <Flex justify="space-between" align="center" p={4} bg={settingRowBg} borderRadius="lg" boxShadow="inner">
-                        <HStack><Icon as={ChatIcon} color={primaryColor} boxSize={5} /><Text fontWeight="medium" color={primaryTextColor} fontSize="md">Notifikasi SMS</Text></HStack>
-                        <Switch colorScheme="blue" size="md" />
-                      </Flex>
-                      <Tooltip label="Fitur ini sedang dalam pengembangan." placement="top" hasArrow bg="gray.600" color="white">
-                        <Button {...secondaryButtonStyle} leftIcon={<LockIcon boxSize={4} />} justifyContent="flex-start" size="md" w="full" onClick={() => toast({ title: "Segera Hadir!", description: "Fitur ganti password akan tersedia segera.", status: "info", duration: 3000, position: "top" })}>
-                          Ganti Password
-                        </Button>
-                      </Tooltip>
-                    </VStack>
-                  </Box>
-                  <Divider borderColor={subtleBorderColor} />
-                  <Box p={5} bgGradient={`linear(to-br, ${dangerZoneRedFrom}, ${dangerZoneOrangeTo})`} borderRadius="lg" border="1px solid" borderColor={dangerZoneBorder} boxShadow="md">
-                    <HStack mb={3} spacing={2.5}>
-                      <Icon as={WarningTwoIcon} color={dangerIconColor} boxSize={6} animation={`${iconWiggle} 4s ease-in-out infinite alternate`} />
-                      <Heading size="md" color={dangerHeadingColor}>Hapus Akun</Heading>
-                    </HStack>
-                    <Text color={dangerTextColor} mb={5} fontSize="sm">
-                      Peringatan: Menghapus akun adalah tindakan permanen. Semua informasi profil, riwayat booking, dan ulasan Anda akan hilang selamanya.
-                    </Text>
-                    <Button {...dangerButtonStyle} size="md" leftIcon={<DeleteIcon boxSize={4} />} onClick={() => toast({ title: "Hapus Akun (Simulasi)", description: "Ini hanya demonstrasi. Akun Anda tidak dihapus.", status: "warning", duration: 5000, position: "top" })}>
-                      Konfirmasi Hapus Akun
-                    </Button>
-                  </Box>
-                </VStack>
-              </Box>
-            </TabPanel>
           </TabPanels>
         </Tabs>
       </Container>

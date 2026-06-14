@@ -29,7 +29,6 @@ import {
     FiBriefcase,
     FiCalendar,
     FiUser,
-    FiSettings,
     FiLogOut,
     FiMenu,
     FiBell,
@@ -136,11 +135,6 @@ const SidebarContent = ({ onClose, onNavigate, onLogout, ...rest }: SidebarProps
             spacing={2}
             align="stretch"
         >
-            <NavItem icon={FiSettings} path="/guide/settings">
-                Settings
-            </NavItem>
-            {/* Logout: pakai Flex dengan onClick, bukan NavItem dengan path,
-                supaya bisa menjalankan handleLogout sebelum berpindah halaman */}
             <Flex
                 onClick={onLogout}
                 align="center"
@@ -261,17 +255,22 @@ const GuideLayout: React.FC<GuideLayoutProps> = ({ children }) => {
                     borderBottomColor={useColorModeValue('gray.200', 'gray.700')}
                     justifyContent={{ base: 'space-between', md: 'flex-end' }}
                 >
-                     <IconButton
-                        display={{ base: 'flex', md: 'none' }}
-                        onClick={onOpen}
-                        variant="outline"
-                        aria-label="open menu"
-                        icon={<FiMenu />}
-                    />
-                    
-                    <Text display={{ base: 'flex', md: 'none' }} fontSize="2xl" fontFamily="monospace" fontWeight="bold">
-                        Travelink
-                    </Text>
+                    <HStack display={{ base: 'flex', md: 'none' }} spacing={3} align="center">
+                        <IconButton
+                            onClick={onOpen}
+                            variant="outline"
+                            aria-label="open menu"
+                            icon={<FiMenu />}
+                        />
+                        <VStack spacing={0} align="flex-start">
+                            <Text fontSize="2xl" fontFamily="monospace" fontWeight="bold" lineHeight="1.1">
+                                Travelink
+                            </Text>
+                            <Text fontSize="xs" color="blue.500" fontWeight="semibold" letterSpacing="wide">
+                                PEMANDU WISATA
+                            </Text>
+                        </VStack>
+                    </HStack>
 
                     <HStack spacing={{ base: '2', md: '6' }}>
                         <Box position="relative" display="inline-flex">

@@ -275,7 +275,16 @@ const GuideWallet: React.FC = () => {
             </Alert>
           </ModalBody>
           <ModalFooter>
-            <Button mr={3} onClick={() => setShowModal(false)}>Batal</Button>
+            <Button
+              mr={3}
+              variant="outline"
+              color="red.500"
+              borderColor="red.500"
+              _hover={{ bg: 'red.50', borderColor: 'red.600', color: 'red.600' }}
+              onClick={() => setShowModal(false)}
+            >
+              Batal
+            </Button>
             <Button
               colorScheme="blue" isLoading={isSubmitting}
               isDisabled={!amount || parseFloat(amount) <= 0 || parseFloat(amount) > (wallet?.available_balance ?? 0)}

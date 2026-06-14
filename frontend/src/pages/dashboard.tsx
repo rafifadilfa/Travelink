@@ -181,7 +181,7 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
               <Badge px={4} py={1.5} borderRadius="full" bgGradient={accentGradient} color="white" fontSize="sm" fontWeight="bold" mb={4} display="inline-flex" alignItems="center" animation={`${slideInUp} 0.6s ease-out`} boxShadow="md">
                 Petualangan Baru Menanti!
               </Badge>
-              <Heading as="h1" fontSize={{ base: "2.8rem", sm: "3.2rem", md: "3.8rem", lg: "4.2rem" }} mb={4} color="white" fontWeight="black" lineHeight="1.1" textShadow="0 3px 15px rgba(0,0,0,0.6)" animation={`${slideInUp} 0.8s ease-out 0.1s both`}>
+              <Heading as="h1" fontSize={{ base: "2rem", sm: "2.8rem", md: "3.5rem", lg: "4.2rem" }} mb={4} color="white" fontWeight="black" lineHeight="1.15" textShadow="0 3px 15px rgba(0,0,0,0.6)" animation={`${slideInUp} 0.8s ease-out 0.1s both`}>
                 Perjalananmu, Lebih Berkesan.
               </Heading>
               <Text fontSize={{ base: "md", md: "lg", lg: "xl" }} mb={8} color="gray.100" lineHeight="1.7" fontWeight="normal" textShadow="0 1px 4px rgba(0,0,0,0.5)" animation={`${slideInUp} 0.8s ease-out 0.25s both`} maxW={{ base: "100%", md: "90%" }}>
