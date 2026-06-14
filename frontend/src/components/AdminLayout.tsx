@@ -193,21 +193,22 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           borderBottomColor={useColorModeValue('gray.200', 'gray.700')}
           justifyContent={{ base: 'space-between', md: 'flex-end' }}
         >
-          <IconButton
-            display={{ base: 'flex', md: 'none' }}
-            onClick={onOpen}
-            variant="outline"
-            aria-label="buka menu"
-            icon={<FiMenu />}
-          />
-          <Text
-            display={{ base: 'flex', md: 'none' }}
-            fontSize="xl"
-            fontFamily="monospace"
-            fontWeight="bold"
-          >
-            Travelink Admin
-          </Text>
+          <HStack display={{ base: 'flex', md: 'none' }} spacing={3} align="center">
+            <IconButton
+              onClick={onOpen}
+              variant="outline"
+              aria-label="buka menu"
+              icon={<FiMenu />}
+            />
+            <VStack spacing={0} align="flex-start">
+              <Text fontSize="xl" fontFamily="monospace" fontWeight="bold" lineHeight="1.1">
+                Travelink
+              </Text>
+              <Text fontSize="xs" color="purple.500" fontWeight="semibold" letterSpacing="wide">
+                Admin
+              </Text>
+            </VStack>
+          </HStack>
 
           <HStack spacing={{ base: '2', md: '6' }}>
             <Box position="relative" display="inline-flex">

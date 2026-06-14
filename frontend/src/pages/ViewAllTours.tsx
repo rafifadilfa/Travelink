@@ -358,7 +358,7 @@ const ViewAllTours: React.FC = () => {
                     {/* Baris kedua: filter harga */}
                     <Box mt={4} pt={4} borderTop="1px solid" borderColor={subtleBorderColor}>
                         <Text display="block" mb={2} fontWeight="medium" fontSize="sm" color={secondaryTextColor}>Rentang Harga (Rp)</Text>
-                        <HStack spacing={3}>
+                        <HStack spacing={3} flexWrap="wrap">
                             <Input
                                 type="number"
                                 placeholder="Min"
@@ -369,7 +369,7 @@ const ViewAllTours: React.FC = () => {
                                 bg={useColorModeValue('gray.100', 'gray.700')}
                                 borderColor={subtleBorderColor}
                                 variant="filled"
-                                maxW="160px"
+                                maxW={{ base: 'full', md: '160px' }}
                                 fontSize="sm"
                                 _focus={{ borderColor: primaryColor, bg: useColorModeValue('white', 'gray.700') }}
                             />
@@ -384,7 +384,7 @@ const ViewAllTours: React.FC = () => {
                                 bg={useColorModeValue('gray.100', 'gray.700')}
                                 borderColor={subtleBorderColor}
                                 variant="filled"
-                                maxW="160px"
+                                maxW={{ base: 'full', md: '160px' }}
                                 fontSize="sm"
                                 _focus={{ borderColor: primaryColor, bg: useColorModeValue('white', 'gray.700') }}
                             />
@@ -541,14 +541,14 @@ const ViewAllTours: React.FC = () => {
                 {/* Pagination */}
                 {!loading && totalPages > 1 && (
                     <Flex justify="center" mt={12} animation={`${fadeIn} 0.5s ease-out 0.5s both`}>
-                        <HStack spacing={3}>
+                        <Flex wrap="wrap" gap={2} justify="center" align="center">
                             <Button
                                 {...secondaryButtonStyle} size="sm"
                                 onClick={() => handlePageChange(currentPage - 1)}
                                 isDisabled={currentPage === 1}
                                 leftIcon={<ArrowLeftIcon boxSize={3} />}
                             >
-                                Sebelumnya
+                                <Text display={{ base: 'none', sm: 'inline' }}>Sebelumnya</Text>
                             </Button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                                 <Button
@@ -567,9 +567,9 @@ const ViewAllTours: React.FC = () => {
                                 isDisabled={currentPage === totalPages}
                                 rightIcon={<ArrowForwardIcon boxSize={3} />}
                             >
-                                Berikutnya
+                                <Text display={{ base: 'none', sm: 'inline' }}>Berikutnya</Text>
                             </Button>
-                        </HStack>
+                        </Flex>
                     </Flex>
                 )}
             </Container>
