@@ -25,10 +25,11 @@ class ProcessSmartOTResult extends Command
 
     public function handle(): int
     {
-        $cutoff = now()->subHours(6);
+        $otConfirmMinutes = config('booking.ot_confirm_timeout_minutes', 360);
+        $cutoff           = now()->subMinutes($otConfirmMinutes);
 
         $groups = OpenTripGroup::with([
-            'tour:id,name,tour_price,tour_guide_id',
+            'tour:id,name,tour_price,tour_guide_id,tour_min_participants',
             'tour.guide:id,name',
             'participants' => fn($q) => $q->where('status', 'matched'),
         ])
@@ -61,6 +62,8 @@ class ProcessSmartOTResult extends Command
         $guideId      = $tour?->tour_guide_id;
         $tourName     = $tour?->name ?? 'paket wisata';
 
+        $minParticipants = max(1, $tour?->tour_min_participants ?? 1);
+
         if ($confirmed->isEmpty()) {
             // TC-058: tidak ada yang konfirmasi → batalkan semua
             OpenTripParticipant::where('group_id', $group->id)
@@ -77,8 +80,25 @@ class ProcessSmartOTResult extends Command
             }
 
             $this->line("  Grup #{$group->id}: dibatalkan (0 konfirmasi).");
+        } elseif ($confirmed->count() < $minParticipants) {
+            // TC-057b: ada yang konfirmasi tapi kurang dari minimum → batalkan semua
+            OpenTripParticipant::where('group_id', $group->id)
+                ->where('status', 'matched')
+                ->update(['status' => 'cancelled']);
+
+            $confirmCount = $confirmed->count();
+            foreach ($all as $p) {
+                NotificationService::send(
+                    'sot_cancelled_min_not_met', 'user', $p->user_id,
+                    'Smart Open Trip Dibatalkan',
+                    "Smart Open Trip \"{$tourName}\" dibatalkan karena hanya {$confirmCount} dari minimum {$minParticipants} peserta yang mengkonfirmasi.",
+                    ['group_id' => $group->id, 'tour_id' => $group->tour_id]
+                );
+            }
+
+            $this->line("  Grup #{$group->id}: dibatalkan ({$confirmCount}/{$minParticipants} konfirmasi, tidak memenuhi minimum).");
         } else {
-            // TC-057: ada yang konfirmasi → keluarkan non-konfirmasi, buat booking
+            // TC-057: ada yang konfirmasi dan cukup → keluarkan non-konfirmasi, buat booking
             foreach ($notConfirmed as $p) {
                 $p->update(['status' => 'cancelled']);
                 NotificationService::send(

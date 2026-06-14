@@ -36,7 +36,7 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { CheckCircleIcon, TimeIcon, InfoIcon, StarIcon } from '@chakra-ui/icons';
-import { FiCheckCircle, FiClock } from 'react-icons/fi';
+import { FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
@@ -67,7 +67,7 @@ declare global {
 
 interface StatusResponse {
   participant_id: number;
-  status: 'waiting' | 'matched' | 'cancelled_by_guide';
+  status: 'waiting' | 'matched' | 'cancelled_by_guide' | 'cancelled_by_timeout';
   group_id: number | null;
   matching_score: number | null;
   expires_at?: string;
@@ -101,6 +101,8 @@ interface Member {
   interests: string[];
   activities: string[];
   matching_score: number;
+  confirmed_at: string | null;
+  status?: 'matched' | 'cancelled' | 'waiting';
   score_detail: ScoreDetail;
   payment_status?: 'unpaid' | 'paid';
 }
@@ -114,6 +116,9 @@ interface GroupDetail {
   trip_date: string;
   matched_at: string;
   expires_at: string;
+  confirm_deadline_at: string;
+  is_confirm_window_open: boolean;
+  is_processed: boolean;
   seconds_remaining: number;
   is_active: boolean;
   member_count: number;
@@ -242,10 +247,11 @@ const WaitingRoom: React.FC = () => {
   const remainingAfterCancel  = Math.max(0, 3 - regCount);
 
   // ── State ──────────────────────────────────────────────────
-  const [stage, setStage]         = useState<'loading' | 'stage1' | 'stage2' | 'cancelled_by_guide'>('loading');
-  const [groupData, setGroupData] = useState<GroupResponse | null>(null);
-  const [countdown, setCountdown] = useState<number>(0);
-  const [myUserId, setMyUserId]   = useState<number | null>(null);
+  const [stage, setStage]         = useState<'loading' | 'stage1' | 'stage2' | 'cancelled_by_guide' | 'cancelled_by_timeout'>('loading');
+  const [groupData, setGroupData]         = useState<GroupResponse | null>(null);
+  const [countdown, setCountdown]         = useState<number>(0);
+  const [countdownExpired, setCountdownExpired] = useState<boolean>(false);
+  const [myUserId, setMyUserId]           = useState<number | null>(null);
 
   // TC-055/056: Konfirmasi keikutsertaan
   const [myConfirmedAt, setMyConfirmedAt] = useState<string | null>(null);
@@ -272,6 +278,13 @@ const WaitingRoom: React.FC = () => {
     if (stage !== 'stage2') return;
     loadSnapScript().then(() => setSnapLoaded(true));
   }, [stage]);
+
+  // ── Inisialisasi myConfirmedAt dari data backend (persisten saat refresh) ─
+  useEffect(() => {
+    if (!groupData || !myUserId || myConfirmedAt) return;
+    const me = groupData.members.find((m) => m.user_id === myUserId);
+    if (me?.confirmed_at) setMyConfirmedAt(me.confirmed_at);
+  }, [groupData, myUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Ambil user saat ini ────────────────────────────────────
   useEffect(() => {
@@ -446,7 +459,9 @@ const WaitingRoom: React.FC = () => {
     try {
       const res = await apiClient.get<GroupResponse>(`/open-trip/group/${gId}`);
       setGroupData(res.data);
-      setCountdown(res.data.group.seconds_remaining);
+      const remaining = res.data.group.seconds_remaining;
+      setCountdown(remaining);
+      if (remaining <= 0) setCountdownExpired(true);
       setStage('stage2');
 
       // Ambil status bayar awal
@@ -466,7 +481,10 @@ const WaitingRoom: React.FC = () => {
         params: { tour_id: tourId, trip_date: tripDate },
       });
 
-      if (res.data.status === 'cancelled_by_guide') {
+      if (res.data.status === 'cancelled_by_timeout') {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setStage('cancelled_by_timeout');
+      } else if (res.data.status === 'cancelled_by_guide') {
         if (pollRef.current) clearInterval(pollRef.current);
         setStage('cancelled_by_guide');
       } else if (res.data.status === 'matched' && res.data.group_id) {
@@ -506,6 +524,7 @@ const WaitingRoom: React.FC = () => {
       setCountdown((prev) => {
         if (prev <= 1) {
           if (countdownRef.current) clearInterval(countdownRef.current);
+          setCountdownExpired(true);
           return 0;
         }
         return prev - 1;
@@ -514,6 +533,26 @@ const WaitingRoom: React.FC = () => {
 
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, [stage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Polling Tahap 2 setelah countdown habis ──────────────
+  // Deteksi cancelled_by_timeout dari scheduler tanpa perlu refresh halaman.
+  useEffect(() => {
+    if (stage !== 'stage2' || !countdownExpired || !tourId || !tripDate) return;
+
+    const id = setInterval(async () => {
+      try {
+        const res = await apiClient.get<StatusResponse>('/open-trip/status', {
+          params: { tour_id: tourId, trip_date: tripDate },
+        });
+        if (res.data.status === 'cancelled_by_timeout') {
+          setStage('cancelled_by_timeout');
+        }
+        // 'matched' → scheduler belum jalan, terus polling
+      } catch { /* abaikan — terus polling */ }
+    }, POLL_INTERVAL_MS);
+
+    return () => clearInterval(id);
+  }, [stage, countdownExpired]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Cleanup saat unmount ──────────────────────────────────
   useEffect(() => {
@@ -719,6 +758,67 @@ const WaitingRoom: React.FC = () => {
   }
 
   // ─────────────────────────────────────────────────────────
+  // Render: Dibatalkan otomatis karena timeout konfirmasi
+  // ─────────────────────────────────────────────────────────
+  if (stage === 'cancelled_by_timeout') {
+    return (
+      <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={4}>
+        <Box
+          bg="white"
+          borderRadius="2xl"
+          boxShadow="lg"
+          p={10}
+          maxW="520px"
+          w="full"
+          textAlign="center"
+          animation={`${fadeIn} 0.4s ease`}
+        >
+          <Box
+            w={20} h={20}
+            borderRadius="full"
+            bg="orange.50"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            mx="auto"
+            mb={6}
+          >
+            <Text fontSize="3xl">⏰</Text>
+          </Box>
+
+          <Badge colorScheme="orange" mb={3} px={3} py={1} borderRadius="full" fontSize="xs">
+            Waktu Habis
+          </Badge>
+
+          <Heading size="md" color="gray.800" mb={3}>
+            Smart Open Trip Dibatalkan Otomatis
+          </Heading>
+
+          <Text color="gray.500" fontSize="sm" mb={6}>
+            Tidak ada peserta yang mengkonfirmasi keikutsertaan dalam batas waktu yang ditentukan,
+            sehingga grup ini dibatalkan secara otomatis oleh sistem.
+          </Text>
+
+          <Alert status="info" borderRadius="xl" mb={6} fontSize="sm" textAlign="left">
+            <AlertIcon />
+            <Box>
+              <Text fontWeight="semibold" mb={1}>Langkah selanjutnya:</Text>
+              <Text>
+                Kamu masih bisa mendaftar ulang Smart Open Trip pada jadwal ini
+                selama kuota pendaftaran belum habis (maks. 3x).
+              </Text>
+            </Box>
+          </Alert>
+
+          <Button colorScheme="blue" onClick={() => navigate('/dashboard')} w="full">
+            Kembali ke Dashboard
+          </Button>
+        </Box>
+      </Flex>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
   // Render: Tahap 2 — grup terbentuk
   // ─────────────────────────────────────────────────────────
   if (stage === 'stage2' && groupData) {
@@ -734,7 +834,7 @@ const WaitingRoom: React.FC = () => {
     const countdownPct = totalSeconds > 0 ? Math.round((countdown / totalSeconds) * 100) : 0;
 
     const paidCount  = Object.values(paymentStatuses).filter((s) => s === 'paid').length;
-    const totalCount = members.length;
+    const totalCount = members.filter((m) => m.status !== 'cancelled').length;
 
     return (
       <Box minH="100vh" bg="gray.50" py={8}>
@@ -880,9 +980,10 @@ const WaitingRoom: React.FC = () => {
 
             <VStack spacing={3} align="stretch">
               {members.map((m) => {
-                const pStatus = paymentStatuses[m.participant_id] ?? 'unpaid';
-                const isPaid  = pStatus === 'paid';
-                const isMe    = m.user_id === myUserId;
+                const pStatus    = paymentStatuses[m.participant_id] ?? 'unpaid';
+                const isPaid     = pStatus === 'paid';
+                const isMe       = m.user_id === myUserId;
+                const isRemoved  = m.status === 'cancelled';
 
                 return (
                   <Flex
@@ -923,18 +1024,34 @@ const WaitingRoom: React.FC = () => {
                         <Icon as={FiCheckCircle} color="green.500" />
                         <Text fontSize="sm" fontWeight="semibold" color="green.600">Lunas</Text>
                       </HStack>
-                    ) : isMe ? (
-                      <Button
-                        colorScheme="blue"
-                        size="sm"
+                    ) : isRemoved ? (
+                      <HStack
+                        bg="red.50"
                         borderRadius="lg"
-                        isLoading={isPaying}
-                        loadingText="Memproses..."
-                        isDisabled={!snapLoaded || myPaymentStatus === 'paid'}
-                        onClick={handlePay}
+                        px={3}
+                        py={1.5}
+                        spacing={1}
                       >
-                        Bayar Sekarang
-                      </Button>
+                        <Icon as={FiXCircle} color="red.400" />
+                        <Text fontSize="sm" color="red.500">Dikeluarkan</Text>
+                      </HStack>
+                    ) : isMe ? (
+                      <VStack spacing={1} align="flex-end">
+                        <Button
+                          colorScheme="blue"
+                          size="sm"
+                          borderRadius="lg"
+                          isLoading={isPaying}
+                          loadingText="Memproses..."
+                          isDisabled={!snapLoaded || myPaymentStatus === 'paid' || !myConfirmedAt}
+                          onClick={handlePay}
+                        >
+                          Bayar Sekarang
+                        </Button>
+                        {!myConfirmedAt && countdown === 0 && (
+                          <Text fontSize="xs" color="orange.500">Konfirmasi dulu</Text>
+                        )}
+                      </VStack>
                     ) : (
                       <HStack
                         bg="orange.50"
@@ -1126,13 +1243,33 @@ const WaitingRoom: React.FC = () => {
 
             <Divider my={5} />
 
+            {/* Banner TC-057: grup sudah diproses scheduler, peserta ini sudah konfirmasi */}
+            {groupData.group.is_processed && myConfirmedAt && (
+              <Alert status="success" borderRadius="xl" mb={4} fontSize="sm">
+                <AlertIcon />
+                <Box>
+                  <Text fontWeight="semibold">Grup sudah diproses!</Text>
+                  <Text>
+                    Pesananmu telah dikirim ke pemandu.{' '}
+                    <Button
+                      variant="link"
+                      colorScheme="green"
+                      size="sm"
+                      fontSize="sm"
+                      onClick={() => navigate('/bookings')}
+                    >
+                      Cek halaman Booking
+                    </Button>{' '}
+                    untuk status konfirmasi.
+                  </Text>
+                </Box>
+              </Alert>
+            )}
+
             <VStack spacing={3}>
               {(() => {
-                // Hitung deadline konfirmasi: expires_at + 6 jam
-                const confirmDeadline = groupData?.group?.expires_at
-                  ? new Date(groupData.group.expires_at).getTime() + 6 * 3600 * 1000
-                  : null;
-                const withinWindow = confirmDeadline && Date.now() < confirmDeadline;
+                // Gunakan flag dari backend (sinkron dengan OT_CONFIRM_TIMEOUT_MINUTES)
+                const withinWindow = groupData?.group?.is_confirm_window_open ?? false;
 
                 if (countdown > 0) {
                   // Matching countdown masih berjalan
