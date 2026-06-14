@@ -522,7 +522,7 @@ const ViewAllTours: React.FC = () => {
                                     <Flex justify="space-between" align="center" mt={2}>
                                         <Box>
                                             <Text fontWeight="black" color={primaryColor} fontSize="lg">{formatPrice(tour.price)}</Text>
-                                            <Text fontSize="xs" color={secondaryTextColor}>per orang</Text>
+                                            <Text fontSize="xs" color={secondaryTextColor}>{tour.is_open_trip ? 'per paket' : 'per orang'}</Text>
                                         </Box>
                                         <Button
                                             {...primaryButtonStyle} size="sm" h="40px" px={5}

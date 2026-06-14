@@ -29,6 +29,8 @@ import {
   AlertIcon,
   Badge,
   Divider,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, CheckIcon } from '@chakra-ui/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -127,6 +129,10 @@ const SmartOpenTripForm: React.FC = () => {
 
   const [errors, setErrors] = useState<FormErrors>({});
 
+  // Hari ketersediaan pemandu untuk tour ini
+  const [availableDays, setAvailableDays]           = useState<number[]>([]);
+  const [availableDayLabels, setAvailableDayLabels] = useState<string[]>([]);
+
   // Guard agar useEffect tidak dijalankan dua kali oleh React 18 Strict Mode
   const hasFetchedOnMount = useRef(false);
 
@@ -201,6 +207,17 @@ const SmartOpenTripForm: React.FC = () => {
     }
   }, [tourId, navigate, toast]);
 
+  // Fetch hari ketersediaan pemandu (selalu on mount, tidak perlu date)
+  useEffect(() => {
+    if (!tourId) return;
+    apiClient.get<{ available_days: { day_of_week: number; label: string }[] }>(
+      `/tours/${tourId}/availabilities`
+    ).then(res => {
+      setAvailableDays(res.data.available_days.map(d => d.day_of_week));
+      setAvailableDayLabels(res.data.available_days.map(d => d.label));
+    }).catch(() => { /* tetap bisa lanjut tanpa validasi hari */ });
+  }, [tourId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Jalankan fetch otomatis hanya jika date sudah ada dari URL params,
   // dan hanya sekali meski React Strict Mode double-invoke effect ini.
   useEffect(() => {
@@ -211,6 +228,13 @@ const SmartOpenTripForm: React.FC = () => {
       setLoading(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cek apakah tanggal yang dipilih jatuh pada hari yang tersedia
+  const isDateAvailable = (dateStr: string): boolean => {
+    if (availableDays.length === 0) return true;
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return availableDays.includes(new Date(y, m - 1, d).getDay());
+  };
 
   // ── Aktivitas yang relevan (filter berdasarkan minat dipilih) ──
   const relevantActivities: Activity[] = formData
@@ -237,6 +261,8 @@ const SmartOpenTripForm: React.FC = () => {
 
     if (!selectedDate) {
       newErrors.date = 'Pilih tanggal trip terlebih dahulu.';
+    } else if (!isDateAvailable(selectedDate)) {
+      newErrors.date = `Hari ini tidak tersedia. Pemandu hanya tersedia pada: ${availableDayLabels.join(', ')}.`;
     }
     if (!age || parseInt(age) < 1 || parseInt(age) > 99) {
       newErrors.age = 'Masukkan umur yang valid (1–99 tahun).';
@@ -363,6 +389,22 @@ const SmartOpenTripForm: React.FC = () => {
           <Text color="gray.500" mb={6} fontSize="sm">
             Pilih tanggal trip terlebih dahulu.
           </Text>
+          {availableDayLabels.length > 0 && (
+            <Box mb={4} p={3} bg="blue.50" borderRadius="lg" border="1px solid" borderColor="blue.100">
+              <Text fontSize="xs" color="blue.700" fontWeight="semibold" mb={2}>
+                Jadwal ketersediaan pemandu:
+              </Text>
+              <Wrap spacing={1}>
+                {availableDayLabels.map(label => (
+                  <WrapItem key={label}>
+                    <Badge colorScheme="blue" variant="solid" borderRadius="full" px={2} py={0.5} fontSize="xs">
+                      {label}
+                    </Badge>
+                  </WrapItem>
+                ))}
+              </Wrap>
+            </Box>
+          )}
           <FormControl isInvalid={!!errors.date}>
             <FormLabel color="gray.700" fontWeight="semibold">
               Tanggal Trip
@@ -370,12 +412,15 @@ const SmartOpenTripForm: React.FC = () => {
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setErrors(prev => ({ ...prev, date: undefined }));
+              }}
               min={new Date().toISOString().split('T')[0]}
               style={{
                 width: '100%',
                 padding: '10px 14px',
-                border: '1px solid #E2E8F0',
+                border: errors.date ? '1px solid #FC8181' : '1px solid #E2E8F0',
                 borderRadius: '8px',
                 fontSize: '16px',
                 outline: 'none',
@@ -391,6 +436,10 @@ const SmartOpenTripForm: React.FC = () => {
             onClick={() => {
               if (!selectedDate) {
                 setErrors({ date: 'Pilih tanggal trip terlebih dahulu.' });
+                return;
+              }
+              if (!isDateAvailable(selectedDate)) {
+                setErrors({ date: `Hari ini tidak tersedia. Pemandu hanya tersedia pada: ${availableDayLabels.join(', ')}.` });
                 return;
               }
               fetchFormData(selectedDate);
@@ -446,7 +495,7 @@ const SmartOpenTripForm: React.FC = () => {
                 📅 {formatDateID(selectedDate)}
               </Text>
               <Text color="blue.100" fontSize="sm">
-                💰 {formatRupiah(formData.tour.price)} / orang
+                💰 {formatRupiah(formData.tour.price)} / paket
               </Text>
             </HStack>
           </Box>

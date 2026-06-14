@@ -258,7 +258,7 @@ const TourDetail: React.FC = () => {
                         <Box mt={{ base: 4, md: 0 }} flexShrink={0}>
                             <Badge bgGradient={accentGradient} color="white" px={5} py={3} borderRadius="lg" fontSize="xl" fontWeight="bold" boxShadow="lg">
                                 {formatPrice(tour.price)}
-                                <Text as="span" fontSize="sm" fontWeight="normal" ml={1.5} opacity={0.9}>/orang</Text>
+                                <Text as="span" fontSize="sm" fontWeight="normal" ml={1.5} opacity={0.9}>{isOpenTrip ? '/paket' : '/orang'}</Text>
                             </Badge>
                         </Box>
                     </Flex>
@@ -340,8 +340,8 @@ const TourDetail: React.FC = () => {
                                 </Alert>
                             )}
 
-                            {/* TC-039: Pilih Tanggal Tour */}
-                            {!noSchedule && (
+                            {/* TC-039: Pilih Tanggal Tour — hanya untuk Private Tour */}
+                            {!noSchedule && !isOpenTrip && (
                                 <Box>
                                     <Text fontWeight="bold" fontSize="md" color={primaryTextColor} mb={2}>Tanggal Tour</Text>
                                     {availableDates.length > 0 && (
@@ -367,7 +367,7 @@ const TourDetail: React.FC = () => {
                                 </Box>
                             )}
 
-                            {!noSchedule && (
+                            {!noSchedule && !isOpenTrip && (
                                 <Box>
                                     <HStack justify="space-between" mb={3}>
                                         <Text fontWeight="bold" fontSize="md" color={primaryTextColor}>Jumlah Peserta</Text>
@@ -384,7 +384,7 @@ const TourDetail: React.FC = () => {
                                 </Box>
                             )}
 
-                            {!noSchedule && (
+                            {!noSchedule && !isOpenTrip && (
                                 <Box bg={useColorModeValue('blue.50', 'blue.900')} p={4} borderRadius="lg" borderLeft="5px solid" borderColor={primaryColor} boxShadow="md">
                                     <Flex justify="space-between" align="center">
                                         <Text fontWeight="bold" fontSize="lg" color={primaryTextColor}>Total Harga</Text>
@@ -414,7 +414,7 @@ const TourDetail: React.FC = () => {
                             )}
 
                             {/* TC-041: Tombol booking langsung ke API */}
-                            {!noSchedule && (
+                            {!noSchedule && !isOpenTrip && (
                                 <Button
                                     {...ctaButtonStyle}
                                     bgGradient="linear(to-r, green.400, green.500)"
