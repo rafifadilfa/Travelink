@@ -139,7 +139,7 @@ const SidebarContent = ({ onClose, onLogout, ...rest }: SidebarProps) => {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isLogoutOpen, onOpen: openLogout, onClose: closeLogout } = useDisclosure();
-  const logoutCancelRef = useRef<HTMLButtonElement>(null);
+  const logoutCancelRef = useRef<any>(null);
   const navigate = useNavigate();
   const pageBg = useColorModeValue('gray.100', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
