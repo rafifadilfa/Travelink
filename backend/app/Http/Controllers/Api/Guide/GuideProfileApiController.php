@@ -14,18 +14,13 @@ use Illuminate\Support\Facades\Storage;
 
 class GuideProfileApiController extends Controller
 {
-    /**
-     * GET /api/guide/profile
-     * Kembalikan profil lengkap guide + bahasa + spesialisasi + status dokumen KYC
-     * + objek completeness (flat + nested per tahap) + flag is_profile_complete.
-     */
+    // GET /api/guide/profile — profil lengkap dengan status KYC, completeness flat + nested
     public function getProfile(Request $request): JsonResponse
     {
         $guide = $request->user()->load(['languages', 'specialities']);
 
         $host = request()->getSchemeAndHttpHost();
 
-        // Helper: konversi path storage ke URL penuh (public disk → /storage/{path})
         $url = fn($path) => $path ? $host . '/storage/' . $path : null;
 
         $completeness = $this->buildCompleteness($guide);
@@ -34,28 +29,22 @@ class GuideProfileApiController extends Controller
             'guide' => array_merge($guide->toArray(), [
                 'languages'          => $guide->languages->pluck('name'),
                 'specialities'       => $guide->specialities->pluck('name'),
-                // URL file profil
                 'avatar_url'         => $url($guide->profile_picture),
                 'ktp_url'            => $url($guide->ktp_document),
                 'selfie_ktp_url'     => $url($guide->selfie_ktp_document),
                 'certificate_url'    => $url($guide->certificate_document),
                 'portfolio_url'      => $url($guide->portfolio_document),
-                // Kelengkapan profil — flat (GuideDashboard) + nested (GuideEditProfile)
+                // completeness: flat untuk GuideDashboard, nested untuk GuideEditProfile
                 'completeness'       => $completeness,
                 'is_profile_complete' => $completeness['step1_complete'] && $completeness['step2']['ktp_document'] && $completeness['step2']['selfie_ktp_document'] && $completeness['step2']['portfolio_document'],
                 'step1_complete'     => $completeness['step1_complete'],
                 'step2_complete'     => $completeness['step2_complete'],
-                // Guide bisa submit KYC kalau KTP + selfie + portofolio sudah ada
                 'can_submit_kyc'     => !empty($guide->ktp_document) && !empty($guide->selfie_ktp_document) && !empty($guide->portfolio_document),
             ]),
         ], 200);
     }
 
-    /**
-     * POST /api/guide/profile
-     * Update info dasar: nama, tentang saya, foto profil, pengalaman, tarif,
-     * rekening bank, bahasa, spesialisasi.
-     */
+    // POST /api/guide/profile — update info dasar, foto, rekening, bahasa, spesialisasi
     public function updateProfile(Request $request): JsonResponse
     {
         $guide = $request->user();
@@ -75,7 +64,6 @@ class GuideProfileApiController extends Controller
             'specialities.*'      => ['string', 'max:100'],
         ]);
 
-        // Upload foto profil kalau ada
         if ($request->hasFile('profile_picture')) {
             if ($guide->profile_picture) {
                 Storage::disk('public')->delete($guide->profile_picture);
@@ -84,7 +72,6 @@ class GuideProfileApiController extends Controller
                 ->store('guides/photos', 'public');
         }
 
-        // Update semua kolom skalar
         $scalarFields = ['name', 'about', 'experience_years', 'base_rate',
                          'bank_name', 'bank_account_number', 'bank_account_holder',
                          'profile_picture'];
@@ -94,7 +81,6 @@ class GuideProfileApiController extends Controller
             ARRAY_FILTER_USE_KEY
         ));
 
-        // Sync bahasa
         if (isset($validated['languages'])) {
             $languageIds = collect($validated['languages'])
                 ->filter()
@@ -102,7 +88,6 @@ class GuideProfileApiController extends Controller
             $guide->languages()->sync($languageIds);
         }
 
-        // Sync spesialisasi
         if (isset($validated['specialities'])) {
             $specialityIds = collect($validated['specialities'])
                 ->filter()
@@ -113,10 +98,7 @@ class GuideProfileApiController extends Controller
         return $this->getProfile($request);
     }
 
-    /**
-     * POST /api/guide/profile/ktp
-     * Upload dokumen KTP.
-     */
+    // POST /api/guide/profile/ktp — upload dokumen KTP
     public function uploadKtp(Request $request): JsonResponse
     {
         $request->validate([
@@ -137,10 +119,7 @@ class GuideProfileApiController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/guide/profile/selfie-ktp
-     * Upload selfie bersama KTP.
-     */
+    // POST /api/guide/profile/selfie-ktp — upload selfie bersama KTP
     public function uploadSelfieKtp(Request $request): JsonResponse
     {
         $request->validate([
@@ -161,10 +140,7 @@ class GuideProfileApiController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/guide/profile/certificate
-     * Upload sertifikat pemandu wisata.
-     */
+    // POST /api/guide/profile/certificate — upload sertifikat pemandu
     public function uploadCertificate(Request $request): JsonResponse
     {
         $request->validate([
@@ -185,10 +161,7 @@ class GuideProfileApiController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/guide/profile/portfolio
-     * Upload portofolio trip (opsional).
-     */
+    // POST /api/guide/profile/portfolio — upload portofolio trip (opsional)
     public function uploadPortfolio(Request $request): JsonResponse
     {
         $request->validate([
@@ -209,16 +182,11 @@ class GuideProfileApiController extends Controller
         ], 200);
     }
 
-    /**
-     * POST /api/guide/profile/submit
-     * Kirim dokumen ke admin untuk diverifikasi.
-     * Status diubah dari 'pending' / 'rejected' → 'menunggu_verifikasi'.
-     */
+    // POST /api/guide/profile/submit — ubah status ke menunggu_verifikasi, notifikasi admin
     public function submitKyc(Request $request): JsonResponse
     {
         $guide = $request->user();
 
-        // Pastikan KTP, selfie, dan portofolio sudah ada sebelum submit
         if (empty($guide->ktp_document) || empty($guide->selfie_ktp_document) || empty($guide->portfolio_document)) {
             return response()->json([
                 'message' => 'KTP, selfie bersama KTP, dan portofolio trip wajib diupload sebelum mengirim untuk verifikasi.',
@@ -244,12 +212,7 @@ class GuideProfileApiController extends Controller
         ], 200);
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
-
-    /**
-     * Bangun objek completeness yang compatible dengan GuideDashboard (flat)
-     * dan GuideEditProfile (nested step1/step2).
-     */
+    // Bangun completeness untuk GuideDashboard (flat) dan GuideEditProfile (nested step1/step2)
     private function buildCompleteness(Guide $guide): array
     {
         $step1 = [
@@ -272,7 +235,7 @@ class GuideProfileApiController extends Controller
         // Step 2 selesai jika KTP + selfie + portofolio ada (sertifikat opsional)
         $step2Complete = $step2['ktp_document'] && $step2['selfie_ktp_document'] && $step2['portfolio_document'];
 
-        // Flat fields dipertahankan agar GuideDashboard tetap bisa baca
+        // flat fields dipertahankan agar GuideDashboard tetap bisa baca
         return array_merge(
             [
                 'profile_picture'      => $step1['profile_picture'],

@@ -27,35 +27,26 @@ class OpenTripGroup extends Model
         'sot_processed_at'  => 'datetime',
     ];
 
-    // ── Relasi ──────────────────────────────────────────────────────────────
-
-    /** Tour yang memiliki grup ini */
     public function tour()
     {
         return $this->belongsTo(Tour::class, 'tour_id');
     }
 
-    /** Semua peserta yang masuk grup ini */
     public function participants()
     {
         return $this->hasMany(OpenTripParticipant::class, 'group_id');
     }
 
-    // ── Helper ──────────────────────────────────────────────────────────────
-
-    /** Apakah grup telah ditolak pemandu */
     public function isRejected(): bool
     {
         return $this->rejected_at !== null;
     }
 
-    /** Apakah countdown masih berjalan */
     public function isActive(): bool
     {
         return $this->expires_at !== null && now()->lessThan($this->expires_at);
     }
 
-    /** Sisa detik countdown (0 jika sudah kadaluarsa atau expires_at null) */
     public function secondsRemaining(): int
     {
         if ($this->expires_at === null) return 0;

@@ -9,26 +9,11 @@ use App\Models\WalletTransaction;
 use App\Models\Withdrawal;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Satu-satunya tempat untuk semua mutasi saldo pemandu.
- * Semua controller, command, dan seeder WAJIB memanggil method ini —
- * jangan menyalin logika increment/decrement atau pembuatan WalletTransaction di tempat lain.
- *
- * Alur saldo:
- *   creditPending()  — saat admin verifikasi pembayaran (UC-18)
- *   settle()         — saat trip selesai via command bookings:settle (A1)
- *   debitAvailable() — saat admin proses pencairan (UC-20)
- */
+// Satu-satunya tempat mutasi saldo pemandu — jangan salin logika increment/decrement di tempat lain.
+// Alur: creditPending (UC-18) → settle/bookings:settle (A1) → debitAvailable (UC-20).
 class WalletService
 {
-    /**
-     * Tambah pending_balance guide saat pembayaran diverifikasi admin.
-     * Belum membuat wallet_transaction — itu baru dibuat saat settle().
-     * ASUMSI A2: komisi 0%, nominal penuh masuk ke pemandu.
-     *
-     * @param Guide $guide
-     * @param float $amount Nominal pesanan (total_amount)
-     */
+    // Tambah pending_balance saat pembayaran diverifikasi (UC-18). Wallet_transaction dibuat saat settle(). ASUMSI A2: komisi 0%.
     public static function creditPending(Guide $guide, float $amount): void
     {
         $commission  = $amount * (config('travelink.platform_commission_percent', 0) / 100);
@@ -37,15 +22,7 @@ class WalletService
         $guide->increment('pending_balance', $guideAmount);
     }
 
-    /**
-     * Pindahkan saldo dari pending → available saat trip dinyatakan selesai.
-     * Sekaligus membuat catatan wallet_transaction (income/credit).
-     * Dipanggil oleh command bookings:settle dan juga oleh seeder (untuk data historis).
-     *
-     * @param Guide   $guide
-     * @param float   $amount    Nominal yang dipindah (sama dengan yang di-creditPending sebelumnya)
-     * @param Booking $booking   Referensi pesanan (untuk deskripsi & booking_id)
-     */
+    // Pindah pending → available saat trip selesai; buat WalletTransaction. Dipanggil bookings:settle & seeder.
     public static function settle(Guide $guide, float $amount, Booking $booking): void
     {
         $booking->loadMissing('transaction');
@@ -66,16 +43,7 @@ class WalletService
         });
     }
 
-    /**
-     * Pindahkan saldo pending → available untuk peserta Smart Open Trip saat trip selesai.
-     * Sekaligus membuat catatan wallet_transaction (income/credit) dan menandai
-     * income_settled_at pada participant agar tidak di-settle ulang.
-     * Dipanggil oleh command opentrip:settle.
-     *
-     * @param Guide                $guide
-     * @param float                $amount      Nominal per orang yang dipindah
-     * @param OpenTripParticipant  $participant Peserta (untuk deskripsi & flag settled)
-     */
+    // Pindah pending → available untuk peserta Smart Open Trip; buat WalletTransaction & tandai income_settled_at. Dipanggil opentrip:settle.
     public static function settleOpenTrip(Guide $guide, float $amount, OpenTripParticipant $participant): void
     {
         $participant->loadMissing(['group.tour']);
@@ -98,14 +66,7 @@ class WalletService
         });
     }
 
-    /**
-     * Kurangi available_balance saat admin memproses pencairan dana.
-     * Sekaligus membuat catatan wallet_transaction (withdrawal/debit).
-     * Dipanggil oleh AdminWithdrawalApiController dan juga oleh seeder.
-     *
-     * @param Guide      $guide
-     * @param Withdrawal $withdrawal Objek pencairan (untuk amount, bank info, dan withdrawal_id)
-     */
+    // Kurangi available_balance saat admin proses pencairan; buat WalletTransaction withdrawal. Dipanggil AdminWithdrawalApiController & seeder.
     public static function debitAvailable(Guide $guide, Withdrawal $withdrawal): void
     {
         DB::transaction(function () use ($guide, $withdrawal) {

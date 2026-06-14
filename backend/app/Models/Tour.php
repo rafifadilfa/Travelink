@@ -11,7 +11,7 @@ class Tour extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'tours'; // specify the table name if it doesn't follow Laravel's naming convention
+    protected $table = 'tours';
 
     protected $fillable = [
         'name',
@@ -29,42 +29,36 @@ class Tour extends Model
         'tour_rating',
         'featured',
         'is_open_trip',
-    ]; // specify the fillable attributes for mass assignment
+    ];
 
-    // Get tour location
     public function location()
     {
-        return $this->belongsTo(Location::class, 'tour_location_id'); // every tour only have one location
+        return $this->belongsTo(Location::class, 'tour_location_id');
     }
 
-    // Get tour meeting point
     public function meetingPoint()
     {
-        return $this->belongsTo(MeetingPoint::class, 'tour_meeting_point_id'); // every tour only have one meeting point
+        return $this->belongsTo(MeetingPoint::class, 'tour_meeting_point_id');
     }
 
-    // Get tour guide
     public function tags()
     {
-        return $this->belongsToMany(Tag::class, 'tour_tags', 'tour_id', 'tag_id')->withTimestamps(); // every tour can have many tags through tour_tag
+        return $this->belongsToMany(Tag::class, 'tour_tags', 'tour_id', 'tag_id')->withTimestamps();
     }
 
-    // Get tour guide
     public function images()
     {
-        return $this->hasMany(TourImage::class, 'tour_id')->orderBy('image_order', 'asc');; // every tour have one or more images
+        return $this->hasMany(TourImage::class, 'tour_id')->orderBy('image_order', 'asc');
     }
 
-    // Get tour categories
     public function categories()
     {
-        return $this->belongsToMany(Category::class, 'tour_categories', 'tour_id', 'category_id')->withTimestamps(); // every tour can have many categories through tour_categories
+        return $this->belongsToMany(Category::class, 'tour_categories', 'tour_id', 'category_id')->withTimestamps();
     }
-    
-    // Get tour day phase
+
     public function dayphase()
     {
-        return $this->belongsTo(DayPhase::class, 'tour_period_id'); // every tour belongs to one day phase
+        return $this->belongsTo(DayPhase::class, 'tour_period_id');
     }
 
     public function items()
@@ -77,22 +71,22 @@ class Tour extends Model
 
     public function guide()
     {
-        return $this->belongsTo(Guide::class, 'tour_guide_id'); // every tour belongs to one guide
+        return $this->belongsTo(Guide::class, 'tour_guide_id');
     }
 
     public function itineraries()
     {
-        return $this->hasMany(TourItinerary::class, 'tour_id')->orderBy('step_number', 'asc'); // every tour can have many itineraries
+        return $this->hasMany(TourItinerary::class, 'tour_id')->orderBy('step_number', 'asc');
     }
 
     public function reviews()
     {
-        return $this->hasMany(TourReview::class, 'tour_id'); // every tour can have many reviews
+        return $this->hasMany(TourReview::class, 'tour_id');
     }
 
     public function transactions()
     {
-        return $this->hasMany(Transaction::class, 'tour_id'); // every tour can have many transactions
+        return $this->hasMany(Transaction::class, 'tour_id');
     }
 
     public function openTripGroups()

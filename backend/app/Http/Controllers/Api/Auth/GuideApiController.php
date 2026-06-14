@@ -11,10 +11,7 @@ use Illuminate\Validation\Rules\Password as PasswordRules;
 
 class GuideApiController extends Controller
 {
-    /**
-     * Register pemandu wisata baru.
-     * Status default = 'pending' (dikontrol oleh nilai default DB, tidak perlu di-set manual).
-     */
+    // Register pemandu baru. Status default 'pending' dari nilai default DB.
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -29,7 +26,6 @@ class GuideApiController extends Controller
                 'email'             => $validated['email'],
                 'password'          => $validated['password'],
                 'email_verified_at' => now(),
-                // verification_status otomatis 'pending' dari default DB
             ]);
 
             return response()->json([
@@ -43,11 +39,7 @@ class GuideApiController extends Controller
         }
     }
 
-    /**
-     * Login pemandu wisata.
-     * Kembalikan token + data guide (termasuk verification_status) supaya frontend bisa
-     * langsung tahu apakah guide sudah verified atau masih pending.
-     */
+    // Login pemandu, kembalikan token + data guide (termasuk verification_status).
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -71,9 +63,6 @@ class GuideApiController extends Controller
         ], 401);
     }
 
-    /**
-     * Logout pemandu wisata — hapus semua token aktif.
-     */
     public function logout(Request $request): JsonResponse
     {
         $request->user()->tokens()->delete();
@@ -83,9 +72,7 @@ class GuideApiController extends Controller
         ], 200);
     }
 
-    /**
-     * Ambil data guide yang sedang login (termasuk verification_status terkini dari DB).
-     */
+    // Ambil data guide yang sedang login, termasuk verification_status terkini.
     public function getGuide(Request $request): JsonResponse
     {
         return response()->json([

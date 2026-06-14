@@ -8,18 +8,10 @@ use App\Models\TourReview;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Melihat ringkasan & daftar ulasan pemandu (UC-16).
- * Menggabungkan ulasan pemandu (guide_reviews) dan ulasan paket (tour_reviews).
- * Dilindungi EnsureGuideIsVerified.
- */
+// Ringkasan & daftar ulasan pemandu (UC-16). Menggabungkan guide_reviews dan tour_reviews.
 class GuideReviewApiController extends Controller
 {
-    // ================================================================
-    // GET /api/guide/reviews
-    // Query: rating=1-5 (filter), period=month|3months|year (filter)
-    // UC-16: Melihat Ulasan & Rating
-    // ================================================================
+    // GET /api/guide/reviews?rating=1-5&period=month|3months|year — UC-16: ulasan & rating
     public function index(Request $request): JsonResponse
     {
         $guide = $request->user();
@@ -36,7 +28,6 @@ class GuideReviewApiController extends Controller
             };
         }
 
-        // ─── Ulasan Pemandu (guide_reviews) ─────────────────────────────
         $guideQuery = GuideReview::where('guide_id', $guide->id)
             ->with('user:id,name,profile_photo_path');
 
@@ -62,7 +53,7 @@ class GuideReviewApiController extends Controller
             ] : null,
         ]);
 
-        // ─── Ulasan Paket (tour_reviews via tour.tour_guide_id) ─────────
+        // ulasan paket (melalui tour milik guide ini)
         $tourQuery = TourReview::whereHas('tour', fn($q) => $q->where('tour_guide_id', $guide->id))
             ->with(['user:id,name,profile_photo_path', 'tour:id,name']);
 
@@ -88,12 +79,11 @@ class GuideReviewApiController extends Controller
             ] : null,
         ]);
 
-        // ─── Gabungkan + sort by created_at DESC ────────────────────────
         $combined = $guideReviews->concat($tourReviews)
             ->sortByDesc('created_at')
             ->values();
 
-        // ─── Distribusi rating (guide_reviews saja, semua waktu) ─────────
+        // distribusi rating (semua waktu, tanpa filter)
         $allRatings = GuideReview::where('guide_id', $guide->id)
             ->selectRaw('rating, COUNT(*) as count')
             ->groupBy('rating')

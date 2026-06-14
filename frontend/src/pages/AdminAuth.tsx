@@ -130,7 +130,6 @@ const AdminAuth: React.FC = () => {
     color: '#721c24',
     fontSize: '14px',
   };
-  // ──────────────────────────────────────────────────────────────
 
   return (
     <div style={{

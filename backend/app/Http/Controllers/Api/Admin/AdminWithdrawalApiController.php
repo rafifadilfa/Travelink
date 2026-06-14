@@ -16,9 +16,7 @@ use Illuminate\Http\Request;
  */
 class AdminWithdrawalApiController extends Controller
 {
-    // ----------------------------------------------------------------
     // Helper: format withdrawal untuk response
-    // ----------------------------------------------------------------
     private function formatWithdrawal(Withdrawal $withdrawal): array
     {
         return [
@@ -42,10 +40,7 @@ class AdminWithdrawalApiController extends Controller
         ];
     }
 
-    // ================================================================
-    // GET /api/admin/withdrawals
-    // Daftar withdrawal menunggu_verifikasi (untuk UC-20)
-    // ================================================================
+    // GET /api/admin/withdrawals — UC-20: daftar withdrawal menunggu_verifikasi
     public function index(): JsonResponse
     {
         $withdrawals = Withdrawal::where('status', Withdrawal::STATUS_MENUNGGU_VERIFIKASI)
@@ -63,10 +58,7 @@ class AdminWithdrawalApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
     // GET /api/admin/withdrawals/{id}
-    // Detail satu withdrawal
-    // ================================================================
     public function show(int $id): JsonResponse
     {
         $withdrawal = Withdrawal::with('guide')->findOrFail($id);
@@ -74,12 +66,7 @@ class AdminWithdrawalApiController extends Controller
         return response()->json(['withdrawal' => $this->formatWithdrawal($withdrawal)], 200);
     }
 
-    // ================================================================
-    // POST /api/admin/withdrawals/{id}/process
-    // Admin transfer manual + tandai selesai (UC-20 Normal Flow)
-    // menunggu_verifikasi → selesai
-    // Efek: WalletService::debitAvailable() (available_balance guide -)
-    // ================================================================
+    // POST /api/admin/withdrawals/{id}/process — UC-20: transfer + tandai selesai, debitAvailable guide
     public function process(Request $request, int $id): JsonResponse
     {
         /** @var Admin $admin */
@@ -106,7 +93,7 @@ class AdminWithdrawalApiController extends Controller
             'processed_at' => now(),
         ]);
 
-        // Kurangi available_balance + buat wallet_transaction (WalletService — satu-satunya sumber kebenaran)
+        // WalletService adalah satu-satunya yang boleh ubah saldo
         WalletService::debitAvailable($guide, $withdrawal);
 
         $withdrawal->load('guide');
@@ -128,11 +115,7 @@ class AdminWithdrawalApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // POST /api/admin/withdrawals/{id}/reject
-    // Data rekening tidak valid (UC-20 Alternate Flow A1)
-    // menunggu_verifikasi → ditolak
-    // ================================================================
+    // POST /api/admin/withdrawals/{id}/reject — UC-20 A1: data rekening tidak valid → ditolak
     public function reject(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([

@@ -12,13 +12,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-/**
- * TC-047: Webhook callback dari Midtrans setelah pembayaran selesai.
- *
- * Verifikasi signature: SHA512(order_id + status_code + gross_amount + server_key)
- * Format order_id Private Trip: PT-{bookingId}-{timestamp}
- * Format order_id Open Trip:    OT-{groupId}-{participantId}-{timestamp}
- */
+// TC-047: Webhook Midtrans. Signature = SHA512(order_id+status_code+gross_amount+server_key)
+// Format order_id: PT-{bookingId}-{ts} (Private) | OT-{groupId}-{participantId}-{ts} (Open Trip)
 class MidtransCallbackController extends Controller
 {
     // POST /api/payment/midtrans/callback
@@ -33,7 +28,6 @@ class MidtransCallbackController extends Controller
         $transactionStatus = $payload['transaction_status'] ?? '';
         $fraudStatus      = $payload['fraud_status']      ?? 'accept';
 
-        // Verifikasi signature Midtrans
         $serverKey = config('midtrans.server_key');
         $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
 
@@ -42,7 +36,6 @@ class MidtransCallbackController extends Controller
             return response()->json(['message' => 'Invalid signature.'], 403);
         }
 
-        // Cek apakah pembayaran berhasil
         $isPaid = $transactionStatus === 'settlement'
             || ($transactionStatus === 'capture' && $fraudStatus === 'accept');
 
@@ -69,7 +62,6 @@ class MidtransCallbackController extends Controller
 
     private function handlePrivateTripPayment(string $orderId): void
     {
-        // Temukan transaksi via midtrans_order_id
         $transaction = Transaction::where('midtrans_order_id', $orderId)
             ->with(['booking', 'tour.guide', 'user'])
             ->first();
@@ -97,7 +89,6 @@ class MidtransCallbackController extends Controller
             WalletService::creditPending($transaction->tour->guide, (int) $transaction->total_amount);
         }
 
-        // Notifikasi wisatawan
         if ($transaction->user_id) {
             $tourName = $transaction->tour?->name ?? 'paket wisata';
             NotificationService::send(
@@ -108,7 +99,6 @@ class MidtransCallbackController extends Controller
             );
         }
 
-        // Notifikasi pemandu
         if ($guideId = $transaction->guide_id) {
             $tourName = $transaction->tour?->name ?? 'paket wisata';
             NotificationService::send(
@@ -122,7 +112,6 @@ class MidtransCallbackController extends Controller
 
     private function handleOpenTripPayment(string $orderId): void
     {
-        // Temukan participant via midtrans_order_id
         $participant = OpenTripParticipant::where('midtrans_order_id', $orderId)
             ->with(['group.tour.guide', 'user'])
             ->first();

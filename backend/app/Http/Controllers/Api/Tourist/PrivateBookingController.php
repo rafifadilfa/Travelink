@@ -15,24 +15,10 @@ use Midtrans\Config as MidtransConfig;
 use Midtrans\Snap;
 use Midtrans\Transaction as MidtransTransaction;
 
-/**
- * Booking Private Trip — wisatawan pilih tour, jumlah peserta, tanggal,
- * lalu bayar langsung via Midtrans Snap.
- *
- * Alur:
- *   POST /api/bookings              → buat Transaction + Booking (status: menunggu_pembayaran)
- *   POST /api/bookings/{id}/payment → buat Snap token Midtrans
- *   GET  /api/bookings/{id}/payment → cek status ke Midtrans, update DB jika lunas
- *   GET  /api/bookings              → daftar semua private booking milik user
- *   GET  /api/bookings/{id}         → detail satu booking
- */
+// Private Trip: buat booking, bayar via Midtrans Snap, cek status pembayaran.
 class PrivateBookingController extends Controller
 {
-    // ================================================================
-    // POST /api/bookings
-    // Buat booking baru: simpan Transaction + Booking ke DB.
-    // Status awal: menunggu_pembayaran (langsung bisa bayar via Midtrans).
-    // ================================================================
+    // POST /api/bookings — buat Transaction + Booking, status awal: menunggu_pembayaran
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -88,10 +74,7 @@ class PrivateBookingController extends Controller
         ], 201);
     }
 
-    // ================================================================
-    // GET /api/bookings
-    // Daftar semua private booking milik user yang sedang login.
-    // ================================================================
+    // GET /api/bookings — daftar private booking milik user
     public function index(Request $request): JsonResponse
     {
         $bookings = Booking::where('user_id', $request->user()->id)
@@ -108,10 +91,7 @@ class PrivateBookingController extends Controller
         ]);
     }
 
-    // ================================================================
-    // GET /api/bookings/{id}
-    // Detail satu booking milik user yang sedang login.
-    // ================================================================
+    // GET /api/bookings/{id} — detail satu booking milik user
     public function show(Request $request, int $id): JsonResponse
     {
         $booking = Booking::where('user_id', $request->user()->id)
@@ -125,11 +105,7 @@ class PrivateBookingController extends Controller
         return response()->json(['booking' => $this->formatBooking($booking)]);
     }
 
-    // ================================================================
-    // POST /api/bookings/{id}/payment
-    // Buat Midtrans Snap token untuk pembayaran booking ini.
-    // Hanya bisa dipanggil saat booking masih menunggu_pembayaran dan belum lunas.
-    // ================================================================
+    // POST /api/bookings/{id}/payment — buat Midtrans Snap token, hanya saat menunggu_pembayaran
     public function createPayment(Request $request, int $id): JsonResponse
     {
         $booking = Booking::where('user_id', Auth::id())
@@ -145,7 +121,7 @@ class PrivateBookingController extends Controller
             return response()->json(['message' => 'Pembayaran sudah lunas.'], 422);
         }
 
-        // Generate order ID unik per percobaan bayar
+        // Timestamp di order_id mencegah duplikat di Midtrans
         $orderId = 'PT-' . $booking->id . '-' . now()->timestamp;
 
         MidtransConfig::$serverKey    = config('midtrans.server_key');
@@ -191,11 +167,7 @@ class PrivateBookingController extends Controller
         ]);
     }
 
-    // ================================================================
-    // GET /api/bookings/{id}/payment
-    // Cek status pembayaran ke Midtrans. Jika sudah lunas, update DB
-    // dan kredit saldo pemandu (escrow). Bisa di-poll dari frontend.
-    // ================================================================
+    // GET /api/bookings/{id}/payment — cek status ke Midtrans, kredit escrow jika lunas (bisa di-poll)
     public function checkPayment(Request $request, int $id): JsonResponse
     {
         $booking = Booking::where('user_id', Auth::id())
@@ -238,14 +210,13 @@ class PrivateBookingController extends Controller
                     'paid_at'        => now(),
                 ]);
 
-                // Kredit saldo pending pemandu (escrow — dicairkan saat trip selesai)
+                // Kredit pending_balance guide (escrow — dicairkan saat trip selesai)
                 $guide = $transaction->tour?->guide;
                 if ($guide) {
                     WalletService::creditPending($guide, (float) $transaction->total_amount);
                 }
 
-                // Notifikasi wisatawan & pemandu — hanya dari path polling ini
-                // (jika Midtrans webhook aktif, notif sudah dikirim di MidtransCallbackController)
+                // Notifikasi hanya dari polling ini (jika webhook aktif, notif sudah dikirim di MidtransCallbackController)
                 $tourName = $transaction->tour?->name ?? 'paket wisata';
                 NotificationService::send(
                     'payment_confirmed',
@@ -267,8 +238,7 @@ class PrivateBookingController extends Controller
                 }
             }
         } catch (\Exception) {
-            // Midtrans belum punya record (order baru dibuat, belum ada aksi bayar)
-            // Kembalikan status saat ini tanpa ubah apa pun
+            // Midtrans belum punya record — order baru, belum ada aksi bayar
         }
 
         return response()->json([
@@ -277,10 +247,7 @@ class PrivateBookingController extends Controller
         ]);
     }
 
-    // ================================================================
-    // POST /api/bookings/{id}/cancel
-    // TC-031: Wisatawan membatalkan booking yang masih menunggu konfirmasi pemandu.
-    // ================================================================
+    // POST /api/bookings/{id}/cancel — TC-031: cancel booking yang masih menunggu konfirmasi pemandu
     public function cancel(Request $request, int $id): JsonResponse
     {
         $booking = Booking::where('user_id', Auth::id())
@@ -317,9 +284,7 @@ class PrivateBookingController extends Controller
         ], 200);
     }
 
-    // ----------------------------------------------------------------
-    // Helper: format satu booking untuk response JSON
-    // ----------------------------------------------------------------
+    // Helper: format booking untuk response
     private function formatBooking(Booking $booking): array
     {
         $transaction = $booking->transaction;

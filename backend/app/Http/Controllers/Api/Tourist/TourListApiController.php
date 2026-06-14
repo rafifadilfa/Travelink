@@ -43,7 +43,6 @@ class TourListApiController extends Controller
         }
 
         $tours = $query->get()->map(function (Tour $tour) use ($host) {
-                // Ambil gambar pertama; fallback ke null
                 $firstImage = $tour->images->first();
                 $imageUrl   = null;
                 if ($firstImage) {
@@ -164,7 +163,7 @@ class TourListApiController extends Controller
 
         // Bangun daftar tanggal tersedia dalam 3 bulan ke depan
         $availableDates = [];
-        $cursor = $today->copy()->addDay(); // mulai besok
+        $cursor = $today->copy()->addDay();
         while ($cursor->lessThanOrEqualTo($threeMonthsLater)) {
             if (in_array($cursor->dayOfWeek, $availableDays)) {
                 $availableDates[] = $cursor->toDateString();

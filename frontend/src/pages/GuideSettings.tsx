@@ -28,8 +28,6 @@ const GuideSettings: React.FC = () => {
   const cancelRef = useRef<HTMLButtonElement>(null);
 
   const handleDeleteAccount = () => {
-    // Di aplikasi nyata, di sini Anda akan memanggil API untuk menghapus akun
-    console.log("Account deletion process initiated.");
 
     toast({
       title: 'Account Deleted',

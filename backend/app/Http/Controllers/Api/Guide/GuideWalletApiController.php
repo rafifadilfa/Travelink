@@ -14,25 +14,18 @@ use Illuminate\Http\Request;
  */
 class GuideWalletApiController extends Controller
 {
-    // ================================================================
-    // GET /api/guide/wallet
-    // Query: type=income|withdrawal (filter), page=1
-    // UC-22: Melihat Dashboard Keuangan
-    // ================================================================
+    // GET /api/guide/wallet?type=income|withdrawal — UC-22: dashboard keuangan
     public function index(Request $request): JsonResponse
     {
         $guide = $request->user();
 
-        // Total penghasilan sejak bergabung:
-        //   pending (escrow belum selesai) + available (siap dicairkan) + sudah dicairkan
-        // Ini satu-satunya formula yang konsisten: wallet_transactions hanya berisi income
-        // yang SUDAH settle, sehingga tidak bisa dipakai untuk menghitung total termasuk pending.
+        // Total income = pending + available + withdrawn. wallet_transactions hanya berisi
+        // income yang sudah settle, sehingga tidak bisa dipakai untuk total termasuk pending.
         $totalWithdrawn = Withdrawal::where('guide_id', $guide->id)
             ->where('status', Withdrawal::STATUS_SELESAI)
             ->sum('amount');
         $totalIncome = $guide->pending_balance + $guide->available_balance + (float) $totalWithdrawn;
 
-        // Riwayat transaksi (bisa difilter by type)
         $txQuery = WalletTransaction::where('guide_id', $guide->id)
             ->orderBy('created_at', 'desc');
 

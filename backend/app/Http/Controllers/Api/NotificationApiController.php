@@ -9,13 +9,7 @@ use App\Models\Guide;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/**
- * Notifikasi sistem untuk User, Guide, dan Admin.
- *
- * GET   /api/notifications             — daftar + unread count
- * PATCH /api/notifications/read-all   — tandai semua sudah dibaca
- * PATCH /api/notifications/{id}/read  — tandai satu sudah dibaca
- */
+// Notifikasi sistem untuk User, Guide, dan Admin.
 class NotificationApiController extends Controller
 {
     public function index(Request $request): JsonResponse

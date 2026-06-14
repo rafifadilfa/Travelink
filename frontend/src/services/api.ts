@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-// ============================================================
-// TOURIST API CLIENT (default export)
-// Pakai token wisatawan dari localStorage key 'token'.
-// ============================================================
+// Tourist API client — token dari localStorage 'token'.
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {
@@ -35,11 +32,7 @@ apiClient.interceptors.response.use(
 
 export default apiClient;
 
-// ============================================================
-// GUIDE API CLIENT (named export)
-// Pakai token pemandu dari localStorage key 'guide_token'.
-// Redirect ke /guide/auth kalau token expired atau tidak valid.
-// ============================================================
+// Guide API client — token dari localStorage 'guide_token', redirect ke /guide/auth saat 401.
 export const guideApiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {
@@ -69,11 +62,7 @@ guideApiClient.interceptors.response.use(
   }
 );
 
-// ============================================================
-// ADMIN API CLIENT (named export)
-// Pakai token admin dari localStorage key 'admin_token'.
-// Redirect ke /admin/auth kalau token expired atau tidak valid.
-// ============================================================
+// Admin API client — token dari localStorage 'admin_token', redirect ke /admin/auth saat 401.
 export const adminApiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {

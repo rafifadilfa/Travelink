@@ -25,10 +25,7 @@ class OpenTripController extends Controller
         private ProfileMatchingService  $matcher,
     ) {}
 
-    // ════════════════════════════════════════════════════════════════════════
     // GET /api/open-trip/form-data?tour_id={id}&date={YYYY-MM-DD}
-    // ════════════════════════════════════════════════════════════════════════
-
     public function formData(Request $request): JsonResponse
     {
         $request->validate([
@@ -95,10 +92,7 @@ class OpenTripController extends Controller
         ]);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     // POST /api/open-trip/join
-    // ════════════════════════════════════════════════════════════════════════
-
     public function join(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -141,7 +135,6 @@ class OpenTripController extends Controller
             }
         }
 
-        // Simpan preferensi dalam transaksi; kembalikan ID untuk fetch ulang
         $isNew         = $existing === null;
         $participantId = DB::transaction(function () use ($validated, $userId, $existing): int {
             if ($existing) {
@@ -178,10 +171,8 @@ class OpenTripController extends Controller
             return $created->id;
         });
 
-        // Jalankan matching — mungkin mengubah status peserta ini ke 'matched'
         $matchingResult = $this->matchingService->runMatching($validated['tour_id'], $validated['trip_date']);
 
-        // Fetch ulang dengan status terbaru
         $participant = OpenTripParticipant::with([
             'interests:id,name',
             'preferences:id,name,category_id',
@@ -204,16 +195,11 @@ class OpenTripController extends Controller
                 'interests'          => $participant->interests->map(fn($c) => ['id' => $c->id, 'name' => $c->name]),
                 'activities'         => $participant->preferences->map(fn($a) => ['id' => $a->id, 'name' => $a->name]),
             ],
-            // ── DEBUG SEMENTARA — hapus setelah bug ditemukan ──────────
             '_debug_matching' => $matchingResult,
         ], $isNew ? 201 : 200);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // GET /api/open-trip/my-trips   (auth:sanctum)
-    // Daftar semua Smart Open Trip yang diikuti user yang sedang login.
-    // ════════════════════════════════════════════════════════════════════════
-
+    // GET /api/open-trip/my-trips — daftar Smart Open Trip yang diikuti user
     public function myTrips(): JsonResponse
     {
         $participants = OpenTripParticipant::with([
@@ -259,11 +245,7 @@ class OpenTripController extends Controller
         return response()->json(['data' => $data]);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // DELETE /api/open-trip/participants/{participantId}
-    // Cancel: hanya bisa jika masih Tahap 1 (status = waiting)
-    // ════════════════════════════════════════════════════════════════════════
-
+    // DELETE /api/open-trip/participants/{participantId} — cancel jika masih waiting (Tahap 1)
     public function cancel(int $participantId): JsonResponse
     {
         $participant = OpenTripParticipant::where('id', $participantId)
@@ -283,17 +265,12 @@ class OpenTripController extends Controller
             ], 422);
         }
 
-        // status === 'waiting' → boleh cancel
         $participant->update(['status' => 'cancelled']);
 
         return response()->json(['message' => 'Pendaftaran berhasil dibatalkan.']);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // POST /api/open-trip/payment/create
-    // Buat transaksi Midtrans untuk peserta yang belum bayar (auth:sanctum)
-    // ════════════════════════════════════════════════════════════════════════
-
+    // POST /api/open-trip/payment/create — buat transaksi Midtrans untuk peserta yang belum bayar
     public function createPayment(Request $request): JsonResponse
     {
         $request->validate([
@@ -312,7 +289,6 @@ class OpenTripController extends Controller
             return response()->json(['message' => 'Kamu sudah membayar.'], 422);
         }
 
-        // Hitung jumlah anggota grup dan harga per orang di backend
         $group = $participant->group()->with('tour:id,name,tour_price')->firstOrFail();
 
         // Grup sudah diproses scheduler — alur pembayaran direct ini sudah tidak berlaku
@@ -322,7 +298,6 @@ class OpenTripController extends Controller
             ], 422);
         }
 
-        // Harus konfirmasi keikutsertaan sebelum membayar
         if ($participant->confirmed_at === null) {
             return response()->json([
                 'message' => 'Konfirmasi keikutsertaanmu terlebih dahulu sebelum membayar.',
@@ -339,10 +314,9 @@ class OpenTripController extends Controller
         $tourPrice     = $group->tour->tour_price;
         $amountPerPerson = (int) ceil($tourPrice / $memberCount);
 
-        // Generate order ID unik per percobaan bayar (timestamp mencegah duplikat di Midtrans)
+        // Timestamp di order_id mencegah duplikat di Midtrans
         $orderId = "OT-{$group->id}-{$participant->id}-" . now()->timestamp;
 
-        // Konfigurasi Midtrans
         MidtransConfig::$serverKey    = config('midtrans.server_key');
         MidtransConfig::$isProduction = config('midtrans.is_production');
         MidtransConfig::$isSanitized  = true;
@@ -377,7 +351,6 @@ class OpenTripController extends Controller
             ], 500);
         }
 
-        // Simpan order_id agar bisa dicek statusnya nanti
         $participant->update([
             'midtrans_order_id' => $orderId,
             'payment_status'    => 'unpaid',
@@ -392,12 +365,7 @@ class OpenTripController extends Controller
         ]);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // GET /api/open-trip/payment/check/{participantId}
-    // Cek status pembayaran ke Midtrans & update DB jika sudah lunas
-    // Juga kembalikan status bayar semua anggota grup (auth:sanctum)
-    // ════════════════════════════════════════════════════════════════════════
-
+    // GET /api/open-trip/payment/check/{participantId} — cek & update status bayar ke Midtrans, kembalikan status semua anggota
     public function checkPaymentStatus(int $participantId): JsonResponse
     {
         $participant = OpenTripParticipant::where('id', $participantId)
@@ -418,7 +386,6 @@ class OpenTripController extends Controller
             return $this->buildPaymentStatusResponse($participant);
         }
 
-        // Tanya Midtrans status transaksi
         MidtransConfig::$serverKey    = config('midtrans.server_key');
         MidtransConfig::$isProduction = config('midtrans.is_production');
 
@@ -438,8 +405,7 @@ class OpenTripController extends Controller
         if ($isPaid) {
             $participant->update(['payment_status' => 'paid']);
 
-            // Kredit pending_balance guide pemilik tour (escrow — ditahan).
-            // Hanya dipanggil sekali karena setelah 'paid', endpoint ini early-return di atas.
+            // Kredit pending_balance guide (escrow — hanya sekali, karena 'paid' early-return di atas)
             $group = $participant->group()->with('tour.guide')->first();
             if ($group && $group->tour && $group->tour->guide) {
                 $memberCount     = OpenTripParticipant::where('group_id', $group->id)
@@ -453,9 +419,7 @@ class OpenTripController extends Controller
         return $this->buildPaymentStatusResponse($participant->fresh());
     }
 
-    /**
-     * Bangun response yang berisi status bayar semua anggota grup.
-     */
+    // Bangun response status bayar semua anggota grup
     private function buildPaymentStatusResponse(OpenTripParticipant $participant): JsonResponse
     {
         $allMembers = OpenTripParticipant::with('user:id,name')
@@ -482,12 +446,7 @@ class OpenTripController extends Controller
         ]);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // POST /api/open-trip/confirm
-    // TC-056: Peserta konfirmasi keikutsertaan dalam window 6 jam setelah
-    // countdown grup berakhir (expires_at sudah lewat, tapi belum > +6 jam).
-    // ════════════════════════════════════════════════════════════════════════
-
+    // POST /api/open-trip/confirm — TC-056: konfirmasi keikutsertaan dalam window 6 jam setelah countdown
     public function confirm(Request $request): JsonResponse
     {
         $request->validate([
@@ -498,7 +457,6 @@ class OpenTripController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        // Harus sudah masuk grup (status matched)
         if ($participant->status !== 'matched' || ! $participant->group_id) {
             return response()->json([
                 'message' => 'Kamu belum masuk ke grup Smart Open Trip.',
@@ -507,7 +465,6 @@ class OpenTripController extends Controller
 
         $group = $participant->group;
 
-        // Countdown harus sudah habis (expires_at sudah lewat)
         if ($group->isActive()) {
             return response()->json([
                 'message' => 'Countdown belum berakhir. Konfirmasi akan tersedia setelah countdown habis.',
@@ -523,7 +480,6 @@ class OpenTripController extends Controller
             ], 422);
         }
 
-        // Sudah konfirmasi sebelumnya
         if ($participant->confirmed_at !== null) {
             return response()->json([
                 'message'       => 'Kamu sudah mengkonfirmasi keikutsertaan ini.',
@@ -539,12 +495,7 @@ class OpenTripController extends Controller
         ], 200);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // GET /api/open-trip/debug-pool?tour_id=X&trip_date=Y   (SEMENTARA)
-    // Dry-run: lihat pool & skor kompatibilitas tanpa ubah data apapun.
-    // Hapus setelah bug ditemukan & diperbaiki.
-    // ════════════════════════════════════════════════════════════════════════
-
+    // GET /api/open-trip/debug-pool?tour_id=X&trip_date=Y — dry-run pool tanpa ubah data (sementara)
     public function debugPool(Request $request): JsonResponse
     {
         $request->validate([
@@ -624,10 +575,7 @@ class OpenTripController extends Controller
         ]);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     // GET /api/open-trip/status?tour_id=X&trip_date=Y
-    // ════════════════════════════════════════════════════════════════════════
-
     public function status(Request $request): JsonResponse
     {
         $request->validate([
@@ -693,10 +641,7 @@ class OpenTripController extends Controller
         return response()->json($response);
     }
 
-    // ════════════════════════════════════════════════════════════════════════
     // GET /api/open-trip/group/{groupId}
-    // ════════════════════════════════════════════════════════════════════════
-
     public function groupDetail(int $groupId): JsonResponse
     {
         $group = OpenTripGroup::with([

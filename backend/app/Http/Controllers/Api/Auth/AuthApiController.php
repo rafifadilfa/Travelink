@@ -7,16 +7,11 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\Rules;
 use Illuminate\Validation\Rules\Password as PasswordRules;
 
 class AuthApiController extends Controller
 {
-    /**
-     * Handle login request
-     */
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -40,9 +35,6 @@ class AuthApiController extends Controller
         ], 401);
     }
 
-    /**
-     * Handle registration request
-     */
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -52,7 +44,7 @@ class AuthApiController extends Controller
         ]);
 
         try {
-            // Password akan di-hash otomatis oleh 'hashed' cast di User model
+            // password di-hash otomatis oleh 'hashed' cast di User model
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
@@ -75,9 +67,6 @@ class AuthApiController extends Controller
         }
     }
 
-    /**
-     * Handle forgot password request
-     */
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate(['email' => 'required|email']);
@@ -97,9 +86,6 @@ class AuthApiController extends Controller
         ], 400);
     }
 
-    /**
-     * Handle logout
-     */
     public function logout(Request $request): JsonResponse
     {
         Auth::guard('web')->logout();
@@ -113,9 +99,6 @@ class AuthApiController extends Controller
         ], 200);
     }
 
-    /**
-     * Get authenticated user
-     */
     public function getUser(Request $request): JsonResponse
     {
         return response()->json([

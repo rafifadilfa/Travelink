@@ -16,9 +16,7 @@ use Illuminate\Http\Request;
  */
 class AdminPaymentApiController extends Controller
 {
-    // ----------------------------------------------------------------
     // Helper: format booking untuk response
-    // ----------------------------------------------------------------
     private function formatBooking(Booking $booking): array
     {
         $transaction = $booking->transaction;
@@ -57,11 +55,7 @@ class AdminPaymentApiController extends Controller
         ];
     }
 
-    // ================================================================
-    // GET /api/admin/payments
-    // Daftar pesanan menunggu_verifikasi_pembayaran
-    // UC-18: Memverifikasi Pembayaran
-    // ================================================================
+    // GET /api/admin/payments — UC-18: daftar pesanan menunggu_verifikasi_pembayaran
     public function index(): JsonResponse
     {
         $bookings = Booking::where('booking_status', Booking::STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN)
@@ -79,10 +73,7 @@ class AdminPaymentApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // GET /api/admin/payments/{id}
-    // Detail satu pesanan + URL bukti pembayaran
-    // ================================================================
+    // GET /api/admin/payments/{id} — detail pesanan + URL bukti pembayaran
     public function show(int $id): JsonResponse
     {
         $booking = Booking::with(['transaction.tour', 'transaction.user', 'transaction.guide'])
@@ -91,12 +82,7 @@ class AdminPaymentApiController extends Controller
         return response()->json(['booking' => $this->formatBooking($booking)], 200);
     }
 
-    // ================================================================
-    // POST /api/admin/payments/{id}/verify
-    // Admin memverifikasi bukti pembayaran (UC-18 Normal Flow)
-    // menunggu_verifikasi_pembayaran → terkonfirmasi
-    // Efek: WalletService::creditPending() (pending_balance guide +)
-    // ================================================================
+    // POST /api/admin/payments/{id}/verify — UC-18: verifikasi → terkonfirmasi, creditPending guide
     public function verify(Request $request, int $id): JsonResponse
     {
         /** @var Admin $admin */
@@ -117,7 +103,7 @@ class AdminPaymentApiController extends Controller
 
         $transaction->update(['payment_status' => 'paid']);
 
-        // Tambah pending_balance pemandu (WalletService — satu-satunya sumber kebenaran)
+        // WalletService adalah satu-satunya yang boleh ubah saldo
         WalletService::creditPending($guide, $transaction->total_amount);
 
         $tourName = $transaction->tour?->name ?? 'paket wisata';
@@ -152,17 +138,12 @@ class AdminPaymentApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // POST /api/admin/payments/{id}/reject
-    // Bukti tidak valid (UC-18 Alternate Flow A1)
-    // terkonfirmasi → menunggu_pembayaran (wisatawan perlu upload ulang)
-    // ================================================================
+    // POST /api/admin/payments/{id}/reject — UC-18 A1: bukti tidak valid → menunggu_pembayaran
     public function rejectPayment(int $id): JsonResponse
     {
         $booking = Booking::where('booking_status', Booking::STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN)
             ->findOrFail($id);
 
-        // Kembalikan ke menunggu_pembayaran agar wisatawan bisa upload ulang
         $booking->update([
             'booking_status'    => Booking::STATUS_MENUNGGU_PEMBAYARAN,
             'payment_proof_path' => null,
