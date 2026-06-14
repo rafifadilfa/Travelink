@@ -138,7 +138,7 @@ class AdminWithdrawalApiController extends Controller
             'guide',
             $withdrawal->guide->id,
             'Pencairan Dana Ditolak',
-            "Permintaan pencairan Rp {$amountFormatted} ditolak. Alasan: {$validated['rejection_reason']}",
+            "Permintaan pencairan Rp {$amountFormatted} ditolak. Alasan: {$validated['rejection_reason']}. Silakan perbarui rekening bank Anda di halaman profil dan ajukan ulang.",
             ['withdrawal_id' => $withdrawal->id]
         );
 

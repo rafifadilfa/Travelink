@@ -45,6 +45,8 @@ class GuideBookingApiController extends Controller
                     'id'    => $transaction->user->id,
                     'name'  => $transaction->user->name,
                     'email' => $transaction->user->email,
+                    'phone_country_code' => $transaction->user->phonecountrycode?->phone_country_code,
+                    'phone_number'       => $transaction->user->phone_number,
                     'avatar_url' => $transaction->user->profile_photo_path
                         ? $host . '/storage/' . $transaction->user->profile_photo_path : null,
                 ] : null,
@@ -59,7 +61,7 @@ class GuideBookingApiController extends Controller
         $tab   = $request->get('tab', 'active');
 
         $query = Booking::whereHas('transaction', fn($q) => $q->where('guide_id', $guide->id))
-            ->with(['transaction.tour', 'transaction.user'])
+            ->with(['transaction.tour', 'transaction.user.phonecountrycode'])
             ->orderBy('created_at', 'desc');
 
         if ($tab === 'history') {

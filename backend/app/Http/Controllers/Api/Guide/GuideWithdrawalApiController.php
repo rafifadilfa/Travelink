@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Guide;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\Withdrawal;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,6 +15,42 @@ use Illuminate\Http\Request;
  */
 class GuideWithdrawalApiController extends Controller
 {
+    // ================================================================
+    // GET /api/guide/withdrawals
+    // Riwayat semua pengajuan pencairan milik pemandu yang login
+    // ================================================================
+    public function index(Request $request): JsonResponse
+    {
+        $guide = $request->user();
+
+        $withdrawals = Withdrawal::where('guide_id', $guide->id)
+            ->orderByDesc('created_at')
+            ->paginate(10);
+
+        $items = $withdrawals->map(function (Withdrawal $w) {
+            return [
+                'id'                  => $w->id,
+                'amount'              => (float) $w->amount,
+                'bank_name'           => $w->bank_name,
+                'bank_account_number' => $w->bank_account_number,
+                'bank_account_holder' => $w->bank_account_holder,
+                'status'              => $w->status,
+                'rejection_reason'    => $w->rejection_reason,
+                'processed_at'        => $w->processed_at,
+                'created_at'          => $w->created_at,
+            ];
+        });
+
+        return response()->json([
+            'data' => $items,
+            'meta' => [
+                'current_page' => $withdrawals->currentPage(),
+                'last_page'    => $withdrawals->lastPage(),
+                'total'        => $withdrawals->total(),
+            ],
+        ]);
+    }
+
     // POST /api/guide/withdrawals — UC-17: pengajuan pencairan dana
     public function store(Request $request): JsonResponse
     {
@@ -51,7 +89,18 @@ class GuideWithdrawalApiController extends Controller
             'status'              => Withdrawal::STATUS_MENUNGGU_VERIFIKASI,
         ]);
 
-        // TODO: notifikasi admin (out of scope)
+        // TC-71: notifikasi semua admin ada pengajuan pencairan baru
+        $amountFormatted = number_format($amount, 0, ',', '.');
+        Admin::all()->each(function (Admin $admin) use ($guide, $withdrawal, $amountFormatted) {
+            NotificationService::send(
+                'withdrawal_requested',
+                'admin',
+                $admin->id,
+                'Permintaan Pencairan Baru',
+                "{$guide->name} mengajukan pencairan dana Rp {$amountFormatted} ke {$withdrawal->bank_name} a.n. {$withdrawal->bank_account_holder}.",
+                ['withdrawal_id' => $withdrawal->id, 'guide_id' => $guide->id]
+            );
+        });
 
         return response()->json([
             'message'    => 'Permintaan pencairan berhasil diajukan. Admin akan memproses dalam 1-3 hari kerja.',

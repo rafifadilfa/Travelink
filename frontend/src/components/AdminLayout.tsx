@@ -280,8 +280,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </AlertDialogHeader>
             <AlertDialogBody>Apakah Anda yakin ingin keluar?</AlertDialogBody>
             <AlertDialogFooter gap={3}>
-              <Button ref={logoutCancelRef} onClick={closeLogout}>Tidak</Button>
-              <Button colorScheme="red" onClick={() => void logoutAdmin()}>Ya</Button>
+              <Button ref={logoutCancelRef} bg="blue.500" color="white" _hover={{ bg: 'blue.600' }} onClick={closeLogout}>Tidak</Button>
+              <Button bg="red.500" color="white" _hover={{ bg: 'red.600' }} onClick={() => void logoutAdmin()}>Ya, Keluar</Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialogOverlay>

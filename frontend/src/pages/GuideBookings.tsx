@@ -31,7 +31,7 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
 } from '@chakra-ui/react';
-import { FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUsers, FiDollarSign, FiThumbsUp } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiXCircle, FiClock, FiUsers, FiDollarSign, FiThumbsUp, FiPhone } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import GuideLayout from '../components/GuideLayout';
 import { guideApiClient } from '../services/api';
@@ -41,6 +41,8 @@ interface BookingUser {
   id: number;
   name: string;
   email: string;
+  phone_country_code: string | null;
+  phone_number: string | null;
   avatar_url: string | null;
 }
 
@@ -140,7 +142,15 @@ const BookingCard = ({
             />
             <Box>
               <Text fontWeight="bold" fontSize="lg">{tx?.user?.name ?? 'Wisatawan'}</Text>
-              <Text fontSize="sm" color="gray.500">
+              {tx?.user?.phone_number ? (
+                <HStack spacing={1} mt={0.5}>
+                  <Icon as={FiPhone} boxSize={3} color="gray.400" />
+                  <Text fontSize="sm" color="gray.500">
+                    {tx.user.phone_country_code ? `${tx.user.phone_country_code} ` : ''}{tx.user.phone_number}
+                  </Text>
+                </HStack>
+              ) : null}
+              <Text fontSize="sm" color="gray.400">
                 Booking #{booking.id}
                 {tx?.transaction_code ? ` · ${tx.transaction_code}` : ''}
               </Text>
