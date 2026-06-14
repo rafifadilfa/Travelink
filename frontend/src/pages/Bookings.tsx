@@ -64,7 +64,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
 import TouristNavbar from '../components/TouristNavbar';
 
-// ─── Animasi ────────────────────────────────────────────────────────────────
+// Animasi
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -76,7 +76,7 @@ const fadeIn = keyframes`
   to   { opacity: 1; }
 `;
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// Types
 
 interface GroupInfo {
   id: number;
@@ -124,7 +124,7 @@ interface GroupDetailResponse {
   members: Member[];
 }
 
-// ─── Types (Private Booking) ────────────────────────────────────────────────
+// Types (Private Booking)
 
 interface PrivateBookingTour {
   id: number;
@@ -168,7 +168,7 @@ const PRIVATE_STATUS_CONFIG: Record<string, { label: string; colorScheme: string
 
 const PRIVATE_TERMINAL = ['selesai', 'ditolak', 'dibatalkan', 'dibatalkan_otomatis'];
 
-// ─── Konstanta ──────────────────────────────────────────────────────────────
+// Konstanta
 
 const BUDGET_LABELS: Record<number, string> = {
   1: '< Rp 500rb', 2: 'Rp 500rb–1jt', 3: 'Rp 1jt–2jt', 4: 'Rp 2jt–5jt', 5: '> Rp 5jt',
@@ -178,7 +178,7 @@ const CRITERIA_LABELS: Record<keyof CriteriaMatch, string> = {
   age: 'Umur', interest: 'Minat', preference: 'Aktivitas', budget: 'Budget',
 };
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// Helpers
 
 const formatRupiah = (n: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
@@ -195,7 +195,7 @@ const isPast = (dateStr: string) => {
 
 const scorePercent = (score: number) => Math.round((score / 5) * 100);
 
-// ─── Config badge status ─────────────────────────────────────────────────────
+// Config badge status
 
 const STATUS_CONFIG = {
   waiting: {
@@ -215,7 +215,7 @@ const STATUS_CONFIG = {
   },
 } as const;
 
-// ─── Sub-komponen: Skeleton card ─────────────────────────────────────────────
+// Sub-komponen: Skeleton card
 
 const SkeletonCard: React.FC = () => (
   <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" p={5} boxShadow="sm">
@@ -233,7 +233,7 @@ const SkeletonCard: React.FC = () => (
   </Box>
 );
 
-// ─── Sub-komponen: Empty state ────────────────────────────────────────────────
+// Sub-komponen: Empty state
 
 interface EmptyStateProps {
   tab: 'upcoming' | 'past';
@@ -281,7 +281,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ tab, onExplore }) => {
   );
 };
 
-// ─── Sub-komponen: Stat row (info grup) ──────────────────────────────────────
+// Sub-komponen: Stat row (info grup)
 
 interface StatRowProps {
   memberCount: number;
@@ -332,7 +332,7 @@ const StatRow: React.FC<StatRowProps> = ({ memberCount, matchingScore, tourPrice
   );
 };
 
-// ─── Sub-komponen: Star Selector ──────────────────────────────────────────────
+// Sub-komponen: Star Selector
 
 interface StarSelectorProps {
   value: number;
@@ -360,7 +360,7 @@ const StarSelector: React.FC<StarSelectorProps> = ({ value, onChange }) => {
   );
 };
 
-// ─── Sub-komponen: Review Modal ───────────────────────────────────────────────
+// Sub-komponen: Review Modal
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -551,7 +551,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   );
 };
 
-// ─── Sub-komponen: Trip card ──────────────────────────────────────────────────
+// Sub-komponen: Trip card
 
 interface TripCardProps {
   item: OpenTripBooking;

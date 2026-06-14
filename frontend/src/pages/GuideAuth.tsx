@@ -184,7 +184,6 @@ const GuideAuth: React.FC = () => {
     fontSize: '13px',
     marginTop: '5px',
   };
-  // ──────────────────────────────────────────────────────────────────────────
 
   return (
     <div style={{

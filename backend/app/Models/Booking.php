@@ -8,7 +8,7 @@ class Booking extends Model
 {
     protected $table = 'bookings';
 
-    // ── Nilai status booking ──────────────────────────────────────────────────
+    // Status booking
     const STATUS_MENUNGGU_KONFIRMASI_PEMANDU    = 'menunggu_konfirmasi_pemandu';
     const STATUS_MENUNGGU_PEMBAYARAN            = 'menunggu_pembayaran';
     const STATUS_MENUNGGU_VERIFIKASI_PEMBAYARAN = 'menunggu_verifikasi_pembayaran';

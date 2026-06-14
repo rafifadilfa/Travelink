@@ -112,7 +112,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      console.log('Register attempt:', { email, password, confirmPassword, username });
       const response = await apiClient.post('/auth/register', {
         name: username,
         email: email,

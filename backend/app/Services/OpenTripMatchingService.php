@@ -8,56 +8,20 @@ use App\Models\Tour;
 use App\Services\NotificationService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 /**
- * OpenTripMatchingService
- *
- * Mengeksekusi algoritma "Greedy Sequential Group Formation" untuk Smart Open Trip.
- * Dipisahkan dari controller agar bisa dipanggil dari seeder, test, dan tempat lain.
- *
- * Referensi algoritma: docs/rancangan_profile_matching.md §6 + penjelasan di atas kode.
+ * Greedy Sequential Group Formation untuk Smart Open Trip.
+ * Referensi: docs/rancangan_profile_matching.md §6
  */
 class OpenTripMatchingService
 {
     public function __construct(private ProfileMatchingService $matcher) {}
 
-    // ════════════════════════════════════════════════════════════════════════
-    // ENTRY POINT — dipanggil setiap kali peserta join pool
-    // ════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Jalankan matching untuk semua peserta 'waiting' di pool (tour + tanggal).
-     *
-     * Algoritma: Greedy Sequential Group Formation
-     * ─────────────────────────────────────────────
-     * 1. Ambil semua peserta 'waiting', urut by created_at ASC
-     *    (paling lama menunggu = anchor pertama)
-     * 2. Anchor jadi "inti" grup sementara.
-     * 3. Cek setiap peserta tersisa: jika kompatibel (match_count ≥ 2 dari 4 kriteria)
-     *    terhadap group_profile grup sementara → masuk grup.
-     *    Group_profile diperbarui setiap kali anggota baru ditambahkan (§4 dokumen).
-     * 4. Jika grup sementara memiliki ≥ 2 anggota → grup terbentuk, countdown mulai.
-     * 5. Sisa peserta yang tidak cocok diproses ulang di iterasi berikutnya.
-     * 6. Batas maksimum anggota = config('open_trip.max_group_size').
-     *
-     * Properti penting:
-     * - Tidak ada peserta yang masuk 2 grup sekaligus.
-     * - Peserta 'matched' (sudah di grup) tidak ikut diproses ulang.
-     *
-     * @param  int    $tourId
-     * @param  string $tripDate  Format: 'Y-m-d'
-     * @return array  Ringkasan hasil: ['groups_formed' => N, 'details' => [...]]
-     */
+    // Jalankan matching pool (tour + tanggal). Dipanggil setiap kali peserta join.
+    // Algoritma §6: anchor = peserta terlama waiting, iterasi greedy, grup terbentuk jika ≥ 2 anggota.
     public function runMatching(int $tourId, string $tripDate): array
     {
         $maxSize = config('open_trip.max_group_size', 6);
-
-        // ── DEBUG LOG — hapus setelah bug terselesaikan ──────────────
-        Log::debug('[OpenTrip] runMatching DIPANGGIL', [
-            'tour_id'   => $tourId,
-            'trip_date' => $tripDate,
-        ]);
 
         $waiting = OpenTripParticipant::with(['interests', 'preferences'])
             ->where('tour_id', $tourId)
@@ -65,21 +29,6 @@ class OpenTripMatchingService
             ->where('status', 'waiting')
             ->orderBy('created_at', 'asc')
             ->get();
-
-        // ── DEBUG LOG — jumlah peserta ditemukan di pool ─────────────
-        Log::debug('[OpenTrip] peserta waiting ditemukan: ' . $waiting->count(), [
-            'peserta' => $waiting->map(fn($p) => [
-                'id'         => $p->id,
-                'user_id'    => $p->user_id,
-                'tour_id'    => $p->tour_id,
-                'trip_date'  => $p->trip_date?->format('Y-m-d'),
-                'status'     => $p->status,
-                'age'        => $p->age,
-                'budget'     => $p->budget_level,
-                'interests'  => $p->interests->pluck('id')->toArray(),
-                'prefs'      => $p->preferences->pluck('id')->toArray(),
-            ])->toArray(),
-        ]);
 
         if ($waiting->count() < 2) {
             return ['groups_formed' => 0, 'details' => [], '_debug_waiting_count' => $waiting->count()];
@@ -107,16 +56,6 @@ class OpenTripMatchingService
                     $groupProfile
                 );
 
-                // ── DEBUG LOG — skor tiap kandidat ───────────────────
-                Log::debug('[OpenTrip] skor kandidat #' . $candidate->id, [
-                    'candidate_profile' => $candidate->toProfileArray(),
-                    'group_profile'     => $groupProfile,
-                    'score'             => $scoreResult['score'],
-                    'match_count'       => $scoreResult['match_count'],
-                    'criteria_match'    => $scoreResult['criteria_match'],
-                    'compatible'        => $scoreResult['compatible'],
-                ]);
-
                 if ($scoreResult['compatible']) {
                     $groupMembers->push($candidate);
                 } else {
@@ -139,11 +78,6 @@ class OpenTripMatchingService
             }
         }
 
-        Log::debug('[OpenTrip] runMatching SELESAI', [
-            'groups_formed'         => count($groupsFormed),
-            '_debug_waiting_count'  => $waiting->count(),
-        ]);
-
         return [
             'groups_formed'        => count($groupsFormed),
             'details'              => $groupsFormed,
@@ -151,16 +85,7 @@ class OpenTripMatchingService
         ];
     }
 
-    // ════════════════════════════════════════════════════════════════════════
-    // INTERNAL — finalisasi satu grup
-    // ════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Buat record OpenTripGroup, hitung skor akhir semua anggota, update status.
-     *
-     * Skor akhir dihitung terhadap group_profile FINAL (setelah semua anggota diketahui).
-     * Ini memastikan skor yang ditampilkan di Tahap 2 konsisten dengan §5d dokumen.
-     */
+    // Buat OpenTripGroup, hitung skor akhir terhadap group_profile FINAL (§5d), update status anggota.
     private function formGroup(
         \Illuminate\Support\Collection $members,
         int $tourId,
@@ -179,7 +104,6 @@ class OpenTripMatchingService
                 'expires_at' => $now->copy()->addMinutes($countdownMinutes),
             ]);
 
-            // Profil acuan FINAL (semua anggota sudah diketahui)
             $finalProfile = $this->matcher->calculateGroupProfile($members);
 
             $memberDetails = [];

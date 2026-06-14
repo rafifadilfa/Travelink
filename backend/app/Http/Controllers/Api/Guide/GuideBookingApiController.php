@@ -6,21 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\OpenTripGroup;
 use App\Models\OpenTripParticipant;
-use App\Models\Transaction;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
-/**
- * Manajemen pesanan masuk pemandu (UC-21 daftar & detail, UC-15 terima/tolak).
- * Semua endpoint dilindungi EnsureGuideIsVerified.
- */
+// Manajemen pesanan masuk pemandu (UC-21 & UC-15). Dilindungi EnsureGuideIsVerified.
 class GuideBookingApiController extends Controller
 {
-    // ----------------------------------------------------------------
-    // Helper: format satu booking untuk response
-    // ----------------------------------------------------------------
+    // Helper: format booking untuk response
     private function formatBooking(Booking $booking): array
     {
         $transaction = $booking->transaction;
@@ -59,11 +52,7 @@ class GuideBookingApiController extends Controller
         ];
     }
 
-    // ================================================================
-    // GET /api/guide/bookings
-    // Query: tab=active|history (default: active), page=1
-    // UC-21: Melihat & Mengelola Pesanan Masuk
-    // ================================================================
+    // GET /api/guide/bookings?tab=active|history — UC-21: daftar pesanan masuk
     public function index(Request $request): JsonResponse
     {
         $guide = $request->user();
@@ -83,7 +72,6 @@ class GuideBookingApiController extends Controller
 
         $bookings = $query->paginate(15);
 
-        // ── Smart Open Trip groups milik guide ini ──────────────────────────────
         $today = now()->toDateString();
 
         $groupQuery = OpenTripGroup::whereHas('tour', fn($q) => $q->where('tour_guide_id', $guide->id))
@@ -129,10 +117,7 @@ class GuideBookingApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // GET /api/guide/bookings/{id}
-    // Detail satu pesanan — dipakai halaman detail sebelum terima/tolak
-    // ================================================================
+    // GET /api/guide/bookings/{id} — detail satu pesanan
     public function show(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -144,11 +129,7 @@ class GuideBookingApiController extends Controller
         return response()->json(['booking' => $this->formatBooking($booking)], 200);
     }
 
-    // ================================================================
-    // POST /api/guide/bookings/{id}/accept
-    // UC-15 Normal Flow: pemandu menerima pesanan
-    // menunggu_konfirmasi_pemandu → menunggu_pembayaran
-    // ================================================================
+    // POST /api/guide/bookings/{id}/accept — UC-15: terima pesanan → menunggu_pembayaran
     public function accept(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -181,11 +162,7 @@ class GuideBookingApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // POST /api/guide/bookings/{id}/reject
-    // UC-15 Alternate Flow A1: pemandu menolak pesanan
-    // menunggu_konfirmasi_pemandu → ditolak
-    // ================================================================
+    // POST /api/guide/bookings/{id}/reject — UC-15 A1: tolak pesanan → ditolak
     public function reject(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -225,13 +202,8 @@ class GuideBookingApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // POST /api/guide/open-trip-groups/{groupId}/reject
-    // Guide menolak grup Smart Open Trip — hanya boleh jika 0 anggota bayar.
-    // Saat ditolak: grup.rejected_at diisi, semua peserta matched → cancelled.
-    // group_id peserta TIDAK dikosongkan agar endpoint status tourist
-    // bisa mendeteksi "cancelled_by_guide".
-    // ================================================================
+    // POST /api/guide/open-trip-groups/{groupId}/reject — tolak grup SOT jika 0 anggota bayar
+    // group_id peserta TIDAK dikosongkan agar /open-trip/status bisa deteksi cancelled_by_guide
     public function rejectOpenTripGroup(Request $request, int $groupId): JsonResponse
     {
         $guide = $request->user();
@@ -262,12 +234,9 @@ class GuideBookingApiController extends Controller
             ], 422);
         }
 
-        // Tandai grup sebagai ditolak
         $group->update(['rejected_at' => now()]);
 
-        // Keluarkan semua peserta dari grup: status → cancelled, payment_status → null
-        // group_id SENGAJA tidak dikosongkan agar endpoint /open-trip/status
-        // dapat mendeteksi bahwa pembatalan ini dilakukan oleh pemandu.
+        // group_id SENGAJA tidak dikosongkan — lihat komentar header method di atas
         OpenTripParticipant::where('group_id', $group->id)
             ->where('status', 'matched')
             ->update([
@@ -282,10 +251,7 @@ class GuideBookingApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // POST /api/guide/open-trip-groups/{groupId}/confirm
-    // TC-037: Pemandu mengkonfirmasi grup — notifikasi semua peserta.
-    // ================================================================
+    // POST /api/guide/open-trip-groups/{groupId}/confirm — TC-037: konfirmasi grup, notifikasi semua peserta
     public function confirmOpenTripGroup(Request $request, int $groupId): JsonResponse
     {
         $guide = $request->user();

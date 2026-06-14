@@ -15,13 +15,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-/**
- * Manajemen paket tour oleh pemandu wisata (verified).
- * Semua endpoint dilindungi EnsureGuideIsVerified.
- */
+// Manajemen paket tour oleh pemandu (verified). Dilindungi EnsureGuideIsVerified.
 class GuideTourApiController extends Controller
 {
-    // ── Helper: format satu tour untuk response list ─────────────────────────
+    // Helper: format tour ringkas untuk response list
     private function formatTour(Tour $tour): array
     {
         return [
@@ -35,7 +32,7 @@ class GuideTourApiController extends Controller
         ];
     }
 
-    // ── Helper: format tour lengkap untuk form edit ───────────────────────────
+    // Helper: format tour lengkap untuk form edit
     private function formatTourDetail(Tour $tour): array
     {
         $tour->load(['categories', 'itineraries', 'items', 'images', 'availabilities']);
@@ -69,9 +66,7 @@ class GuideTourApiController extends Controller
         ];
     }
 
-    // ================================================================
     // GET /api/guide/tours
-    // ================================================================
     public function index(Request $request): JsonResponse
     {
         $guide  = $request->user();
@@ -82,9 +77,7 @@ class GuideTourApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
     // POST /api/guide/tours
-    // ================================================================
     public function store(Request $request): JsonResponse
     {
         $guide = $request->user();
@@ -134,9 +127,7 @@ class GuideTourApiController extends Controller
         ], 201);
     }
 
-    // ================================================================
     // GET /api/guide/tours/{id}
-    // ================================================================
     public function show(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -147,9 +138,7 @@ class GuideTourApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
     // PUT /api/guide/tours/{id}
-    // ================================================================
     public function update(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -200,9 +189,7 @@ class GuideTourApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
     // PATCH /api/guide/tours/{id}/status
-    // ================================================================
     public function toggleStatus(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -225,10 +212,7 @@ class GuideTourApiController extends Controller
         ], 200);
     }
 
-    // ================================================================
-    // DELETE /api/guide/tours/{id}  (soft delete)
-    // TC-023: Blokir hapus jika ada booking aktif.
-    // ================================================================
+    // DELETE /api/guide/tours/{id} (soft delete) — TC-023: blokir jika ada booking aktif
     public function destroy(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -251,9 +235,7 @@ class GuideTourApiController extends Controller
         return response()->json(['message' => 'Tour berhasil dihapus.'], 200);
     }
 
-    // ================================================================
     // POST /api/guide/tours/{id}/images
-    // ================================================================
     public function uploadImages(Request $request, int $id): JsonResponse
     {
         $guide = $request->user();
@@ -287,9 +269,7 @@ class GuideTourApiController extends Controller
         ], 201);
     }
 
-    // ================================================================
     // DELETE /api/guide/tours/{id}/images/{imageId}
-    // ================================================================
     public function destroyImage(Request $request, int $id, int $imageId): JsonResponse
     {
         $guide = $request->user();
@@ -302,7 +282,7 @@ class GuideTourApiController extends Controller
         return response()->json(['message' => 'Foto berhasil dihapus.'], 200);
     }
 
-    // ── Private: cari atau buat Location, kembalikan ID-nya ──────────────────
+    // Cari atau buat Location, kembalikan ID-nya
     private function resolveLocationId(?string $name): ?int
     {
         if (empty($name)) return null;
@@ -315,7 +295,7 @@ class GuideTourApiController extends Controller
         return $location->id;
     }
 
-    // ── Private: sync kategori, itinerary, item, dan hari ketersediaan ──────────
+    // Sync relasi tour: kategori, itinerary, item, dan ketersediaan
     private function syncRelations(Tour $tour, array $data): void
     {
         // Hari ketersediaan — hapus lama, buat baru (unique days 0-6)
@@ -327,7 +307,6 @@ class GuideTourApiController extends Controller
             }
         }
 
-        // Kategori
         if (!empty($data['category'])) {
             $cat = Category::firstOrCreate(['name' => trim($data['category'])]);
             $tour->categories()->sync([$cat->id]);

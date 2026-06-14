@@ -36,24 +36,17 @@ class OpenTripParticipant extends Model
         'guide_reviewed'     => 'boolean',
     ];
 
-    // ── Relasi ──────────────────────────────────────────────────
-
-    /** Wisatawan pemilik profil ini */
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    /** Tour yang diikuti sebagai Smart Open Trip */
     public function tour()
     {
         return $this->belongsTo(Tour::class, 'tour_id');
     }
 
-    /**
-     * Minat peserta (Kriteria 2) — kategori wisata yang dipilih.
-     * Pivot: participant_interests (participant_id, category_id)
-     */
+    // Kriteria 2: minat wisata (M2M via participant_interests).
     public function interests()
     {
         return $this->belongsToMany(
@@ -64,10 +57,7 @@ class OpenTripParticipant extends Model
         );
     }
 
-    /**
-     * Preferensi aktivitas peserta (Kriteria 3) — set aktivitas yang dipilih.
-     * Pivot: participant_preferences (participant_id, activity_id)
-     */
+    // Kriteria 3: preferensi aktivitas (M2M via participant_preferences).
     public function preferences()
     {
         return $this->belongsToMany(
@@ -78,18 +68,13 @@ class OpenTripParticipant extends Model
         );
     }
 
-    /** Grup tempat peserta ini tergabung (null jika masih waiting) */
+    // null jika masih waiting
     public function group()
     {
         return $this->belongsTo(OpenTripGroup::class, 'group_id');
     }
 
-    // ── Helper: siapkan array profil untuk ProfileMatchingService ──
-
-    /**
-     * Kembalikan profil peserta sebagai array sederhana.
-     * Format ini yang diterima ProfileMatchingService.
-     */
+    // Format profil untuk ProfileMatchingService.
     public function toProfileArray(): array
     {
         return [

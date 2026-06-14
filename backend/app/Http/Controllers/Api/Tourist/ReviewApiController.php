@@ -12,18 +12,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * Endpoint rating/ulasan guide oleh wisatawan (UC-09).
- * Berlaku untuk Private Booking maupun Smart Open Trip.
- */
+// Ulasan pemandu & paket oleh wisatawan (UC-09) — berlaku untuk Private Booking dan Smart Open Trip.
 class ReviewApiController extends Controller
 {
-    // ================================================================
-    // POST /api/reviews/guide
-    // Submit rating & komentar ke pemandu setelah trip selesai.
-    // Wajib login sebagai wisatawan (auth:sanctum).
-    // Body: { transaction_id? | participant_id?, rating: 1-5, comment?: string }
-    // ================================================================
+    // POST /api/reviews/guide — submit rating ke pemandu setelah trip selesai
     public function submitGuideReview(Request $request): JsonResponse
     {
         $request->validate([
@@ -49,11 +41,7 @@ class ReviewApiController extends Controller
             : $this->submitForOpenTrip($request, Auth::id(), $partId);
     }
 
-    // ================================================================
-    // GET /api/reviews/status
-    // Cek apakah user sudah review untuk booking/peserta tertentu.
-    // Query: ?transaction_id=X  ATAU  ?participant_id=X
-    // ================================================================
+    // GET /api/reviews/status?transaction_id=X atau ?participant_id=X — cek apakah user sudah review
     public function reviewStatus(Request $request): JsonResponse
     {
         $userId = Auth::id();
@@ -97,14 +85,7 @@ class ReviewApiController extends Controller
         return response()->json(['message' => 'Harap sertakan transaction_id atau participant_id.'], 422);
     }
 
-    // ─── Private helpers ────────────────────────────────────────────────────
-
-    // ================================================================
-    // POST /api/reviews/tour
-    // Submit rating untuk paket wisata setelah trip selesai.
-    // Hanya untuk Private Booking. Auth: wisatawan (auth:sanctum).
-    // Body: { transaction_id: int, rating: 1-5, comment?: string }
-    // ================================================================
+    // POST /api/reviews/tour — submit rating paket wisata setelah trip selesai (hanya Private Booking)
     public function submitTourReview(Request $request): JsonResponse
     {
         $request->validate([

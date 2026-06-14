@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -12,13 +11,7 @@ class Guide extends Authenticatable
 {
     use HasFactory, Notifiable, HasApiTokens;
 
-    protected $table = 'guides'; // specify the table name if it doesn't follow Laravel's naming convention
-    
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $table = 'guides';
 
     protected $fillable = [
         'name',
@@ -62,36 +55,36 @@ class Guide extends Authenticatable
 
     public function languages()
     {
-        return $this->belongsToMany(Language::class, 'guide_languages', 'guide_id', 'language_id')->withTimestamps(); // every guide can speak many languages through guide_languages
+        return $this->belongsToMany(Language::class, 'guide_languages', 'guide_id', 'language_id')->withTimestamps();
     }
 
     public function tours()
     {
-        return $this->hasMany(Tour::class, 'tour_guide_id'); // every guide can be associated with many tours through tour_guides
+        return $this->hasMany(Tour::class, 'tour_guide_id');
     }
 
     public function reviews()
     {
-        return $this->hasMany(GuideReview::class, 'guide_id'); // every guide can have many reviews
+        return $this->hasMany(GuideReview::class, 'guide_id');
     }
 
     public function specialities()
     {
-        return $this->belongsToMany(Speciality::class, 'guide_specialities', 'guide_id', 'speciality_id')->withTimestamps(); // every guide can have many specialities through guide_specialities
+        return $this->belongsToMany(Speciality::class, 'guide_specialities', 'guide_id', 'speciality_id')->withTimestamps();
     }
 
     public function country()
     {
-        return $this->belongsTo(Country::class, 'country_id'); // every guide belongs to one country
+        return $this->belongsTo(Country::class, 'country_id');
     }
 
     public function phoneCountryCode()
     {
-        return $this->belongsTo(PhoneCountryCode::class, 'phone_country_code_id'); // every guide belongs to one phone country code
+        return $this->belongsTo(PhoneCountryCode::class, 'phone_country_code_id');
     }
 
     public function transactions()
     {
-        return $this->hasMany(Transaction::class, 'guide_id'); // every guide can be associated with many transactions
+        return $this->hasMany(Transaction::class, 'guide_id');
     }
 }

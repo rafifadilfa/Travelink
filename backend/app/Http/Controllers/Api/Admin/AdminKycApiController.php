@@ -10,10 +10,7 @@ use Illuminate\Http\Request;
 
 class AdminKycApiController extends Controller
 {
-    /**
-     * GET /api/admin/kyc
-     * Daftar semua guide dengan status pending — antrian KYC yang perlu ditinjau.
-     */
+    // GET /api/admin/kyc — antrian guide menunggu_verifikasi
     public function index(): JsonResponse
     {
         $guides = Guide::where('verification_status', 'menunggu_verifikasi')
@@ -23,10 +20,7 @@ class AdminKycApiController extends Controller
         return response()->json(['guides' => $guides], 200);
     }
 
-    /**
-     * GET /api/admin/kyc/{id}
-     * Detail satu guide: profil lengkap + URL dokumen KYC untuk preview.
-     */
+    // GET /api/admin/kyc/{id} — profil lengkap + URL dokumen KYC
     public function show(int $id): JsonResponse
     {
         $guide = Guide::with(['languages', 'specialities'])
@@ -47,10 +41,7 @@ class AdminKycApiController extends Controller
         ], 200);
     }
 
-    /**
-     * GET /api/admin/guides
-     * Daftar SEMUA guide — semua status (pending, verified, rejected).
-     */
+    // GET /api/admin/guides — semua guide semua status
     public function allGuides(): JsonResponse
     {
         $guides = Guide::orderBy('created_at', 'desc')
@@ -59,10 +50,7 @@ class AdminKycApiController extends Controller
         return response()->json(['guides' => $guides], 200);
     }
 
-    /**
-     * POST /api/admin/kyc/{id}/approve
-     * Setujui guide: ubah verification_status → 'verified', hapus rejection_reason lama.
-     */
+    // POST /api/admin/kyc/{id}/approve — setujui KYC, status → verified
     public function approve(int $id): JsonResponse
     {
         $guide = Guide::findOrFail($id);
@@ -94,10 +82,7 @@ class AdminKycApiController extends Controller
         ], 200);
     }
 
-    /**
-     * GET /api/admin/users
-     * Daftar semua wisatawan (User) yang terdaftar di sistem.
-     */
+    // GET /api/admin/users — daftar semua wisatawan
     public function usersList(): JsonResponse
     {
         $users = \App\Models\User::orderBy('created_at', 'desc')
@@ -106,10 +91,7 @@ class AdminKycApiController extends Controller
         return response()->json(['users' => $users], 200);
     }
 
-    /**
-     * POST /api/admin/kyc/{id}/reject
-     * Tolak guide: ubah verification_status → 'rejected', simpan alasan penolakan.
-     */
+    // POST /api/admin/kyc/{id}/reject — tolak KYC, simpan alasan penolakan
     public function reject(Request $request, int $id): JsonResponse
     {
         $validated = $request->validate([

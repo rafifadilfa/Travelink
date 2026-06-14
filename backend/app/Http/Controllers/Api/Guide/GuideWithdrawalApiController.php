@@ -13,10 +13,7 @@ use Illuminate\Http\Request;
  */
 class GuideWithdrawalApiController extends Controller
 {
-    // ================================================================
-    // POST /api/guide/withdrawals
-    // UC-17: Melakukan Pencairan Dana
-    // ================================================================
+    // POST /api/guide/withdrawals — UC-17: pengajuan pencairan dana
     public function store(Request $request): JsonResponse
     {
         $guide = $request->user();
