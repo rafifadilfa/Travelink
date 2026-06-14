@@ -313,7 +313,21 @@ class OpenTripController extends Controller
         }
 
         // Hitung jumlah anggota grup dan harga per orang di backend
-        $group       = $participant->group()->with('tour:id,name,tour_price')->firstOrFail();
+        $group = $participant->group()->with('tour:id,name,tour_price')->firstOrFail();
+
+        // Grup sudah diproses scheduler — alur pembayaran direct ini sudah tidak berlaku
+        if ($group->sot_processed_at !== null) {
+            return response()->json([
+                'message' => 'Grup ini sudah diproses. Cek halaman Booking untuk status pesananmu.',
+            ], 422);
+        }
+
+        // Harus konfirmasi keikutsertaan sebelum membayar
+        if ($participant->confirmed_at === null) {
+            return response()->json([
+                'message' => 'Konfirmasi keikutsertaanmu terlebih dahulu sebelum membayar.',
+            ], 422);
+        }
         $memberCount = OpenTripParticipant::where('group_id', $group->id)
             ->where('status', 'matched')
             ->count();
@@ -500,11 +514,12 @@ class OpenTripController extends Controller
             ], 422);
         }
 
-        // Window 6 jam setelah countdown harus belum lewat
-        $confirmationDeadline = $group->expires_at->addHours(6);
+        // Window konfirmasi setelah countdown harus belum lewat
+        $otConfirmMinutes     = config('booking.ot_confirm_timeout_minutes', 360);
+        $confirmationDeadline = $group->expires_at->copy()->addMinutes($otConfirmMinutes);
         if (now()->greaterThan($confirmationDeadline)) {
             return response()->json([
-                'message' => 'Batas waktu konfirmasi (6 jam setelah countdown) sudah habis.',
+                'message' => "Batas waktu konfirmasi ({$otConfirmMinutes} menit setelah countdown) sudah habis.",
             ], 422);
         }
 
@@ -643,6 +658,22 @@ class OpenTripController extends Controller
                 ], 200);
             }
 
+            // TC-057/058: peserta di-cancel oleh scheduler karena window konfirmasi habis
+            $cancelledByTimeout = OpenTripParticipant::where('user_id', Auth::id())
+                ->where('tour_id', $request->integer('tour_id'))
+                ->where('trip_date', $request->input('trip_date'))
+                ->where('status', 'cancelled')
+                ->whereNotNull('group_id')
+                ->whereHas('group', fn($q) => $q->whereNotNull('sot_processed_at')->whereNull('rejected_at'))
+                ->first();
+
+            if ($cancelledByTimeout) {
+                return response()->json([
+                    'status'  => 'cancelled_by_timeout',
+                    'message' => 'Waktu konfirmasi habis dan grup diproses otomatis. Kamu tidak diikutsertakan karena tidak mengkonfirmasi dalam batas waktu.',
+                ], 200);
+            }
+
             return response()->json(['message' => 'Kamu belum terdaftar di pool ini.'], 404);
         }
 
@@ -704,7 +735,9 @@ class OpenTripController extends Controller
                 'interests'       => $p->interests->pluck('name'),
                 'activities'      => $p->preferences->pluck('name'),
                 'matching_score'  => $p->matching_score,
-                'score_detail'    => [
+                'confirmed_at'   => $p->confirmed_at?->toIso8601String(),
+                'status'         => $p->status,
+                'score_detail'   => [
                     'weights'        => $scoreResult['weights'],
                     'ncf'            => $scoreResult['ncf'],
                     'nsf'            => $scoreResult['nsf'],
@@ -717,19 +750,27 @@ class OpenTripController extends Controller
 
         $guide = $group->tour->guide;
 
+        $otConfirmMinutes   = config('booking.ot_confirm_timeout_minutes', 360);
+        $confirmDeadlineAt  = $group->expires_at->copy()->addMinutes($otConfirmMinutes);
+
         return response()->json([
             'group' => [
-                'id'                => $group->id,
-                'tour_id'           => $group->tour_id,
-                'tour_name'         => $group->tour->name,
-                'tour_location'     => $group->tour->location?->name,
-                'tour_price'        => $group->tour->tour_price,
-                'trip_date'         => $group->trip_date->format('Y-m-d'),
-                'matched_at'        => $group->matched_at->toIso8601String(),
-                'expires_at'        => $group->expires_at->toIso8601String(),
-                'seconds_remaining' => $group->secondsRemaining(),
-                'is_active'         => $group->isActive(),
-                'member_count'      => $group->participants->count(),
+                'id'                     => $group->id,
+                'tour_id'                => $group->tour_id,
+                'tour_name'              => $group->tour->name,
+                'tour_location'          => $group->tour->location?->name,
+                'tour_price'             => $group->tour->tour_price,
+                'trip_date'              => $group->trip_date->format('Y-m-d'),
+                'matched_at'             => $group->matched_at->toIso8601String(),
+                'expires_at'             => $group->expires_at->toIso8601String(),
+                'confirm_deadline_at'    => $confirmDeadlineAt->toIso8601String(),
+                'is_confirm_window_open' => ! $group->isActive()
+                    && now()->lessThan($confirmDeadlineAt)
+                    && $group->sot_processed_at === null,
+                'is_processed'           => $group->sot_processed_at !== null,
+                'seconds_remaining'      => $group->secondsRemaining(),
+                'is_active'              => $group->isActive(),
+                'member_count'           => $group->participants->count(),
             ],
             'guide' => $guide ? [
                 'id'              => $guide->id,

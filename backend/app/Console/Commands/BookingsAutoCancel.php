@@ -16,24 +16,27 @@ class BookingsAutoCancel extends Command
 
     public function handle(): int
     {
-        $cutoff = Carbon::now()->subHours(24);
+        $guideConfirmMinutes = config('booking.guide_confirm_timeout_minutes', 1440);
+        $paymentMinutes      = config('booking.payment_timeout_minutes', 1440);
 
-        // TC-045: auto-cancel jika pemandu tidak merespons dalam 24 jam
-        $pendingGuideQuery = Booking::where('booking_status', Booking::STATUS_MENUNGGU_KONFIRMASI_PEMANDU)
-            ->where('created_at', '<=', $cutoff);
+        // TC-045: auto-cancel jika pemandu tidak merespons dalam batas waktu
+        $guideConfirmCutoff = Carbon::now()->subMinutes($guideConfirmMinutes);
+        $pendingGuideQuery  = Booking::where('booking_status', Booking::STATUS_MENUNGGU_KONFIRMASI_PEMANDU)
+            ->where('created_at', '<=', $guideConfirmCutoff);
         $pendingGuideCount = $pendingGuideQuery->count();
         $pendingGuideQuery->update([
             'booking_status'     => Booking::STATUS_DIBATALKAN_OTOMATIS,
-            'cancelation_reason' => 'Dibatalkan otomatis: tidak ada konfirmasi dari pemandu dalam 24 jam.',
+            'cancelation_reason' => "Dibatalkan otomatis: tidak ada konfirmasi dari pemandu dalam {$guideConfirmMinutes} menit.",
         ]);
 
-        // TC-049: auto-cancel jika wisatawan tidak membayar dalam 24 jam
-        $unpaidQuery = Booking::where('booking_status', Booking::STATUS_MENUNGGU_PEMBAYARAN)
-            ->where('updated_at', '<=', $cutoff);
+        // TC-049: auto-cancel jika wisatawan tidak membayar dalam batas waktu
+        $paymentCutoff = Carbon::now()->subMinutes($paymentMinutes);
+        $unpaidQuery   = Booking::where('booking_status', Booking::STATUS_MENUNGGU_PEMBAYARAN)
+            ->where('updated_at', '<=', $paymentCutoff);
         $unpaidCount = $unpaidQuery->count();
         $unpaidQuery->update([
             'booking_status'     => Booking::STATUS_DIBATALKAN_OTOMATIS,
-            'cancelation_reason' => 'Dibatalkan otomatis: pembayaran tidak diterima dalam 24 jam.',
+            'cancelation_reason' => "Dibatalkan otomatis: pembayaran tidak diterima dalam {$paymentMinutes} menit.",
         ]);
 
         $total = $pendingGuideCount + $unpaidCount;
