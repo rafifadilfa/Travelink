@@ -337,7 +337,7 @@ const SmartOpenTripForm: React.FC = () => {
   // ─────────────────────────────────────────────────────────
   if (!selectedDate || !formData) {
     return (
-      <Flex minH="100vh" align={{ base: 'flex-start', md: 'center' }} justify="center" bg="gray.50" p={{ base: 3, md: 4 }} pt={{ base: 10, md: 0 }}>
+      <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={{ base: 3, md: 4 }}>
         <Box
           bg="white"
           borderRadius="2xl"
@@ -377,7 +377,7 @@ const SmartOpenTripForm: React.FC = () => {
                 padding: '10px 14px',
                 border: '1px solid #E2E8F0',
                 borderRadius: '8px',
-                fontSize: '15px',
+                fontSize: '16px',
                 outline: 'none',
                 color: '#2D3748',
               }}
