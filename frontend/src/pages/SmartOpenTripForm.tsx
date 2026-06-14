@@ -337,12 +337,12 @@ const SmartOpenTripForm: React.FC = () => {
   // ─────────────────────────────────────────────────────────
   if (!selectedDate || !formData) {
     return (
-      <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={4}>
+      <Flex minH="100vh" align={{ base: 'flex-start', md: 'center' }} justify="center" bg="gray.50" p={{ base: 3, md: 4 }} pt={{ base: 10, md: 0 }}>
         <Box
           bg="white"
           borderRadius="2xl"
           boxShadow="lg"
-          p={8}
+          p={{ base: 5, md: 8 }}
           maxW="480px"
           w="full"
           animation={`${fadeIn} 0.4s ease`}
@@ -407,8 +407,8 @@ const SmartOpenTripForm: React.FC = () => {
   // Render: form utama (4 kriteria)
   // ─────────────────────────────────────────────────────────
   return (
-    <Box minH="100vh" bg="gray.50" py={8}>
-      <Container maxW="2xl">
+    <Box minH="100vh" bg="gray.50" py={{ base: 4, md: 8 }}>
+      <Container maxW="2xl" px={{ base: 3, md: 4 }}>
         {/* Header */}
         <Button
           variant="ghost"

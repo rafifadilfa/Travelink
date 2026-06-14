@@ -97,7 +97,7 @@ const GuideReviews: React.FC = () => {
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={8}>
             {/* Rata-rata */}
             <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md" textAlign="center">
-              <Text fontSize="5xl" fontWeight="bold" color="blue.500">
+              <Text fontSize={{ base: '4xl', md: '5xl' }} fontWeight="bold" color="blue.500">
                 {summary.average_rating.toFixed(1)}
               </Text>
               <Stars rating={summary.average_rating} />
@@ -147,10 +147,10 @@ const GuideReviews: React.FC = () => {
               <Box key={r.id} bg={cardBg} p={5} borderRadius="lg" boxShadow="sm"
                 border="1px solid" borderColor={border}>
                 <Flex justify="space-between" align="flex-start" mb={3} gap={2}>
-                  <HStack align="start" spacing={3}>
-                    <Avatar name={r.user?.name ?? 'Wisatawan'} src={r.user?.avatar_url ?? undefined} size="sm" />
-                    <VStack align="start" spacing={0.5}>
-                      <HStack spacing={2}>
+                  <HStack align="start" spacing={3} minW={0} flex={1}>
+                    <Avatar name={r.user?.name ?? 'Wisatawan'} src={r.user?.avatar_url ?? undefined} size="sm" flexShrink={0} />
+                    <VStack align="start" spacing={0.5} minW={0}>
+                      <HStack spacing={2} flexWrap="wrap">
                         <Text fontWeight="semibold" fontSize="sm">{r.user?.name ?? 'Wisatawan'}</Text>
                         <Badge
                           colorScheme={r.type === 'guide' ? 'blue' : 'teal'}
@@ -164,7 +164,9 @@ const GuideReviews: React.FC = () => {
                       <Text fontSize="xs" color={secondary}>{fmtDate(r.created_at)}</Text>
                     </VStack>
                   </HStack>
-                  <Stars rating={r.rating} />
+                  <Box flexShrink={0}>
+                    <Stars rating={r.rating} />
+                  </Box>
                 </Flex>
                 {r.comment && <Text fontSize="sm" color="gray.700">{r.comment}</Text>}
               </Box>
