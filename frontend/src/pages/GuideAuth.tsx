@@ -220,7 +220,7 @@ const GuideAuth: React.FC = () => {
               fontSize: '32px', marginBottom: '12px',
               display: 'flex', alignItems: 'center', fontWeight: '700',
             }}>
-              <span style={{ marginRight: '16px', fontSize: '36px' }}>✈️</span> Travelink
+              Travelink
             </h1>
             <p style={{ fontSize: '18px', opacity: 0.9, margin: 0 }}>
               Jelajahi Indonesia bersama pemandu lokal

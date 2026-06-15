@@ -199,8 +199,8 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
         <Box mb={16}>
           <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={8} direction={{ base: 'column', md: 'row' }} gap={{ base: 3, md: 2 }}>
             <Box>
-              <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5} display="flex" alignItems="center">
-                <Text as="span" fontSize="2xl" mr={3} role="img">🌟</Text> Destinasi Unggulan
+              <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5}>
+                Destinasi Unggulan
               </Heading>
               <Text color={secondaryTextColor} fontSize="md">Tour pilihan terbaik untuk Anda.</Text>
             </Box>
@@ -241,7 +241,7 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
                         fontSize="xs" fontWeight="bold"
                         boxShadow="md" pointerEvents="none"
                       >
-                        ✨ Smart Open Trip
+                        Smart Open Trip
                       </Badge>
                     )}
                     <Flex position="absolute" bottom={4} left={4} bg={ratingBadgeBg} backdropFilter="blur(8px)" px={3} py={1.5} borderRadius="lg" alignItems="center" boxShadow="md">
@@ -307,8 +307,8 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
           <Box>
             <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={8} direction={{ base: 'column', md: 'row' }} gap={{ base: 3, md: 2 }}>
               <Box>
-                <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5} display="flex" alignItems="center">
-                  <Text as="span" fontSize="2xl" mr={3} role="img">🗓️</Text> Tour Mendatang Anda
+                <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5}>
+                  Tour Mendatang Anda
                 </Heading>
                 <Text color={secondaryTextColor} fontSize="md">Bersiap untuk pengalaman luar biasa ini!</Text>
               </Box>
@@ -367,10 +367,9 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
               </VStack>
             ) : (
               <VStack bg={cardBg} p={{ base: 6, md: 10 }} borderRadius="xl" boxShadow="lg" textAlign="center" border="1px solid" borderColor={subtleBorderColor} spacing={4} minH="280px" justifyContent="center">
-                <Text fontSize="4xl">🎉</Text>
                 <Heading size="md" color={primaryTextColor} fontWeight="semibold">Tidak Ada Tour Mendatang</Heading>
                 <Text color={secondaryTextColor} fontSize="sm" maxW="sm">Sepertinya jadwal Anda masih kosong. Yuk, booking tour baru yang seru!</Text>
-                <Button {...primaryButtonStyle} px={6} h="42px" onClick={() => navigate('/tours')} mt={2} rightIcon={<Text as="span" ml={1}>🚀</Text>}>Cari Tour</Button>
+                <Button {...primaryButtonStyle} px={6} h="42px" onClick={() => navigate('/tours')} mt={2} rightIcon={<ArrowForwardIcon />}>Cari Tour</Button>
               </VStack>
             )}
           </Box>
@@ -379,8 +378,8 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
           <Box>
             <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={8} direction={{ base: 'column', md: 'row' }} gap={{ base: 3, md: 2 }}>
               <Box>
-                <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5} display="flex" alignItems="center">
-                  <Text as="span" fontSize="2xl" mr={3} role="img">👋</Text> Pemandu Terbaik
+                <Heading size="xl" color={primaryTextColor} fontWeight="bold" mb={1.5}>
+                  Pemandu Terbaik
                 </Heading>
                 <Text color={secondaryTextColor} fontSize="md">Pemandu lokal berperingkat tertinggi.</Text>
               </Box>

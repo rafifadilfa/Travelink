@@ -7,7 +7,7 @@ import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink,
 } from '@chakra-ui/react';
 import { ArrowBackIcon, CheckCircleIcon, CalendarIcon, InfoOutlineIcon } from '@chakra-ui/icons';
-import { FiMapPin, FiUsers } from 'react-icons/fi';
+import { FiFileText, FiMapPin, FiUser as FiUserIcon, FiUsers } from 'react-icons/fi';
 import apiClient from '../services/api';
 import TouristNavbar from '../components/TouristNavbar';
 
@@ -262,7 +262,7 @@ const Payment: React.FC = () => {
             <Box bg={cardBg} p={{ base: 5, md: 8 }} borderRadius="xl" boxShadow="xl" border="1px solid" borderColor={borderColor}>
               <Heading as="h2" size={{ base: 'md', md: 'lg' }} fontWeight="bold" mb={6} color={primaryColor}
                 display="flex" alignItems="center" gap={2}>
-                <Text as="span" fontSize="2xl">🧾</Text> Ringkasan Pesanan
+                <Icon as={FiFileText} boxSize={5} /> Ringkasan Pesanan
               </Heading>
 
               <Box bg={summaryBg} p={{ base: 4, md: 6 }} borderRadius="lg" border="1px solid" borderColor={borderColor} mb={6} boxShadow="sm">
@@ -305,7 +305,7 @@ const Payment: React.FC = () => {
 
                   <HStack justifyContent="space-between" alignItems="center">
                     <HStack spacing={3} color={secondaryText}>
-                      <Text fontSize="lg" color={primaryColor}>👤</Text>
+                      <Icon as={FiUserIcon} boxSize={5} />
                       <Text fontSize="md" fontWeight="medium">Pemandu</Text>
                     </HStack>
                     <Text fontSize="md" color={primaryTextColor} fontWeight="semibold">{details.guideName}</Text>

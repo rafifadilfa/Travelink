@@ -412,10 +412,10 @@ const AdminKycDetail: React.FC = () => {
                   fontWeight="semibold"
                 >
                   {guide.verification_status === 'verified'
-                    ? '✅ Guide ini sudah diverifikasi.'
+                    ? 'Guide ini sudah diverifikasi.'
                     : guide.verification_status === 'rejected'
-                    ? '❌ Verifikasi guide ini sudah ditolak.'
-                    : 'ℹ️ Pengajuan KYC belum dikirim.'}
+                    ? 'Verifikasi guide ini sudah ditolak.'
+                    : 'Pengajuan KYC belum dikirim.'}
                 </Text>
                 {guide.rejection_reason && (
                   <Text fontSize="sm" color="red.600" mt={2}>

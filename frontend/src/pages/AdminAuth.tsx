@@ -174,7 +174,6 @@ const AdminAuth: React.FC = () => {
               fontSize: '32px', marginBottom: '12px',
               display: 'flex', alignItems: 'center', fontWeight: '700',
             }}>
-              <span style={{ marginRight: '16px', fontSize: '36px' }}>✈️</span>
               Travelink
               <span style={{
                 marginLeft: '14px', fontSize: '11px', fontWeight: '700',

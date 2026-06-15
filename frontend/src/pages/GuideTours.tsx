@@ -25,6 +25,7 @@ import {
 import {
     FiPlus,
     FiEdit,
+    FiStar,
     FiTrash2,
     FiEye,
 } from 'react-icons/fi';
@@ -207,7 +208,7 @@ const GuideTours: React.FC = () => {
                                         </Text>
                                         {tour.rating != null && (
                                             <Text fontSize="sm" color={secondaryTextColor}>
-                                                • ⭐ {tour.rating}
+                                                • <Icon as={FiStar} boxSize={3} mb="-1px" /> {tour.rating}
                                             </Text>
                                         )}
                                     </HStack>

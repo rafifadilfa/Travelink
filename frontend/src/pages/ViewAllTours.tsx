@@ -35,6 +35,7 @@ import {
 } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
+import { FiAlertTriangle, FiSearch as FiSearchIcon } from 'react-icons/fi';
 import apiClient from '../services/api';
 import TouristNavbar from '../components/TouristNavbar';
 
@@ -74,12 +75,12 @@ interface Tour {
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800';
 
 const categories = [
-    { value: 'Beach',    label: 'Beach',    icon: '🏖️' },
-    { value: 'Mountain', label: 'Mountain', icon: '🏔️' },
-    { value: 'City',     label: 'City',     icon: '🏙️' },
-    { value: 'Cultural', label: 'Culture',  icon: '🏛️' },
-    { value: 'Diving',   label: 'Diving',   icon: '🤿' },
-    { value: 'Nature',   label: 'Nature',   icon: '🌿' },
+    { value: 'Beach',    label: 'Beach' },
+    { value: 'Mountain', label: 'Mountain' },
+    { value: 'City',     label: 'City' },
+    { value: 'Cultural', label: 'Culture' },
+    { value: 'Diving',   label: 'Diving' },
+    { value: 'Nature',   label: 'Nature' },
 ];
 
 const ViewAllTours: React.FC = () => {
@@ -413,14 +414,14 @@ const ViewAllTours: React.FC = () => {
                     </Flex>
                 ) : fetchError ? (
                     <VStack bg={cardBg} p={{ base: 8, md: 16 }} borderRadius="2xl" boxShadow="xl" textAlign="center" borderTop="4px solid" borderColor="red.400" spacing={5} minH="300px" justifyContent="center">
-                        <Text fontSize="5xl">⚠️</Text>
+                        <Icon as={FiAlertTriangle} boxSize={12} color="red.400" />
                         <Heading size="lg" color={primaryTextColor}>Gagal Memuat Tour</Heading>
                         <Text color={secondaryTextColor}>{fetchError}</Text>
                         <Button {...primaryButtonStyle} onClick={() => window.location.reload()}>Coba Lagi</Button>
                     </VStack>
                 ) : filteredTours.length === 0 ? (
                     <VStack bg={cardBg} p={{ base: 8, md: 16 }} borderRadius="2xl" boxShadow="xl" textAlign="center" borderTop="4px solid" borderColor={primaryColor} spacing={5} minH="400px" justifyContent="center" animation={`${fadeIn} 0.5s ease-out`}>
-                        <Text fontSize="6xl" role="img" aria-label="Kaca pembesar">🔍</Text>
+                        <Icon as={FiSearchIcon} boxSize={14} color={primaryColor} />
                         <Heading size="xl" color={primaryTextColor} fontWeight="bold">Tidak Ada Tour Ditemukan</Heading>
                         <Text color={secondaryTextColor} fontSize="lg" maxW="md">
                             Tidak ada tour yang cocok dengan pencarian Anda. Coba ubah filter atau kata kunci!
@@ -474,7 +475,7 @@ const ViewAllTours: React.FC = () => {
                                             boxShadow="md"
                                             pointerEvents="none"
                                         >
-                                            ✨ Smart Open Trip
+                                            Smart Open Trip
                                         </Badge>
                                     )}
 
@@ -508,7 +509,7 @@ const ViewAllTours: React.FC = () => {
                                     {/* Info guide */}
                                     {tour.guide && (
                                         <HStack spacing={1.5} mb={3}>
-                                            <Text fontSize="xs" color={secondaryTextColor}>🧭 Dipandu oleh</Text>
+                                            <Text fontSize="xs" color={secondaryTextColor}>Dipandu oleh</Text>
                                             <Text
                                                 fontSize="xs" color={primaryColor} fontWeight="semibold"
                                                 cursor="pointer" _hover={{ textDecoration: 'underline' }}

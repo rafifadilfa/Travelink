@@ -59,6 +59,7 @@ import {
   TimeIcon,
   WarningIcon,
 } from '@chakra-ui/icons';
+import { FiCompass, FiDollarSign, FiMap, FiMapPin, FiTarget, FiUsers as FiUsersIcon } from 'react-icons/fi';
 import { keyframes } from '@emotion/react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
@@ -251,7 +252,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ tab, onExplore }) => {
         bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100"
         boxShadow="sm" animation={`${fadeIn} 0.3s ease`}
       >
-        <Text fontSize="3xl" mb={4}>🧭</Text>
+        <Icon as={FiCompass} boxSize={10} color="blue.300" mb={4} />
         <Heading size="md" color={textColor} mb={2}>Belum ada perjalanan mendatang</Heading>
         <Text color={subtleColor} fontSize="sm" mb={6} maxW="320px" mx="auto">
           Ikut Smart Open Trip untuk otomatis dicocokkan dengan peserta lain yang punya minat serupa.
@@ -272,7 +273,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ tab, onExplore }) => {
       bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100"
       boxShadow="sm" animation={`${fadeIn} 0.3s ease`}
     >
-      <Text fontSize="3xl" mb={4}>🗺️</Text>
+      <Icon as={FiMap} boxSize={10} color="gray.300" mb={4} />
       <Heading size="md" color={textColor} mb={2}>Riwayat perjalanan masih kosong</Heading>
       <Text color={subtleColor} fontSize="sm" maxW="300px" mx="auto">
         Trip yang sudah selesai atau dibatalkan akan tercatat di sini.
@@ -298,17 +299,17 @@ const StatRow: React.FC<StatRowProps> = ({ memberCount, matchingScore, tourPrice
 
   const items = [
     {
-      icon: '👥',
+      icon: FiUsersIcon,
       label: 'Anggota',
       value: `${memberCount} orang`,
     },
     ...(matchingScore !== null ? [{
-      icon: '🎯',
+      icon: FiTarget,
       label: 'Kecocokan',
       value: `${scorePercent(matchingScore)}%`,
     }] : []),
     {
-      icon: '💰',
+      icon: FiDollarSign,
       label: 'Est. per orang',
       value: formatRupiah(Math.round(tourPrice / memberCountForSplit)),
     },
@@ -323,7 +324,10 @@ const StatRow: React.FC<StatRowProps> = ({ memberCount, matchingScore, tourPrice
         <React.Fragment key={item.label}>
           {idx > 0 && <Divider orientation="vertical" h="auto" />}
           <Box flex={1} px={{ base: 2, md: 3 }} py={2.5} textAlign="center">
-            <Text fontSize="xs" color={labelColor} mb={0.5}>{item.icon} {item.label}</Text>
+            <HStack spacing={1} justify="center" mb={0.5}>
+                <Icon as={item.icon} boxSize={3} color={labelColor} />
+                <Text fontSize="xs" color={labelColor}>{item.label}</Text>
+              </HStack>
             <Text fontSize={{ base: 'xs', md: 'sm' }} fontWeight="semibold" color={valueColor} noOfLines={1}>{item.value}</Text>
           </Box>
         </React.Fragment>
@@ -651,7 +655,7 @@ const TripCard: React.FC<TripCardProps> = ({ item, isUpcoming, index, onViewDeta
         {/* Lokasi */}
         {item.tour_location && (
           <HStack spacing={1} color={subtleColor} mb={4}>
-            <Text fontSize="xs">📍</Text>
+            <Icon as={FiMapPin} boxSize={3} />
             <Text fontSize="sm">{item.tour_location}</Text>
           </HStack>
         )}
@@ -912,7 +916,7 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
         {/* Lokasi */}
         {tour?.location && (
           <HStack spacing={1} color={subtleColor} mb={3}>
-            <Text fontSize="xs">📍</Text>
+            <Icon as={FiMapPin} boxSize={3} />
             <Text fontSize="sm">{tour.location}</Text>
           </HStack>
         )}
@@ -924,7 +928,7 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
             <Text>{tx?.tour_date ? formatDate(tx.tour_date) : '-'}</Text>
           </HStack>
           <HStack spacing={1.5} fontSize="xs" color={subtleColor}>
-            <Text>👥</Text>
+            <Icon as={FiUsersIcon} boxSize={3} />
             <Text>{tx?.participant_count ?? 1} orang</Text>
           </HStack>
         </HStack>
@@ -932,7 +936,7 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
         {/* Pemandu */}
         {tour?.guide && (
           <HStack spacing={1.5} fontSize="xs" color={subtleColor} mb={3}>
-            <Text>🧭</Text>
+            <Icon as={FiCompass} boxSize={3} />
             <Text>{tour.guide.name}</Text>
           </HStack>
         )}

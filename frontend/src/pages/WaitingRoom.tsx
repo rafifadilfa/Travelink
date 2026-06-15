@@ -36,7 +36,7 @@ import {
   Icon,
 } from '@chakra-ui/react';
 import { CheckCircleIcon, TimeIcon, InfoIcon, StarIcon } from '@chakra-ui/icons';
-import { FiCheckCircle, FiClock, FiXCircle } from 'react-icons/fi';
+import { FiCalendar, FiCheckCircle, FiClock, FiCompass, FiCreditCard, FiMapPin, FiUsers, FiXCircle } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
@@ -621,9 +621,10 @@ const WaitingRoom: React.FC = () => {
 
           {tripDate && (
             <Box bg="blue.50" borderRadius="xl" p={4} mb={6}>
-              <Text color="blue.700" fontSize="sm" fontWeight="semibold">
-                📅 {formatDate(tripDate)}
-              </Text>
+              <HStack color="blue.700" fontSize="sm" fontWeight="semibold">
+                <Icon as={FiCalendar} boxSize={3.5} />
+                <Text fontSize="sm" fontWeight="semibold">{formatDate(tripDate)}</Text>
+              </HStack>
               <Text color="blue.500" fontSize="xs" mt={1}>
                 Halaman ini otomatis diperbarui setiap {POLL_INTERVAL_MS / 1000} detik
               </Text>
@@ -727,7 +728,7 @@ const WaitingRoom: React.FC = () => {
             mx="auto"
             mb={6}
           >
-            <Text fontSize="3xl">🚫</Text>
+            <Icon as={FiXCircle} boxSize={10} color="red.400" />
           </Box>
 
           <Badge colorScheme="red" mb={3} px={3} py={1} borderRadius="full" fontSize="xs">
@@ -863,10 +864,19 @@ const WaitingRoom: React.FC = () => {
                   <Heading size="md" color="white">{group.tour_name}</Heading>
                   <HStack spacing={4}>
                     {group.tour_location && (
-                      <Text color="green.100" fontSize="sm">📍 {group.tour_location}</Text>
+                      <HStack spacing={1}>
+                        <Icon as={FiMapPin} color="green.100" boxSize={3} />
+                        <Text color="green.100" fontSize="sm">{group.tour_location}</Text>
+                      </HStack>
                     )}
-                    <Text color="green.100" fontSize="sm">📅 {formatDate(group.trip_date)}</Text>
-                    <Text color="green.100" fontSize="sm">👥 {group.member_count} anggota</Text>
+                    <HStack spacing={1}>
+                      <Icon as={FiCalendar} color="green.100" boxSize={3} />
+                      <Text color="green.100" fontSize="sm">{formatDate(group.trip_date)}</Text>
+                    </HStack>
+                    <HStack spacing={1}>
+                      <Icon as={FiUsers} color="green.100" boxSize={3} />
+                      <Text color="green.100" fontSize="sm">{group.member_count} anggota</Text>
+                    </HStack>
                   </HStack>
                 </VStack>
 
@@ -894,7 +904,7 @@ const WaitingRoom: React.FC = () => {
               <Flex justify="space-between" align="center" wrap="wrap" gap={2}>
                 <Box>
                   <Text color="green.700" fontSize="sm">
-                    💰 Tagihan kamu (split bill):
+                    Tagihan kamu (split bill):
                   </Text>
                   <Text color="green.500" fontSize="xs" mt={0.5}>
                     Harga paket {formatRupiah(group.tour_price)} ÷ {group.member_count} orang
@@ -917,9 +927,10 @@ const WaitingRoom: React.FC = () => {
               mb={6}
               animation={`${fadeIn} 0.43s ease`}
             >
-              <Text fontWeight="semibold" color="gray.700" fontSize="sm" mb={4}>
-                🧭 Pemandu Wisata
-              </Text>
+              <HStack spacing={2} mb={4}>
+                <Icon as={FiCompass} color="gray.600" boxSize={4} />
+                <Text fontWeight="semibold" color="gray.700" fontSize="sm">Pemandu Wisata</Text>
+              </HStack>
               <Flex align="center" gap={4}>
                 <Avatar
                   size="lg"
@@ -966,9 +977,10 @@ const WaitingRoom: React.FC = () => {
             animation={`${fadeIn} 0.45s ease`}
           >
             <Flex justify="space-between" align="center" mb={4}>
-              <Text fontWeight="semibold" color="gray.700" fontSize="sm">
-                💳 Status Pembayaran Grup
-              </Text>
+              <HStack spacing={2}>
+                <Icon as={FiCreditCard} color="gray.600" boxSize={4} />
+                <Text fontWeight="semibold" color="gray.700" fontSize="sm">Status Pembayaran Grup</Text>
+              </HStack>
               <Badge
                 colorScheme={paidCount === totalCount ? 'green' : 'orange'}
                 px={3}
@@ -1115,7 +1127,7 @@ const WaitingRoom: React.FC = () => {
                         py={2}
                         spacing={2}
                       >
-                        <Text fontSize="lg">{isMatch ? '✅' : '❌'}</Text>
+                        <Icon as={isMatch ? FiCheckCircle : FiXCircle} color={isMatch ? 'green.500' : 'red.400'} boxSize={5} />
                         <VStack spacing={0} align="flex-start">
                           <Text fontSize="xs" fontWeight="semibold" color="gray.700">
                             {CRITERIA_LABELS[key]}
@@ -1158,9 +1170,10 @@ const WaitingRoom: React.FC = () => {
             p={6}
             animation={`${fadeIn} 0.6s ease`}
           >
-            <Text fontWeight="semibold" color="gray.700" mb={5}>
-              👥 Anggota Grup ({members.length} orang)
-            </Text>
+            <HStack spacing={2} mb={5}>
+              <Icon as={FiUsers} color="gray.600" boxSize={4} />
+              <Text fontWeight="semibold" color="gray.700">Anggota Grup ({members.length} orang)</Text>
+            </HStack>
 
             <VStack spacing={4} align="stretch">
               {members.map((m, idx) => {
@@ -1233,7 +1246,7 @@ const WaitingRoom: React.FC = () => {
                         {(Object.keys(m.score_detail.criteria_match) as Array<keyof CriteriaMatch>).map((key) => (
                           <HStack key={key} spacing={1}>
                             <Text fontSize="xs" color="gray.400">{CRITERIA_LABELS[key]}</Text>
-                            <Text fontSize="xs">{m.score_detail.criteria_match[key] ? '✅' : '❌'}</Text>
+                            <Icon as={m.score_detail.criteria_match[key] ? FiCheckCircle : FiXCircle} color={m.score_detail.criteria_match[key] ? 'green.400' : 'red.300'} boxSize={3} />
                           </HStack>
                         ))}
                       </VStack>

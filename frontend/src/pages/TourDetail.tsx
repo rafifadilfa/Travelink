@@ -24,7 +24,7 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
-import { FiCalendar, FiClock, FiMapPin, FiMessageCircle, FiStar } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiMessageCircle, FiStar, FiTag, FiZap } from 'react-icons/fi';
 import apiClient from '../services/api';
 import TouristNavbar from '../components/TouristNavbar';
 
@@ -250,7 +250,7 @@ const TourDetail: React.FC = () => {
                                 )}
                                 {isOpenTrip && (
                                     <Badge colorScheme="purple" px={3} py={1.5} borderRadius="full">
-                                        ✨ Smart Open Trip
+                                        Smart Open Trip
                                     </Badge>
                                 )}
                             </HStack>
@@ -403,7 +403,7 @@ const TourDetail: React.FC = () => {
                                         color="white"
                                         _hover={{ bgGradient: 'linear(to-r, purple.600, blue.600)', transform: 'translateY(-3px)', boxShadow: 'xl' }}
                                         onClick={() => navigate(`/open-trip/join/${id}`)}
-                                        leftIcon={<Text fontSize="xl">✨</Text>}
+                                        leftIcon={<Icon as={FiZap} />}
                                     >
                                         Ikut Smart Open Trip
                                     </Button>
@@ -424,7 +424,7 @@ const TourDetail: React.FC = () => {
                                     isLoading={isBooking}
                                     loadingText="Memproses..."
                                     isDisabled={!!dateError}
-                                    leftIcon={<Text fontSize="xl">🎫</Text>}
+                                    leftIcon={<Icon as={FiTag} />}
                                 >
                                     Pesan Sekarang
                                 </Button>
@@ -443,7 +443,7 @@ const TourDetail: React.FC = () => {
                             )}
 
                             {!noSchedule && (
-                                <Text fontSize="sm" color={secondaryTextColor} textAlign="center">✨ Pembatalan gratis hingga 24 jam sebelum tour</Text>
+                                <Text fontSize="sm" color={secondaryTextColor} textAlign="center"></Text>
                             )}
                         </VStack>
                     </Box>

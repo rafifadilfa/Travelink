@@ -272,7 +272,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               alignItems: 'center',
               fontWeight: '700',
             }}>
-              <span style={{ marginRight: '16px', fontSize: '36px' }}>✈️</span> Travelink
+              Travelink
             </h1>
             <p style={{ fontSize: '18px', opacity: 0.9 }}>Discover Indonesia with local guides</p>
           </div>
@@ -330,7 +330,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               fontWeight: '600', 
               textShadow: '0 1px 3px rgba(0,0,0,0.3)',
             }}>
-                📍 {destinations[currentDestination].name}, Indonesia
+                {destinations[currentDestination].name}, Indonesia
             </p>
             </div>
         </div>

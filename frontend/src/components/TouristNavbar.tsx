@@ -22,7 +22,7 @@ import {
     useDisclosure,
 } from '@chakra-ui/react';
 import { SearchIcon } from '@chakra-ui/icons';
-import { FiBell, FiLogOut, FiSearch } from 'react-icons/fi';
+import { FiBell, FiBriefcase, FiCompass, FiLogOut, FiNavigation, FiSearch } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
 import { logoutUser } from '../utils/logout';
@@ -174,7 +174,7 @@ const TouristNavbar: React.FC = () => {
                                 transition="all 0.3s ease"
                                 _hover={{ transform: 'rotate(-10deg) scale(1.1)', boxShadow: 'xl' }}
                             >
-                                <Text fontSize="xl" color="white" fontWeight="bold">✈</Text>
+                                <Icon as={FiNavigation} color="white" boxSize="18px" />
                             </Flex>
                             <Heading as="h1" size="md" color={primaryTextColor} fontWeight="extrabold"
                                 display={{ base: 'none', sm: 'block' }}>
@@ -219,7 +219,7 @@ const TouristNavbar: React.FC = () => {
                                 display={{ base: 'none', md: 'flex' }}
                                 size="sm"
                                 onClick={() => navigate('/tours')}
-                                leftIcon={<Text as="span" role="img" aria-label="explore" mr={1}>🧭</Text>}
+                                leftIcon={<Icon as={FiCompass} boxSize="14px" />}
                             >
                                 Explore
                             </Button>
@@ -228,7 +228,7 @@ const TouristNavbar: React.FC = () => {
                                 display={{ base: 'none', md: 'flex' }}
                                 size="sm"
                                 onClick={() => navigate('/bookings')}
-                                leftIcon={<Text as="span" role="img" aria-label="bookings" mr={1}>💼</Text>}
+                                leftIcon={<Icon as={FiBriefcase} boxSize="14px" />}
                             >
                                 Booking Saya
                             </Button>

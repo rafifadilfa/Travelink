@@ -34,7 +34,7 @@ import {
   useToast,
 } from '@chakra-ui/react';
 import { ArrowForwardIcon, ChevronRightIcon, SearchIcon, StarIcon } from '@chakra-ui/icons';
-import { FiMapPin, FiUser, FiBook } from 'react-icons/fi';
+import { FiCompass, FiMap, FiMapPin, FiSearch as FiSearchLg, FiSunrise, FiUser, FiBook } from 'react-icons/fi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
@@ -236,7 +236,7 @@ const TourCard: React.FC<TourCardProps> = ({ tour, index }) => {
           <Image src={tour.image_url} alt={tour.name} w="100%" h="100%" objectFit="cover" />
         ) : (
           <Flex h="100%" align="center" justify="center">
-            <Text fontSize="3xl">🏝️</Text>
+            <Icon as={FiSunrise} boxSize={10} color="gray.300" />
           </Flex>
         )}
         {tour.is_open_trip && (
@@ -272,7 +272,6 @@ const TourCard: React.FC<TourCardProps> = ({ tour, index }) => {
 
         {tour.guide && (
           <Text fontSize="xs" color={subtleColor} mb={3} noOfLines={1}>
-            🧭{' '}
             <Text
               as="span"
               color={primaryColor}
@@ -314,7 +313,7 @@ const EmptyState: React.FC<EmptyProps> = ({ type, keyword }) => {
   const primaryColor = useColorModeValue('blue.600', 'blue.300');
   return (
     <Box textAlign="center" py={8}>
-      <Text fontSize="2xl" mb={2}>{type === 'guide' ? '🧭' : '🗺️'}</Text>
+      <Icon as={type === 'guide' ? FiCompass : FiMap} boxSize={8} color={primaryColor} mb={2} />
       <Text color={subtleColor} fontSize="sm" mb={3}>
         Tidak ada {type === 'guide' ? 'pemandu' : 'paket wisata'} ditemukan untuk{' '}
         <Text as="span" fontWeight="semibold">"{keyword}"</Text>.
@@ -484,7 +483,7 @@ const SearchResults: React.FC = () => {
         {/* Placeholder saat belum ada query */}
         {!query && (
           <Box textAlign="center" py={20}>
-            <Text fontSize="5xl" mb={4}>🔍</Text>
+            <Icon as={FiSearchLg} boxSize={16} color="gray.300" mb={4} />
             <Heading size="md" color={titleColor} mb={2}>Temukan Pemandu & Paket Wisata</Heading>
             <Text color={subtleColor} maxW="400px" mx="auto">
               Ketik nama pemandu, spesialisasi, atau destinasi wisata di kolom pencarian di atas.
@@ -499,7 +498,7 @@ const SearchResults: React.FC = () => {
             {/* ── Seksi Pemandu Wisata ── */}
             <Box>
               <Flex align="center" gap={3} mb={5} pb={3} borderBottom="2px solid" borderColor={dividerColor}>
-                <Text fontSize="xl">🧭</Text>
+                <Icon as={FiCompass} boxSize={5} color={primaryColor} />
                 <Heading size="md" color={titleColor}>Pemandu Wisata</Heading>
                 {!loadingGuides && (
                   <Badge colorScheme={guides.length > 0 ? 'blue' : 'gray'} borderRadius="full" px={2}>
@@ -526,7 +525,7 @@ const SearchResults: React.FC = () => {
             {/* ── Seksi Paket Wisata ── */}
             <Box>
               <Flex align="center" gap={3} mb={5} pb={3} borderBottom="2px solid" borderColor={dividerColor}>
-                <Text fontSize="xl">🗺️</Text>
+                <Icon as={FiMap} boxSize={5} color={primaryColor} />
                 <Heading size="md" color={titleColor}>Paket Wisata</Heading>
                 {!loadingTours && (
                   <Badge colorScheme={tours.length > 0 ? 'blue' : 'gray'} borderRadius="full" px={2}>

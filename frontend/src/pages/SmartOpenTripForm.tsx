@@ -33,7 +33,8 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react';
-import { ArrowBackIcon, CheckIcon } from '@chakra-ui/icons';
+import { ArrowBackIcon, ArrowForwardIcon } from '@chakra-ui/icons';
+import { FiCalendar, FiDollarSign, FiMapPin, FiUsers } from 'react-icons/fi';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { keyframes } from '@emotion/react';
 import apiClient from '../services/api';
@@ -364,92 +365,158 @@ const SmartOpenTripForm: React.FC = () => {
   // ─────────────────────────────────────────────────────────
   if (!selectedDate || !formData) {
     return (
-      <Flex minH="100vh" align="center" justify="center" bg="gray.50" p={{ base: 3, md: 4 }}>
-        <Box
-          bg="white"
-          borderRadius="2xl"
-          boxShadow="lg"
-          p={{ base: 5, md: 8 }}
-          maxW="480px"
-          w="full"
-          animation={`${fadeIn} 0.4s ease`}
-        >
-          <Button
-            variant="ghost"
-            leftIcon={<ArrowBackIcon />}
-            mb={6}
-            onClick={() => navigate(-1)}
-            size="sm"
-            color="gray.500"
-          >
-            Kembali
-          </Button>
-          <Heading size="md" mb={1} color="gray.800">
-            Smart Open Trip
-          </Heading>
-          <Text color="gray.500" mb={6} fontSize="sm">
-            Pilih tanggal trip terlebih dahulu.
-          </Text>
-          {availableDayLabels.length > 0 && (
-            <Box mb={4} p={3} bg="blue.50" borderRadius="lg" border="1px solid" borderColor="blue.100">
-              <Text fontSize="xs" color="blue.700" fontWeight="semibold" mb={2}>
-                Jadwal ketersediaan pemandu:
-              </Text>
-              <Wrap spacing={1}>
-                {availableDayLabels.map(label => (
-                  <WrapItem key={label}>
-                    <Badge colorScheme="blue" variant="solid" borderRadius="full" px={2} py={0.5} fontSize="xs">
-                      {label}
-                    </Badge>
-                  </WrapItem>
-                ))}
-              </Wrap>
-            </Box>
-          )}
-          <FormControl isInvalid={!!errors.date}>
-            <FormLabel color="gray.700" fontWeight="semibold">
-              Tanggal Trip
-            </FormLabel>
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
-                setErrors(prev => ({ ...prev, date: undefined }));
-              }}
-              min={new Date().toISOString().split('T')[0]}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: errors.date ? '1px solid #FC8181' : '1px solid #E2E8F0',
-                borderRadius: '8px',
-                fontSize: '16px',
-                outline: 'none',
-                color: '#2D3748',
-              }}
-            />
-            <FormErrorMessage>{errors.date}</FormErrorMessage>
-          </FormControl>
-          <Button
-            mt={6}
-            colorScheme="blue"
-            w="full"
-            onClick={() => {
-              if (!selectedDate) {
-                setErrors({ date: 'Pilih tanggal trip terlebih dahulu.' });
-                return;
-              }
-              if (!isDateAvailable(selectedDate)) {
-                setErrors({ date: `Hari ini tidak tersedia. Pemandu hanya tersedia pada: ${availableDayLabels.join(', ')}.` });
-                return;
-              }
-              fetchFormData(selectedDate);
-            }}
-          >
-            Lanjut
-          </Button>
+      <Box minH="100vh" bg="gray.50">
+        {/* Top bar */}
+        <Box bg="white" borderBottom="1px solid" borderColor="gray.100" py={3} px={4}>
+          <Container maxW="2xl">
+            <Button
+              variant="ghost"
+              leftIcon={<ArrowBackIcon />}
+              size="sm"
+              color="gray.500"
+              onClick={() => navigate(-1)}
+            >
+              Kembali
+            </Button>
+          </Container>
         </Box>
-      </Flex>
+
+        <Container maxW="2xl" py={{ base: 6, md: 10 }} px={{ base: 4, md: 6 }}>
+          {/* Page heading */}
+          <VStack align="start" spacing={1} mb={8} animation={`${fadeIn} 0.35s ease`}>
+            <HStack spacing={2}>
+              <Flex
+                w={8} h={8} borderRadius="lg"
+                bg="blue.500" align="center" justify="center"
+              >
+                <FiCalendar color="white" size={16} />
+              </Flex>
+              <Text fontSize="xs" color="blue.600" fontWeight="semibold" textTransform="uppercase" letterSpacing="wider">
+                Smart Open Trip
+              </Text>
+            </HStack>
+            <Heading size="lg" color="gray.800" mt={1}>Pilih Tanggal Keberangkatan</Heading>
+            <Text color="gray.500" fontSize="sm" maxW="420px">
+              Tentukan tanggal kamu bergabung, lalu isi preferensi untuk dicocokkan dengan peserta perjalanan yang tepat.
+            </Text>
+          </VStack>
+
+          {/* Card */}
+          <Box
+            bg="white"
+            borderRadius="xl"
+            boxShadow="sm"
+            border="1px solid"
+            borderColor="gray.100"
+            p={{ base: 5, md: 7 }}
+            animation={`${fadeIn} 0.4s ease`}
+          >
+            {/* Step indicator */}
+            <HStack spacing={3} mb={6}>
+              <Flex
+                w={7} h={7} borderRadius="full"
+                bg="blue.500" align="center" justify="center" flexShrink={0}
+              >
+                <Text color="white" fontSize="xs" fontWeight="bold">1</Text>
+              </Flex>
+              <Box>
+                <Text fontWeight="semibold" color="gray.800" fontSize="sm">Pilih Tanggal</Text>
+                <Text fontSize="xs" color="gray.400">Langkah 1 dari 2</Text>
+              </Box>
+            </HStack>
+
+            {/* Availability info */}
+            {availableDayLabels.length > 0 && (
+              <Box mb={5} p={3} bg="blue.50" borderRadius="lg" border="1px solid" borderColor="blue.100">
+                <HStack spacing={1.5} mb={2}>
+                  <FiUsers color="#2B6CB0" size={13} />
+                  <Text fontSize="xs" color="blue.700" fontWeight="semibold">
+                    Pemandu tersedia pada:
+                  </Text>
+                </HStack>
+                <Wrap spacing={1}>
+                  {availableDayLabels.map(label => (
+                    <WrapItem key={label}>
+                      <Badge colorScheme="blue" variant="solid" borderRadius="full" px={2.5} py={0.5} fontSize="xs">
+                        {label}
+                      </Badge>
+                    </WrapItem>
+                  ))}
+                </Wrap>
+              </Box>
+            )}
+
+            <FormControl isInvalid={!!errors.date}>
+              <FormLabel color="gray.600" fontWeight="medium" fontSize="sm" mb={1.5}>
+                Tanggal Trip
+              </FormLabel>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setErrors(prev => ({ ...prev, date: undefined }));
+                }}
+                min={new Date().toISOString().split('T')[0]}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: errors.date ? '1px solid #FC8181' : '1px solid #E2E8F0',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  outline: 'none',
+                  color: '#2D3748',
+                  background: 'white',
+                }}
+              />
+              <FormErrorMessage>{errors.date}</FormErrorMessage>
+            </FormControl>
+
+            <Button
+              mt={6}
+              colorScheme="blue"
+              w="full"
+              size="md"
+              rightIcon={<ArrowForwardIcon />}
+              onClick={() => {
+                if (!selectedDate) {
+                  setErrors({ date: 'Pilih tanggal trip terlebih dahulu.' });
+                  return;
+                }
+                if (!isDateAvailable(selectedDate)) {
+                  setErrors({ date: `Hari ini tidak tersedia. Pemandu hanya tersedia pada: ${availableDayLabels.join(', ')}.` });
+                  return;
+                }
+                fetchFormData(selectedDate);
+              }}
+            >
+              Lanjutkan
+            </Button>
+          </Box>
+
+          {/* Steps overview */}
+          <Box mt={6} p={4} bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100">
+            <Text fontSize="xs" color="gray.400" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={3}>
+              Yang akan kamu isi
+            </Text>
+            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={3}>
+              {[
+                { label: 'Umur', icon: <FiUsers size={13} /> },
+                { label: 'Minat Wisata', icon: <FiMapPin size={13} /> },
+                { label: 'Preferensi Aktivitas', icon: <FiCalendar size={13} /> },
+                { label: 'Budget', icon: <FiDollarSign size={13} /> },
+              ].map((item, i) => (
+                <HStack key={i} spacing={2} p={2} borderRadius="md" bg="gray.50">
+                  <Flex w={5} h={5} borderRadius="full" bg="gray.200" align="center" justify="center" flexShrink={0}>
+                    <Text fontSize="9px" color="gray.500" fontWeight="bold">{i + 1}</Text>
+                  </Flex>
+                  <Text fontSize="xs" color="gray.600">{item.label}</Text>
+                </HStack>
+              ))}
+            </SimpleGrid>
+          </Box>
+        </Container>
+      </Box>
     );
   }
 
@@ -479,26 +546,35 @@ const SmartOpenTripForm: React.FC = () => {
           animation={`${fadeIn} 0.4s ease`}
         >
           {/* Info tour */}
-          <Box bg="blue.600" px={8} py={6}>
+          <Box bg="blue.600" px={{ base: 5, md: 8 }} py={6}>
             <Badge colorScheme="yellow" mb={2} fontSize="xs" px={2} py={1} borderRadius="md">
-              ✨ Smart Open Trip
+              Smart Open Trip
             </Badge>
-            <Heading size="md" color="white" mb={1}>
+            <Heading size="md" color="white" mb={2}>
               {formData.tour.name}
             </Heading>
-            <HStack spacing={4} mt={1}>
+            <Wrap spacing={4} mt={1}>
               {formData.tour.location && (
-                <Text color="blue.100" fontSize="sm">
-                  📍 {formData.tour.location}
-                </Text>
+                <WrapItem>
+                  <HStack spacing={1.5}>
+                    <FiMapPin color="#BEE3F8" size={13} />
+                    <Text color="blue.100" fontSize="sm">{formData.tour.location}</Text>
+                  </HStack>
+                </WrapItem>
               )}
-              <Text color="blue.100" fontSize="sm">
-                📅 {formatDateID(selectedDate)}
-              </Text>
-              <Text color="blue.100" fontSize="sm">
-                💰 {formatRupiah(formData.tour.price)} / paket
-              </Text>
-            </HStack>
+              <WrapItem>
+                <HStack spacing={1.5}>
+                  <FiCalendar color="#BEE3F8" size={13} />
+                  <Text color="blue.100" fontSize="sm">{formatDateID(selectedDate)}</Text>
+                </HStack>
+              </WrapItem>
+              <WrapItem>
+                <HStack spacing={1.5}>
+                  <FiDollarSign color="#BEE3F8" size={13} />
+                  <Text color="blue.100" fontSize="sm">{formatRupiah(formData.tour.price)} / paket</Text>
+                </HStack>
+              </WrapItem>
+            </Wrap>
           </Box>
 
           <Box px={8} py={6}>
@@ -538,10 +614,15 @@ const SmartOpenTripForm: React.FC = () => {
             <VStack spacing={8} align="stretch">
               {/* ── Kriteria 1: Umur ── */}
               <FormControl isInvalid={!!errors.age}>
-                <FormLabel color="gray.700" fontWeight="semibold" mb={1}>
-                  1. Umur
-                </FormLabel>
-                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs">
+                <HStack spacing={3} mb={1} align="center">
+                  <Flex w={6} h={6} borderRadius="full" bg="blue.500" align="center" justify="center" flexShrink={0}>
+                    <Text color="white" fontSize="10px" fontWeight="bold">1</Text>
+                  </Flex>
+                  <FormLabel color="gray.800" fontWeight="semibold" mb={0} fontSize="sm">
+                    Umur
+                  </FormLabel>
+                </HStack>
+                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs" pl={9}>
                   Dipakai untuk mencocokkan dengan peserta seusia.
                 </FormHelperText>
                 <NumberInput
@@ -568,10 +649,15 @@ const SmartOpenTripForm: React.FC = () => {
 
               {/* ── Kriteria 2: Minat ── */}
               <FormControl isInvalid={!!errors.interests}>
-                <FormLabel color="gray.700" fontWeight="semibold" mb={1}>
-                  2. Minat Wisata
-                </FormLabel>
-                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs">
+                <HStack spacing={3} mb={1} align="center">
+                  <Flex w={6} h={6} borderRadius="full" bg="blue.500" align="center" justify="center" flexShrink={0}>
+                    <Text color="white" fontSize="10px" fontWeight="bold">2</Text>
+                  </Flex>
+                  <FormLabel color="gray.800" fontWeight="semibold" mb={0} fontSize="sm">
+                    Minat Wisata
+                  </FormLabel>
+                </HStack>
+                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs" pl={9}>
                   Pilih 1 atau lebih kategori wisata yang kamu sukai.
                 </FormHelperText>
                 <CheckboxGroup
@@ -605,10 +691,15 @@ const SmartOpenTripForm: React.FC = () => {
 
               {/* ── Kriteria 3: Preferensi Aktivitas ── */}
               <FormControl isInvalid={!!errors.activities}>
-                <FormLabel color="gray.700" fontWeight="semibold" mb={1}>
-                  3. Preferensi Aktivitas
-                </FormLabel>
-                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs">
+                <HStack spacing={3} mb={1} align="center">
+                  <Flex w={6} h={6} borderRadius="full" bg="blue.500" align="center" justify="center" flexShrink={0}>
+                    <Text color="white" fontSize="10px" fontWeight="bold">3</Text>
+                  </Flex>
+                  <FormLabel color="gray.800" fontWeight="semibold" mb={0} fontSize="sm">
+                    Preferensi Aktivitas
+                  </FormLabel>
+                </HStack>
+                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs" pl={9}>
                   Aktivitas ditampilkan berdasarkan minat yang kamu pilih. Pilih minimal 1.
                 </FormHelperText>
 
@@ -685,10 +776,15 @@ const SmartOpenTripForm: React.FC = () => {
 
               {/* ── Kriteria 4: Budget ── */}
               <FormControl isInvalid={!!errors.budget}>
-                <FormLabel color="gray.700" fontWeight="semibold" mb={1}>
-                  4. Budget Perjalanan
-                </FormLabel>
-                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs">
+                <HStack spacing={3} mb={1} align="center">
+                  <Flex w={6} h={6} borderRadius="full" bg="blue.500" align="center" justify="center" flexShrink={0}>
+                    <Text color="white" fontSize="10px" fontWeight="bold">4</Text>
+                  </Flex>
+                  <FormLabel color="gray.800" fontWeight="semibold" mb={0} fontSize="sm">
+                    Budget Perjalanan
+                  </FormLabel>
+                </HStack>
+                <FormHelperText color="gray.400" mt={0} mb={3} fontSize="xs" pl={9}>
                   Rentang budget per orang untuk keseluruhan perjalanan ini.
                 </FormHelperText>
                 <RadioGroup value={budgetLevel} onChange={setBudgetLevel}>
