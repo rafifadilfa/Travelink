@@ -167,9 +167,7 @@ const CreateTour: React.FC = () => {
             if (photoFiles.length > 0) {
                 const formData = new FormData();
                 photoFiles.forEach(f => formData.append('images[]', f));
-                await guideApiClient.post(`/guide/tours/${tourId}/images`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
+                await guideApiClient.post(`/guide/tours/${tourId}/images`, formData);
             }
 
             toast({
@@ -318,7 +316,7 @@ const CreateTour: React.FC = () => {
                         <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md">
                             <Heading size="lg" mb={2}>Foto Tour</Heading>
                             <Text fontSize="sm" color="gray.500" mb={4}>
-                                Maksimal 10 foto (JPG/PNG/WebP, maks 5 MB per foto)
+                                Maksimal 10 foto (JPG/PNG/WebP, maks 10 MB per foto)
                             </Text>
 
                             {/* Area upload */}

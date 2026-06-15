@@ -219,7 +219,9 @@ class GuideTourApiController extends Controller
         $tour  = Tour::where('tour_guide_id', $guide->id)->findOrFail($id);
 
         $hasActiveBookings = \App\Models\Transaction::where('tour_id', $tour->id)
-            ->whereHas('booking', fn($q) =>
+            ->whereHas(
+                'booking',
+                fn($q) =>
                 $q->whereIn('booking_status', \App\Models\Booking::ACTIVE_STATUSES)
             )
             ->exists();
@@ -243,7 +245,7 @@ class GuideTourApiController extends Controller
 
         $request->validate([
             'images'   => ['required', 'array', 'min:1', 'max:10'],
-            'images.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
         ]);
 
         $host   = $request->getSchemeAndHttpHost();
