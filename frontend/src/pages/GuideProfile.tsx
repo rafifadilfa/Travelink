@@ -257,7 +257,7 @@ const GuideProfile: React.FC = () => {
                   <Flex justify="space-between" align="center">
                     <Text fontWeight="bold" color={primaryColor} fontSize="xl">
                       {formatPrice(tour.price)}
-                      <Text as="span" fontSize="xs" color={secondaryTextColor} fontWeight="normal"> /orang</Text>
+                      <Text as="span" fontSize="xs" color={secondaryTextColor} fontWeight="normal"> {tour.is_open_trip ? '/paket' : '/orang'}</Text>
                     </Text>
                     <Button
                       {...secondaryButtonStyle} size="sm" h="40px" leftIcon={<ViewIcon />}

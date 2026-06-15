@@ -307,7 +307,7 @@ const EditTour: React.FC = () => {
                                 </SimpleGrid>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
                                     <FormControl isRequired>
-                                        <FormLabel>Harga per Orang</FormLabel>
+                                        <FormLabel>{isOpenTrip ? 'Harga Paket' : 'Harga per Orang'}</FormLabel>
                                         <InputGroup>
                                             <InputLeftAddon>Rp</InputLeftAddon>
                                             <Input

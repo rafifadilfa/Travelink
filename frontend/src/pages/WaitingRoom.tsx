@@ -679,12 +679,14 @@ const WaitingRoom: React.FC = () => {
                 )}
               </AlertDialogBody>
               <AlertDialogFooter gap={3}>
-                <Button ref={cancelRef} onClick={onCancelClose} size="sm" variant="ghost">
+                <Button ref={cancelRef} onClick={onCancelClose} size="sm" bg="blue.500" color="white" _hover={{ bg: 'blue.600' }}>
                   Tidak, tetap tunggu
                 </Button>
                 <Button
-                  colorScheme="red"
                   size="sm"
+                  bg="red.500"
+                  color="white"
+                  _hover={{ bg: 'red.600' }}
                   onClick={handleCancel}
                   isLoading={isCancelling}
                   loadingText="Membatalkan..."

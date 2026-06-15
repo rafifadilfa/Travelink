@@ -1027,10 +1027,10 @@ const PrivateBookingCard: React.FC<PrivateBookingCardProps> = ({ booking, onPaym
               Tindakan ini tidak dapat dibatalkan.
             </AlertDialogBody>
             <AlertDialogFooter gap={3}>
-              <Button ref={cancelDialogRef} variant="ghost" size="sm" onClick={onCancelClose} isDisabled={isCancelling}>
+              <Button ref={cancelDialogRef} size="sm" bg="blue.500" color="white" _hover={{ bg: 'blue.600' }} onClick={onCancelClose} isDisabled={isCancelling}>
                 Tidak
               </Button>
-              <Button colorScheme="red" size="sm" onClick={handleConfirmCancel} isLoading={isCancelling} loadingText="Membatalkan...">
+              <Button size="sm" bg="red.500" color="white" _hover={{ bg: 'red.600' }} onClick={handleConfirmCancel} isLoading={isCancelling} loadingText="Membatalkan...">
                 Ya, Batalkan
               </Button>
             </AlertDialogFooter>

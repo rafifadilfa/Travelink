@@ -217,7 +217,7 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
                   boxShadow="lg" border="1px solid" borderColor={subtleBorderColor}
                   transition="all 0.35s cubic-bezier(.08,.52,.52,1)" cursor="pointer"
                   _hover={{ boxShadow: 'xl', borderColor: primaryColor, transform: 'translateY(-6px) scale(1.01)' }}
-                  onClick={() => navigate(`/tours/${tour.id}`)}
+                  onClick={() => navigate(`/tours/${tour.id}`, { state: { is_open_trip: tour.is_open_trip, tour_id: tour.id } })}
                   animation={`${slideInUp} 0.6s ease-out ${index * 0.1}s both`}
                   role="group"
                 >
@@ -233,6 +233,17 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
                         <Badge key={tag} variant="solid" bgGradient={accentGradient} color="white" px={2.5} py={1} borderRadius="md" fontSize="xs" boxShadow="sm">{tag}</Badge>
                       ))}
                     </HStack>
+                    {tour.is_open_trip && (
+                      <Badge
+                        position="absolute" top={4} right={4}
+                        colorScheme="purple" variant="solid"
+                        px={3} py={1} borderRadius="full"
+                        fontSize="xs" fontWeight="bold"
+                        boxShadow="md" pointerEvents="none"
+                      >
+                        ✨ Smart Open Trip
+                      </Badge>
+                    )}
                     <Flex position="absolute" bottom={4} left={4} bg={ratingBadgeBg} backdropFilter="blur(8px)" px={3} py={1.5} borderRadius="lg" alignItems="center" boxShadow="md">
                       <Icon as={ChakraStarIcon} fill="yellow.400" color="yellow.400" boxSize={4} mr={1.5} />
                       <Text fontWeight="bold" color={primaryTextColor} fontSize="sm">{tour.rating.toFixed(1)}</Text>
@@ -245,7 +256,7 @@ const ratingBadgeBg      = useColorModeValue('whiteAlpha.900', 'blackAlpha.700')
                     <Flex justify="space-between" align="center" mt={2}>
                       <Box>
                         <Text fontWeight="bold" color={primaryColor} fontSize="lg">{formatPrice(tour.price)}</Text>
-                        <Text fontSize="xs" color={secondaryTextColor}>per orang</Text>
+                        <Text fontSize="xs" color={secondaryTextColor}>{tour.is_open_trip ? 'per paket' : 'per orang'}</Text>
                       </Box>
                       <Button {...primaryButtonStyle} size="sm" h="40px" px={5} onClick={e => { e.stopPropagation(); navigate(`/tours/${tour.id}`); }}>Pesan</Button>
                     </Flex>

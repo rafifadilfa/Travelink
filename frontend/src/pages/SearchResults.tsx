@@ -288,7 +288,7 @@ const TourCard: React.FC<TourCardProps> = ({ tour, index }) => {
         <Flex justify="space-between" align="center">
           <Box>
             <Text fontWeight="black" color={primaryColor} fontSize="md">{formatPrice(tour.price)}</Text>
-            <Text fontSize="2xs" color={subtleColor}>per orang</Text>
+            <Text fontSize="2xs" color={subtleColor}>{tour.is_open_trip ? 'per paket' : 'per orang'}</Text>
           </Box>
           <Button
             size="sm"
