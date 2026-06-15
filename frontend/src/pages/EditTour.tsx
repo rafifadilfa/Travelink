@@ -370,7 +370,7 @@ const EditTour: React.FC = () => {
                         <Box bg={cardBg} p={6} borderRadius="lg" boxShadow="md">
                             <Heading size="lg" mb={2}>Foto Tour</Heading>
                             <Text fontSize="sm" color="gray.500" mb={4}>
-                                Maksimal 10 foto (JPG/PNG/WebP, maks 5 MB per foto)
+                                Maksimal 10 foto (JPG/PNG/WebP, maks 10 MB per foto)
                             </Text>
 
                             {/* Foto yang sudah ada */}
