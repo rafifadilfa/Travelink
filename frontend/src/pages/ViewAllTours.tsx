@@ -255,7 +255,7 @@ const ViewAllTours: React.FC = () => {
     const categoryLabel = (cats: string[]) => {
         if (cats.length === 0) return '';
         const match = categories.find(c => c.value === cats[0]);
-        return match ? `${match.icon} ${match.label}` : cats[0];
+        return match ? match.label : cats[0];
     };
 
     return (
@@ -333,7 +333,7 @@ const ViewAllTours: React.FC = () => {
                             >
                                 <option value="">Semua Kategori</option>
                                 {categories.map(cat => (
-                                    <option key={cat.value} value={cat.value}>{cat.icon} {cat.label}</option>
+                                    <option key={cat.value} value={cat.value}>{cat.label}</option>
                                 ))}
                             </Select>
                         </Box>
