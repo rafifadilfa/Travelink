@@ -126,10 +126,10 @@ const AdminWithdrawalList: React.FC = () => {
                       <Td fontSize="sm">{fmtDate(w.created_at)}</Td>
                       <Td>
                         <HStack spacing={2}>
-                          <Button size="sm" colorScheme="green" onClick={() => setProcessId(w.id)}>
+                          <Button size="sm" colorScheme="blue" onClick={() => setProcessId(w.id)}>
                             Proses
                           </Button>
-                          <Button size="sm" variant="outline" colorScheme="red"
+                          <Button size="sm" colorScheme="red"
                             onClick={() => { setRejectId(w.id); setRejectReason(''); }}>
                             Tolak
                           </Button>
@@ -155,8 +155,8 @@ const AdminWithdrawalList: React.FC = () => {
               Tindakan ini akan mengurangi saldo pemandu.
             </AlertDialogBody>
             <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={() => setProcessId(null)}>Batal</Button>
-              <Button colorScheme="green" isLoading={isProcessing} onClick={handleProcess} ml={3}>
+              <Button ref={cancelRef} colorScheme="blue" variant="ghost" onClick={() => setProcessId(null)}>Batal</Button>
+              <Button colorScheme="blue" isLoading={isProcessing} onClick={handleProcess} ml={3}>
                 Konfirmasi Proses
               </Button>
             </AlertDialogFooter>
@@ -177,7 +177,7 @@ const AdminWithdrawalList: React.FC = () => {
             </FormControl>
           </ModalBody>
           <ModalFooter>
-            <Button mr={3} onClick={() => setRejectId(null)}>Batal</Button>
+            <Button colorScheme="blue" variant="ghost" mr={3} onClick={() => setRejectId(null)}>Batal</Button>
             <Button colorScheme="red" isLoading={isRejecting}
               isDisabled={!rejectReason.trim()} onClick={handleRejectSubmit}>
               Tolak Pencairan

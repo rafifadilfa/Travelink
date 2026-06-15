@@ -40,45 +40,29 @@ const customTheme = extendTheme({
       },
       // Variants
       variants: {
-        // Customizing the 'solid' variant
-        solid: (props: any) => ({ // props can be used for colorMode specifics if needed
-          bg: "brand.500", // Use your brand color
-          color: "white",
-          _hover: {
-            bg: "brand.600", // Darker brand color on hover
-            _disabled: { // Keep disabled state consistent
-              bg: "brand.500",
-              opacity: 0.6, // Add opacity for disabled state
+        solid: (props: any) => {
+          if (props.colorScheme && props.colorScheme !== 'brand') return {};
+          return {
+            bg: "brand.500",
+            color: "white",
+            _hover: {
+              bg: "brand.600",
+              _disabled: { bg: "brand.500", opacity: 0.6 },
             },
-          },
-          _active: {
-            bg: "brand.700", // Even darker for active state
-          },
-          _disabled: { // General disabled state
-            bg: "brand.300",
-            opacity: 0.6,
-            cursor: "not-allowed",
-          }
-        }),
-        // You can define other variants like 'outline', 'ghost' here
-        // Example for 'outline':
-        outline: (props: any) => ({
-          borderColor: "brand.500",
-          color: "brand.500",
-          _hover: {
-            bg: "brand.50", // Light brand color for hover background
-            borderColor: "brand.600",
-          },
-          _active: {
-            bg: "brand.100",
-          },
-          _disabled: {
-            borderColor: "brand.300",
-            color: "brand.300",
-            opacity: 0.6,
-            cursor: "not-allowed",
-          }
-        }),
+            _active: { bg: "brand.700" },
+            _disabled: { bg: "brand.300", opacity: 0.6, cursor: "not-allowed" },
+          };
+        },
+        outline: (props: any) => {
+          if (props.colorScheme && props.colorScheme !== 'brand') return {};
+          return {
+            borderColor: "brand.500",
+            color: "brand.500",
+            _hover: { bg: "brand.50", borderColor: "brand.600" },
+            _active: { bg: "brand.100" },
+            _disabled: { borderColor: "brand.300", color: "brand.300", opacity: 0.6, cursor: "not-allowed" },
+          };
+        },
       },
      
     },

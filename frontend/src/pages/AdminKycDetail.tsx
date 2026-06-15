@@ -141,6 +141,9 @@ const AdminKycDetail: React.FC = () => {
   const [rejectError, setRejectError]   = useState('');
   const initialFocusRef = useRef<HTMLTextAreaElement>(null);
 
+  // Modal setujui
+  const { isOpen: isApproveOpen, onOpen: onApproveOpen, onClose: onApproveClose } = useDisclosure();
+
   const apiBase = ((import.meta.env.VITE_API_URL as string) ?? '').replace('/api', '');
 
   useEffect(() => {
@@ -383,7 +386,7 @@ const AdminKycDetail: React.FC = () => {
                   leftIcon={<FiCheckCircle />}
                   w="full"
                   isLoading={actionLoading}
-                  onClick={handleApprove}
+                  onClick={onApproveOpen}
                 >
                   Setujui Verifikasi
                 </Button>
@@ -441,6 +444,34 @@ const AdminKycDetail: React.FC = () => {
         </VStack>
       </SimpleGrid>
 
+      {/* ── Modal persetujuan ── */}
+      <Modal isOpen={isApproveOpen} onClose={onApproveClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Setujui Verifikasi</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text fontSize="sm" color={secondaryTxt}>
+              Anda akan menyetujui verifikasi untuk <strong>{guide?.name}</strong>. Guide ini akan
+              mendapatkan akses penuh untuk membuat dan mengelola paket wisata.
+            </Text>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" variant="ghost" mr={3} onClick={onApproveClose} isDisabled={actionLoading}>
+              Batal
+            </Button>
+            <Button
+              colorScheme="green"
+              leftIcon={<FiCheckCircle />}
+              isLoading={actionLoading}
+              onClick={async () => { await handleApprove(); onApproveClose(); }}
+            >
+              Setujui Verifikasi
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
       {/* ── Modal penolakan ── */}
       <Modal
         isOpen={isOpen}
@@ -476,7 +507,7 @@ const AdminKycDetail: React.FC = () => {
             </Text>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose} isDisabled={actionLoading}>
+            <Button colorScheme="blue" variant="ghost" mr={3} onClick={onClose} isDisabled={actionLoading}>
               Batal
             </Button>
             <Button
