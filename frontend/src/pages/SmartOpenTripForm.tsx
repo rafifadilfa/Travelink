@@ -12,6 +12,7 @@ import {
   FormLabel,
   Heading,
   HStack,
+  Input,
   NumberDecrementStepper,
   NumberIncrementStepper,
   NumberInput,
@@ -409,7 +410,7 @@ const SmartOpenTripForm: React.FC = () => {
             <FormLabel color="gray.700" fontWeight="semibold">
               Tanggal Trip
             </FormLabel>
-            <input
+            <Input
               type="date"
               value={selectedDate}
               onChange={(e) => {
